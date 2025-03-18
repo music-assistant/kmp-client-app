@@ -7,18 +7,27 @@ import android.os.Bundle
 import android.os.IBinder
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat.RepeatMode
+import android.support.v4.media.session.PlaybackStateCompat.ShuffleMode
 import androidx.media.MediaBrowserServiceCompat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
+import ua.pp.formatbce.musicassistant.data.model.server.Player
+import ua.pp.formatbce.musicassistant.data.source.PlayerData
 import ua.pp.formatbce.musicassistant.data.source.ServiceDataSource
+import ua.pp.formatbce.musicassistant.ui.compose.main.PlayerAction
 
 class MediaPlaybackService : MediaBrowserServiceCompat() {
+    private val scope = CoroutineScope(Dispatchers.IO)
+
     private lateinit var mediaSessionHelper: MediaSessionHelper
     private lateinit var mediaNotificationManager: MediaNotificationManager
 
     private val dataSource: ServiceDataSource by inject()
-    private val players = listOf("Player 1", "Player 2", "Player 3", "Player 4", "Player 5")
+    private val players = mutableListOf<Player>()
     private var activePlayerIndex = 0
-    private val playerStates = BooleanArray(players.size) { false }
 
     override fun onCreate() {
         super.onCreate()
@@ -26,32 +35,64 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             MediaSessionHelper(this, createCallback())
         mediaNotificationManager = MediaNotificationManager(this, mediaSessionHelper)
         sessionToken = mediaSessionHelper.getSessionToken()
-        updatePlaybackState()
+        scope.launch {
+            dataSource.players.collect {
+                players.clear()
+                it?.let { players.addAll(it) }
+                updatePlaybackState()
+            }
+        }
     }
+
+    private val activePlayer: Player?
+        get() {
+            if (activePlayerIndex >= players.size) {
+                activePlayerIndex = 0
+            }
+            return players.getOrNull(activePlayerIndex)
+        }
 
     private fun createCallback(): MediaSessionCompat.Callback =
         object : MediaSessionCompat.Callback() {
             override fun onPlay() {
-                playerStates[activePlayerIndex] = true
-                updatePlaybackState()
+                activePlayer?.let {
+                    dataSource.playerAction(
+                        PlayerData(it),
+                        PlayerAction.TogglePlayPause
+                    )
+                }
             }
 
             override fun onPause() {
-                playerStates[activePlayerIndex] = false
-                updatePlaybackState()
+                activePlayer?.let {
+                    dataSource.playerAction(
+                        PlayerData(it),
+                        PlayerAction.TogglePlayPause
+                    )
+                }
             }
 
             override fun onSkipToNext() {
-                println("media session onSkipToNext")
+                activePlayer?.let { dataSource.playerAction(PlayerData(it), PlayerAction.Next) }
             }
 
             override fun onSkipToPrevious() {
-                println("media session onSkipToPrevious")
+                activePlayer?.let { dataSource.playerAction(PlayerData(it), PlayerAction.Previous) }
+            }
+
+            override fun onSetRepeatMode(@RepeatMode repeatMode: Int) {
+                //println("media session onSetRepeatMode $repeatMode")
+            }
+
+            override fun onSetShuffleMode(@ShuffleMode shuffleMode: Int) {
+                //println("media session onSetShuffleMode $shuffleMode")
             }
 
             override fun onCustomAction(action: String, extras: Bundle?) {
-                if (action == "ACTION_SWITCH") {
-                    switchPlayer()
+                when (action) {
+                    "ACTION_SWITCH_PLAYER" -> switchPlayer()
+                    "ACTION_TOGGLE_SHUFFLE" -> println("ACTION_TOGGLE_SHUFFLE")
+                    "ACTION_TOGGLE_REPEAT" -> println("ACTION_TOGGLE_REPEAT")
                 }
             }
         }
@@ -72,7 +113,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     }
 
     private fun updatePlaybackState() {
-        mediaSessionHelper.updatePlaybackState(playerStates[activePlayerIndex])
+        mediaSessionHelper.updatePlaybackState(activePlayer)
         updateNotification()
     }
 
@@ -82,14 +123,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     }
 
     private fun updateNotification() {
-        val title = "Now Playing on ${players[activePlayerIndex]}"
-        val artist = "Remote Media Player"
-
-        val notification = mediaNotificationManager.createNotification(
-            title,
-            artist,
-            players[activePlayerIndex]
-        )
+        val notification = mediaNotificationManager.createNotification(activePlayer)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 MediaNotificationManager.NOTIFICATION_ID,
