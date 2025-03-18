@@ -50,6 +50,7 @@ import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import ua.pp.formatbce.musicassistant.data.model.server.events.QueueItem
+import ua.pp.formatbce.musicassistant.data.source.PlayerData
 import ua.pp.formatbce.musicassistant.utils.toMinSec
 import kotlin.time.Duration.Companion.seconds
 
@@ -57,7 +58,7 @@ import kotlin.time.Duration.Companion.seconds
 @Composable
 fun Queue(
     nestedScrollConnection: NestedScrollConnection,
-    playerData: MainViewModel.PlayerData,
+    playerData: PlayerData,
     items: List<QueueItem>,
     chosenItemsIds: Set<String>?,
     queueAction: (QueueAction) -> Unit,

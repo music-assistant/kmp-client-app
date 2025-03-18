@@ -81,7 +81,12 @@ class ServiceClient(private val settings: SettingsRepository) {
                     listenForMessages()
                 }
             } catch (e: Exception) {
-                _connectionStateFlow.update { ConnectionState.Disconnected(Exception("Connection failed: ${e.message}")) }
+                _connectionStateFlow.update {
+                    ConnectionState.disconnected(
+                        Exception("Connection failed: ${e.message}"),
+                        settings.connectionInfo.value != null
+                    )
+                }
             }
             isConnecting = false
         }
@@ -144,7 +149,12 @@ class ServiceClient(private val settings: SettingsRepository) {
 
     fun disconnect(reason: Exception? = null) {
         CoroutineScope(Dispatchers.IO).launch {
-            _connectionStateFlow.update { ConnectionState.Disconnected(reason) }
+            _connectionStateFlow.update {
+                ConnectionState.disconnected(
+                    reason,
+                    settings.connectionInfo.value != null
+                )
+            }
             session?.close()
             session = null
         }

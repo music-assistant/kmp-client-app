@@ -72,11 +72,11 @@ import compose.icons.tablericons.SquareCheck
 import kotlinx.coroutines.launch
 import ua.pp.formatbce.musicassistant.data.model.local.MediaItem
 import ua.pp.formatbce.musicassistant.data.model.server.QueueOption
+import ua.pp.formatbce.musicassistant.data.source.PlayerData
 import ua.pp.formatbce.musicassistant.ui.compose.common.ActionIcon
 import ua.pp.formatbce.musicassistant.ui.compose.common.Fab
-import ua.pp.formatbce.musicassistant.ui.compose.main.MainViewModel
 
-data class LibraryScreen(val playerData: MainViewModel.PlayerData) : Screen {
+data class LibraryScreen(val playerData: PlayerData) : Screen {
 
     @Composable
     override fun Content() {

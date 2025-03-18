@@ -16,7 +16,7 @@ import ua.pp.formatbce.musicassistant.api.playMediaRequest
 import ua.pp.formatbce.musicassistant.data.model.local.MediaItem
 import ua.pp.formatbce.musicassistant.data.model.server.QueueOption
 import ua.pp.formatbce.musicassistant.data.model.server.ServerMediaItem
-import ua.pp.formatbce.musicassistant.ui.compose.main.MainViewModel
+import ua.pp.formatbce.musicassistant.data.source.PlayerData
 import ua.pp.formatbce.musicassistant.utils.ConnectionState
 
 class LibraryViewModel(
@@ -116,7 +116,7 @@ class LibraryViewModel(
         refreshListForTab(LibraryTab.Artists)
     }
 
-    fun playSelectedItems(playerData: MainViewModel.PlayerData, option: QueueOption) {
+    fun playSelectedItems(playerData: PlayerData, option: QueueOption) {
         screenModelScope.launch {
             apiClient.sendRequest(
                 playMediaRequest(

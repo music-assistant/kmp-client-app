@@ -9,13 +9,13 @@ import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaSessionCompat
 import androidx.media.MediaBrowserServiceCompat
 import org.koin.android.ext.android.inject
-import ua.pp.formatbce.musicassistant.api.ServiceClient
+import ua.pp.formatbce.musicassistant.data.source.ServiceDataSource
 
 class MediaPlaybackService : MediaBrowserServiceCompat() {
     private lateinit var mediaSessionHelper: MediaSessionHelper
     private lateinit var mediaNotificationManager: MediaNotificationManager
 
-    private val client: ServiceClient by inject()
+    private val dataSource: ServiceDataSource by inject()
     private val players = listOf("Player 1", "Player 2", "Player 3", "Player 4", "Player 5")
     private var activePlayerIndex = 0
     private val playerStates = BooleanArray(players.size) { false }

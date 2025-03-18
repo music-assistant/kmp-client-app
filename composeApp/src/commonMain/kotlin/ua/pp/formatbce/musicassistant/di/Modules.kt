@@ -6,7 +6,7 @@ import org.koin.dsl.module
 import ua.pp.formatbce.musicassistant.api.ServiceClient
 import ua.pp.formatbce.musicassistant.data.settings.SettingsRepository
 import ua.pp.formatbce.musicassistant.data.settings.provideSettings
-import ua.pp.formatbce.musicassistant.data.source.ServiceDatasource
+import ua.pp.formatbce.musicassistant.data.source.ServiceDataSource
 import ua.pp.formatbce.musicassistant.ui.compose.library.LibraryViewModel
 import ua.pp.formatbce.musicassistant.ui.compose.main.MainViewModel
 import ua.pp.formatbce.musicassistant.ui.compose.settings.SettingsViewModel
@@ -16,7 +16,7 @@ val sharedModule = module {
     single { provideSettings() }
     singleOf(::SettingsRepository)
     singleOf(::ServiceClient)
-    singleOf(::ServiceDatasource)
+    singleOf(::ServiceDataSource)
     viewModelOf(::ThemeViewModel)
     factory { MainViewModel(get(), get()) }
     factory { SettingsViewModel(get(), get()) }

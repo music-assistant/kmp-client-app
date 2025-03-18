@@ -117,6 +117,7 @@ class SettingsScreen : Screen {
 
                         ConnectionState.Connecting -> "Connecting to $ipAddress:$port."
                         is ConnectionState.Disconnected -> "Disconnected${state.exception?.message?.let { ": $it" } ?: ""}."
+                        ConnectionState.NoServer -> "Please provide server address and port."
                         null -> ""
                     },
                     color = MaterialTheme.colors.onBackground,

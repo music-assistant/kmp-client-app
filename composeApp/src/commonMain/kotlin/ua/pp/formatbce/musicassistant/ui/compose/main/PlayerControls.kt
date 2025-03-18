@@ -26,13 +26,14 @@ import compose.icons.tablericons.Switch2
 import ua.pp.formatbce.musicassistant.data.model.server.PlayerFeature
 import ua.pp.formatbce.musicassistant.data.model.server.PlayerState
 import ua.pp.formatbce.musicassistant.data.model.server.RepeatMode
+import ua.pp.formatbce.musicassistant.data.source.PlayerData
 import ua.pp.formatbce.musicassistant.ui.compose.common.ActionIcon
 
 @Composable
 fun PlayerControls(
     modifier: Modifier = Modifier,
-    playerData: MainViewModel.PlayerData,
-    playerAction: (MainViewModel.PlayerData, PlayerAction) -> Unit
+    playerData: PlayerData,
+    playerAction: (PlayerData, PlayerAction) -> Unit
 ) {
     val player = playerData.player
     val queue = playerData.queue

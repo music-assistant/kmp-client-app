@@ -44,13 +44,14 @@ import kotlinx.coroutines.launch
 import ua.pp.formatbce.musicassistant.data.model.server.MediaType
 import ua.pp.formatbce.musicassistant.data.model.server.Player
 import ua.pp.formatbce.musicassistant.data.model.server.PlayerState
+import ua.pp.formatbce.musicassistant.data.source.PlayerData
 
 @Composable
 fun PlayersRow(
     modifier: Modifier = Modifier,
-    players: List<MainViewModel.PlayerData> = emptyList(),
+    players: List<PlayerData> = emptyList(),
     selectedPlayerId: String?,
-    playerAction: (MainViewModel.PlayerData, PlayerAction) -> Unit,
+    playerAction: (PlayerData, PlayerAction) -> Unit,
     onItemClick: (Player) -> Unit = {},
 
     ) {
@@ -83,9 +84,9 @@ fun PlayersRow(
 @Composable
 fun PlayerCard(
     modifier: Modifier = Modifier,
-    playerData: MainViewModel.PlayerData,
+    playerData: PlayerData,
     isSelected: Boolean,
-    playerAction: (MainViewModel.PlayerData, PlayerAction) -> Unit,
+    playerAction: (PlayerData, PlayerAction) -> Unit,
     onClick: () -> Unit,
 ) {
     val player = playerData.player
