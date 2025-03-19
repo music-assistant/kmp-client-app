@@ -10,8 +10,12 @@ import android.support.v4.media.session.MediaSessionCompat
 import androidx.media.MediaBrowserServiceCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import ua.pp.formatbce.musicassistant.data.source.PlayerData
@@ -25,8 +29,14 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     private lateinit var mediaNotificationManager: MediaNotificationManager
 
     private val dataSource: ServiceDataSource by inject()
-    private val players = mutableListOf<PlayerData>()
-    private var activePlayerIndex = 0
+    private val players = dataSource.playersData
+        .map { list -> list.filter { it.queue?.currentItem != null } }
+        .stateIn(scope, SharingStarted.Eagerly, emptyList())
+    private val activePlayerIndex = MutableStateFlow(0)
+    private val currentPlayerData =
+        combine(players, activePlayerIndex) { players, index ->
+            players.getOrNull(index) ?: players.getOrNull(0)
+        }.stateIn(scope, SharingStarted.Eagerly, null)
 
     override fun onCreate() {
         super.onCreate()
@@ -34,46 +44,29 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             MediaSessionHelper(this, createCallback())
         mediaNotificationManager = MediaNotificationManager(this, mediaSessionHelper)
         sessionToken = mediaSessionHelper.getSessionToken()
-        scope.launch {
-            dataSource.playersData
-                .map { list -> list.filter { it.queue?.currentItem != null } }
-                .filter { list -> list.isNotEmpty() }
-                .collect {
-                    players.clear()
-                    players.addAll(it)
-                    updatePlaybackState()
-                }
-        }
+        scope.launch { currentPlayerData.collect { updatePlaybackState(it, players.value.size > 1) } }
     }
-
-    private val activePlayer: PlayerData?
-        get() {
-            if (activePlayerIndex >= players.size) {
-                activePlayerIndex = 0
-            }
-            return players.getOrNull(activePlayerIndex)
-        }
 
     private fun createCallback(): MediaSessionCompat.Callback =
         object : MediaSessionCompat.Callback() {
             override fun onPlay() {
-                activePlayer?.let {
+                currentPlayerData.value?.let {
                     dataSource.playerAction(it, PlayerAction.TogglePlayPause)
                 }
             }
 
             override fun onPause() {
-                activePlayer?.let {
+                currentPlayerData.value?.let {
                     dataSource.playerAction(it, PlayerAction.TogglePlayPause)
                 }
             }
 
             override fun onSkipToNext() {
-                activePlayer?.let { dataSource.playerAction(it, PlayerAction.Next) }
+                currentPlayerData.value?.let { dataSource.playerAction(it, PlayerAction.Next) }
             }
 
             override fun onSkipToPrevious() {
-                activePlayer?.let {
+                currentPlayerData.value?.let {
                     dataSource.playerAction(it, PlayerAction.Previous)
                 }
             }
@@ -81,7 +74,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             override fun onCustomAction(action: String, extras: Bundle?) {
                 when (action) {
                     "ACTION_SWITCH_PLAYER" -> switchPlayer()
-                    "ACTION_TOGGLE_SHUFFLE" -> activePlayer?.let { playerData ->
+                    "ACTION_TOGGLE_SHUFFLE" -> currentPlayerData.value?.let { playerData ->
                         playerData.queue?.let {
                             dataSource.playerAction(
                                 playerData,
@@ -90,7 +83,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                         }
                     }
 
-                    "ACTION_TOGGLE_REPEAT" -> activePlayer?.let { playerData ->
+                    "ACTION_TOGGLE_REPEAT" -> currentPlayerData.value?.let { playerData ->
                         playerData.queue?.let {
                             dataSource.playerAction(
                                 playerData,
@@ -118,19 +111,18 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     ) {
     }
 
-    private fun updatePlaybackState() {
-        mediaSessionHelper.updatePlaybackState(activePlayer, players.size > 1)
-        updateNotification()
-    }
-
     private fun switchPlayer() {
-        activePlayerIndex = (activePlayerIndex + 1) % players.size
-        updatePlaybackState()
+        activePlayerIndex.update {
+            if (players.value.size > 1) {
+                (it + 1) % players.value.size
+            } else 0
+        }
     }
 
-    private fun updateNotification() {
+    private fun updatePlaybackState(player: PlayerData?, showPlayersSwitch: Boolean) {
+        mediaSessionHelper.updatePlaybackState(player, showPlayersSwitch)
         val notification =
-            mediaNotificationManager.createNotification(activePlayer)
+            mediaNotificationManager.createNotification(player)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 MediaNotificationManager.NOTIFICATION_ID,

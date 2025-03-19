@@ -17,9 +17,9 @@ class MediaNotificationManager(
         playerData: PlayerData?,
     ): Notification {
         return NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.baseline_library_music_24)
+            .setSmallIcon(R.drawable.ic_ma_logo)
             .setContentTitle(playerData?.queue?.currentItem?.mediaItem?.trackDescription ?: "-")
-            .setContentText("MA - " + (playerData?.player?.displayName ?: "no active players"))
+            .setContentText("Music Assistant - " + (playerData?.player?.displayName ?: "no active players"))
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setStyle(
                 androidx.media.app.NotificationCompat.MediaStyle()
