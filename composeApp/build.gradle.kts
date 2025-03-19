@@ -42,6 +42,8 @@ kotlin {
             implementation(libs.koin.androidx.compose)
 
             implementation(libs.androidx.media)
+
+            implementation(libs.coil)
         }
         commonMain.dependencies {
             implementation(compose.runtime)

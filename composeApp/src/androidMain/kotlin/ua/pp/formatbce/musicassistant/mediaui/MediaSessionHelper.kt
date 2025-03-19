@@ -1,7 +1,9 @@
 package ua.pp.formatbce.musicassistant.mediaui
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.media.session.PlaybackState
+import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import ua.pp.formatbce.musicassistant.R
@@ -24,8 +26,10 @@ class MediaSessionHelper(context: Context, callback: MediaSessionCompat.Callback
 
     fun updatePlaybackState(
         playerData: PlayerData?,
+        bitmap: Bitmap?,
         showNextPlayerButton: Boolean,
     ) {
+        println("Elapsed: ${playerData?.queue?.elapsedTime?.toLong()} seconds")
         val state = if (playerData?.player?.state == PlayerState.PLAYING)
             PlaybackStateCompat.STATE_PLAYING
         else
@@ -35,17 +39,14 @@ class MediaSessionHelper(context: Context, callback: MediaSessionCompat.Callback
                 PlaybackStateCompat.ACTION_PLAY or
                         PlaybackStateCompat.ACTION_PAUSE or
                         PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
-                        PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
-                        PlaybackStateCompat.ACTION_SET_SHUFFLE_MODE or
-                        PlaybackStateCompat.ACTION_SET_REPEAT_MODE
+                        PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
             )
-
-            /*.addCustomAction(
-                PlaybackStateCompat.CustomAction.Builder(
-                    "ACTION_TOGGLE_SHUFFLE", "Shuffle", getShuffleModeIcon()
-                ).build()
-            )*/
-            .setState(state, PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1f)
+            .setState(
+                state,
+                playerData?.queue?.elapsedTime?.toLong()?.let { it * 1000 }
+                    ?: PlaybackState.PLAYBACK_POSITION_UNKNOWN,
+                1f
+            )
             .setActiveQueueItemId(MediaSessionCompat.QueueItem.UNKNOWN_ID.toLong())
             .also { builder ->
                 playerData?.queue?.shuffleEnabled?.let { shuffle ->
@@ -80,17 +81,25 @@ class MediaSessionHelper(context: Context, callback: MediaSessionCompat.Callback
             .build()
         mediaSession.setPlaybackState(playbackState)
 
-        /*val metadata = MediaMetadataCompat.Builder()
+        val metadata = MediaMetadataCompat.Builder()
             .putString(
-                MediaMetadataCompat.METADATA_KEY_ART_URI,
-                "https://i.discogs.com/8WjIMLHzeE75vp5u6lUYUarGLpd-kaI6GCWJv7mJQhk/rs:fit/g:sm/q:90/h:517/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExOTEy/MjYyLTE2MDU2NTg3/MzctOTkwOC5qcGVn.jpeg"
+                MediaMetadataCompat.METADATA_KEY_TITLE,
+                playerData?.queue?.currentItem?.mediaItem?.trackDescription ?: "-"
             )
             .putString(
-                MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI,
-                "https://i.discogs.com/8WjIMLHzeE75vp5u6lUYUarGLpd-kaI6GCWJv7mJQhk/rs:fit/g:sm/q:90/h:517/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExOTEy/MjYyLTE2MDU2NTg3/MzctOTkwOC5qcGVn.jpeg"
+                MediaMetadataCompat.METADATA_KEY_ARTIST,
+                "Music Assistant - " + (playerData?.player?.displayName ?: "no active players")
             )
+            .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, bitmap)
+            .also { builder ->
+                playerData?.queue?.currentItem?.duration?.toLong()?.let {
+                    println("Duration: $it seconds")
+                    builder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, it * 1000)
+                } ?: run { println("Duration: unknown") }
+            }
             .build()
-        mediaSession.setMetadata(metadata)*/
+
+        mediaSession.setMetadata(metadata)
     }
 
     private fun getRepeatModeIcon(repeatMode: RepeatMode): Int = when (repeatMode) {

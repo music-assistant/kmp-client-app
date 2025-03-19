@@ -2,24 +2,32 @@ package ua.pp.formatbce.musicassistant.mediaui
 
 import android.app.Notification
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.graphics.Bitmap
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import ua.pp.formatbce.musicassistant.MainActivity
 import ua.pp.formatbce.musicassistant.R
-import ua.pp.formatbce.musicassistant.data.source.PlayerData
 
 class MediaNotificationManager(
     private val context: Context,
     private val mediaSessionHelper: MediaSessionHelper
 ) {
 
-    fun createNotification(
-        playerData: PlayerData?,
-    ): Notification {
+    fun createNotification(bitmap: Bitmap?): Notification {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_ma_logo)
-            .setContentTitle(playerData?.queue?.currentItem?.mediaItem?.trackDescription ?: "-")
-            .setContentText("Music Assistant - " + (playerData?.player?.displayName ?: "no active players"))
+            .setLargeIcon(bitmap)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setStyle(
                 androidx.media.app.NotificationCompat.MediaStyle()
@@ -28,6 +36,7 @@ class MediaNotificationManager(
             .setPriority(NotificationManager.IMPORTANCE_HIGH)
             .setOngoing(true)
             .setAutoCancel(false)
+            .setContentIntent(pendingIntent)
             .also { builder ->
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     builder.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)

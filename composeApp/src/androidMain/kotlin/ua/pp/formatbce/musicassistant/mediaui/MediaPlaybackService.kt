@@ -8,6 +8,10 @@ import android.os.IBinder
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaSessionCompat
 import androidx.media.MediaBrowserServiceCompat
+import coil3.BitmapImage
+import coil3.ImageLoader
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,7 +48,13 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             MediaSessionHelper(this, createCallback())
         mediaNotificationManager = MediaNotificationManager(this, mediaSessionHelper)
         sessionToken = mediaSessionHelper.getSessionToken()
-        scope.launch { currentPlayerData.collect { updatePlaybackState(it, players.value.size > 1) } }
+        scope.launch {
+            combine(
+                currentPlayerData,
+                players.map { it.size > 1 }
+            ) { player, moreThanOnePlayer -> Pair(player, moreThanOnePlayer) }
+                .collect { updatePlaybackState(it.first, it.second) }
+        }
     }
 
     private fun createCallback(): MediaSessionCompat.Callback =
@@ -120,17 +130,25 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     }
 
     private fun updatePlaybackState(player: PlayerData?, showPlayersSwitch: Boolean) {
-        mediaSessionHelper.updatePlaybackState(player, showPlayersSwitch)
-        val notification =
-            mediaNotificationManager.createNotification(player)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                MediaNotificationManager.NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-            )
-        } else {
-            startForeground(MediaNotificationManager.NOTIFICATION_ID, notification)
+        scope.launch {
+            val bitmap = player?.player?.currentMedia?.imageUrl?.let {
+                ((ImageLoader(this@MediaPlaybackService)
+                    .execute(
+                        ImageRequest.Builder(this@MediaPlaybackService).data(it).build()
+                    ) as? SuccessResult)?.image as? BitmapImage)?.bitmap
+            }
+            mediaSessionHelper.updatePlaybackState(player, bitmap, showPlayersSwitch)
+            val notification =
+                mediaNotificationManager.createNotification(bitmap)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    MediaNotificationManager.NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                )
+            } else {
+                startForeground(MediaNotificationManager.NOTIFICATION_ID, notification)
+            }
         }
     }
 }
