@@ -121,7 +121,7 @@ fun PlayerCard(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            player.currentMedia?.imageUrl?.let {
+            queue?.currentItem?.image?.path?.let {
                 AsyncImage(
                     modifier = Modifier
                         .padding(top = 4.dp, bottom = 4.dp, start = 4.dp, end = 0.dp)

@@ -10,4 +10,5 @@ sealed class PlayerAction {
     data object VolumeDown : PlayerAction()
     data class ToggleShuffle(val current: Boolean) : PlayerAction()
     data class ToggleRepeatMode(val current: RepeatMode) : PlayerAction()
+    data class SeekTo(val pos: Long) : PlayerAction()
 }

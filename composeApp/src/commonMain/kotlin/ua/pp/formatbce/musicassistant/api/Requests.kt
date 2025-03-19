@@ -88,13 +88,23 @@ fun playerQueueSetShuffleRequest(
         put("shuffle_enabled", JsonPrimitive(enabled))
     })
 
+fun playerQueueSeekRequest(
+    queueId: String,
+    position: Long,
+) = Request(
+    command = "player_queues/seek",
+    args = buildJsonObject {
+        put("queue_id", JsonPrimitive(queueId))
+        put("position", JsonPrimitive(position))
+    })
+
 fun getArtistsRequest(
     favorite: Boolean? = null,
     search: String? = null,
     limit: Int = Int.MAX_VALUE,
     offset: Int = 0,
     orderBy: String? = null,
-    albumArtistsOnly: Boolean = true,
+    albumArtistsOnly: Boolean = false,
 ) = Request(
     command = "music/artists/library_items",
     args = buildJsonObject {
@@ -103,7 +113,7 @@ fun getArtistsRequest(
         put("limit", JsonPrimitive(limit))
         put("offset", JsonPrimitive(offset))
         orderBy?.let { put("order_by", JsonPrimitive(it)) }
-        albumArtistsOnly?.let { put("album_artists_only", JsonPrimitive(it)) }
+        put("album_artists_only", JsonPrimitive(albumArtistsOnly))
     }
 )
 

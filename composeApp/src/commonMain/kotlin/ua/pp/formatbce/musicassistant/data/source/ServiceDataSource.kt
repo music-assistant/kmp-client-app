@@ -19,6 +19,7 @@ import ua.pp.formatbce.musicassistant.api.playerQueueItemsRequest
 import ua.pp.formatbce.musicassistant.api.playerQueueMoveItemRequest
 import ua.pp.formatbce.musicassistant.api.playerQueuePlayIndexRequest
 import ua.pp.formatbce.musicassistant.api.playerQueueRemoveItemRequest
+import ua.pp.formatbce.musicassistant.api.playerQueueSeekRequest
 import ua.pp.formatbce.musicassistant.api.playerQueueSetRepeatModeRequest
 import ua.pp.formatbce.musicassistant.api.playerQueueSetShuffleRequest
 import ua.pp.formatbce.musicassistant.api.simplePlayerRequest
@@ -142,6 +143,15 @@ class ServiceDataSource(
                     )
                 }
 
+                is PlayerAction.SeekTo -> {
+                    apiClient.sendRequest(
+                        playerQueueSeekRequest(
+                            queueId = data.queue?.queueId ?: return@launch,
+                            position = action.pos
+                        )
+                    )
+                }
+
                 is PlayerAction.ToggleRepeatMode -> apiClient.sendRequest(
                     playerQueueSetRepeatModeRequest(
                         queueId = data.queue?.queueId ?: return@launch,
@@ -254,7 +264,13 @@ class ServiceDataSource(
                             }
                         }
 
-                        is QueueTimeUpdatedEvent,
+                        is QueueTimeUpdatedEvent -> {
+                            _queues.update {
+                                _queues.value?.map {
+                                    if (it.queueId == event.objectId) it.copy(elapsedTime = event.data) else it
+                                }
+                            }
+                        }
                         is MediaItemPlayedEvent -> {
                             // do nothing
                         }

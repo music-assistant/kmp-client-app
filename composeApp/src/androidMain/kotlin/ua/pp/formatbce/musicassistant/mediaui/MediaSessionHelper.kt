@@ -29,7 +29,7 @@ class MediaSessionHelper(context: Context, callback: MediaSessionCompat.Callback
         bitmap: Bitmap?,
         showNextPlayerButton: Boolean,
     ) {
-        println("Elapsed: ${playerData?.queue?.elapsedTime?.toLong()} seconds")
+        println("updatePlaybackState")
         val state = if (playerData?.player?.state == PlayerState.PLAYING)
             PlaybackStateCompat.STATE_PLAYING
         else
@@ -37,6 +37,7 @@ class MediaSessionHelper(context: Context, callback: MediaSessionCompat.Callback
         val playbackState = PlaybackStateCompat.Builder()
             .setActions(
                 PlaybackStateCompat.ACTION_PLAY or
+                        PlaybackStateCompat.ACTION_SEEK_TO or
                         PlaybackStateCompat.ACTION_PAUSE or
                         PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
                         PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
@@ -93,9 +94,8 @@ class MediaSessionHelper(context: Context, callback: MediaSessionCompat.Callback
             .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, bitmap)
             .also { builder ->
                 playerData?.queue?.currentItem?.duration?.toLong()?.let {
-                    println("Duration: $it seconds")
                     builder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, it * 1000)
-                } ?: run { println("Duration: unknown") }
+                }
             }
             .build()
 

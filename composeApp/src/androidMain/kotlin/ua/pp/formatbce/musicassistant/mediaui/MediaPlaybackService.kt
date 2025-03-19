@@ -14,9 +14,11 @@ import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -26,6 +28,7 @@ import ua.pp.formatbce.musicassistant.data.source.PlayerData
 import ua.pp.formatbce.musicassistant.data.source.ServiceDataSource
 import ua.pp.formatbce.musicassistant.ui.compose.main.PlayerAction
 
+@OptIn(FlowPreview::class)
 class MediaPlaybackService : MediaBrowserServiceCompat() {
     private val scope = CoroutineScope(Dispatchers.IO)
 
@@ -53,6 +56,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 currentPlayerData,
                 players.map { it.size > 1 }
             ) { player, moreThanOnePlayer -> Pair(player, moreThanOnePlayer) }
+                .debounce(200)
                 .collect { updatePlaybackState(it.first, it.second) }
         }
     }
@@ -78,6 +82,12 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             override fun onSkipToPrevious() {
                 currentPlayerData.value?.let {
                     dataSource.playerAction(it, PlayerAction.Previous)
+                }
+            }
+
+            override fun onSeekTo(pos: Long) {
+                currentPlayerData.value?.let {
+                    dataSource.playerAction(it, PlayerAction.SeekTo(pos / 1000))
                 }
             }
 
@@ -131,7 +141,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     private fun updatePlaybackState(player: PlayerData?, showPlayersSwitch: Boolean) {
         scope.launch {
-            val bitmap = player?.player?.currentMedia?.imageUrl?.let {
+            val bitmap = player?.queue?.currentItem?.image?.path?.let {
                 ((ImageLoader(this@MediaPlaybackService)
                     .execute(
                         ImageRequest.Builder(this@MediaPlaybackService).data(it).build()
