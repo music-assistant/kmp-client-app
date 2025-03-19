@@ -1,6 +1,9 @@
 package ua.pp.formatbce.musicassistant.mediaui
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.Bundle
@@ -24,6 +27,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
+import ua.pp.formatbce.musicassistant.data.model.server.PlayerState
 import ua.pp.formatbce.musicassistant.data.source.PlayerData
 import ua.pp.formatbce.musicassistant.data.source.ServiceDataSource
 import ua.pp.formatbce.musicassistant.ui.compose.main.PlayerAction
@@ -45,6 +49,17 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             players.getOrNull(index) ?: players.getOrNull(0)
         }.stateIn(scope, SharingStarted.Eagerly, null)
 
+    private val dismissReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            println("Notification dismissed!")
+            if (players.value.any { it.player.state == PlayerState.PLAYING }) {
+                updatePlaybackState(currentPlayerData.value, players.value.size > 1)
+            } else {
+                stopSelf()
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         mediaSessionHelper =
@@ -58,6 +73,12 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             ) { player, moreThanOnePlayer -> Pair(player, moreThanOnePlayer) }
                 .debounce(200)
                 .collect { updatePlaybackState(it.first, it.second) }
+        }
+        val filter = IntentFilter(ACTION_NOTIFICATION_DISMISSED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(dismissReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(dismissReceiver, filter)
         }
     }
 
@@ -160,5 +181,10 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 startForeground(MediaNotificationManager.NOTIFICATION_ID, notification)
             }
         }
+    }
+
+    companion object {
+        const val ACTION_NOTIFICATION_DISMISSED =
+            "ua.pp.formatbce.maclient.ACTION_NOTIFICATION_DISMISSED"
     }
 }

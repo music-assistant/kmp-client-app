@@ -7,11 +7,15 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -59,7 +63,6 @@ fun PlayersRow(
     val scrollState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     LazyRow(
-        state = scrollState,
         modifier = modifier.draggable(
             orientation = Orientation.Horizontal,
             state = rememberDraggableState { delta ->
@@ -68,6 +71,8 @@ fun PlayersRow(
                 }
             },
         ),
+        state = scrollState,
+        flingBehavior = rememberSnapFlingBehavior(lazyListState = scrollState),
         contentPadding = PaddingValues(horizontal = 8.dp),
     ) {
         items(items = players) { playerData ->
@@ -91,10 +96,11 @@ fun PlayerCard(
 ) {
     val player = playerData.player
     val queue = playerData.queue
-    Column(
+    Box(
         modifier = modifier
-            .width(260.dp)
             .padding(4.dp)
+            .width(260.dp)
+            .height(120.dp)
             .clip(RoundedCornerShape(size = 16.dp))
             .alpha(if (isSelected) 1f else 0.4f)
             .background(
@@ -103,70 +109,60 @@ fun PlayerCard(
             )
             .clickable(enabled = !isSelected) { onClick() }
     ) {
-        Text(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
-                .basicMarquee(iterations = 100),
-            textAlign = TextAlign.Center,
-            text = player.displayName,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            color = MaterialTheme.colors.onPrimary,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.body1
-        )
-        Row(
-            modifier = Modifier.wrapContentSize(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            queue?.currentItem?.image?.path?.let {
-                AsyncImage(
-                    modifier = Modifier
-                        .padding(top = 4.dp, bottom = 4.dp, start = 4.dp, end = 0.dp)
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(size = 16.dp)),
-                    model = it,
-                    contentDescription = null,
-                    contentScale = ContentScale.FillBounds,
-                )
-            } ?: run {
-                val isAnnouncing = player.currentMedia?.mediaType == MediaType.ANNOUNCEMENT
-                        && player.announcementInProgress == true
-                Icon(
-                    modifier = Modifier
-                        .padding(top = 8.dp, bottom = 8.dp, start = 8.dp, end = 4.dp)
-                        .size(40.dp),
-                    imageVector = if (isAnnouncing)
-                        FontAwesomeIcons.Solid.PhoneVolume
-                    else
-                        FontAwesomeIcons.Solid.PlayCircle,
-                    contentDescription = null,
-                    tint = if (isAnnouncing)
-                        MaterialTheme.colors.error
-                    else
-                        MaterialTheme.colors.onPrimary,
-                )
-            }
-            Text(
+        queue?.currentItem?.image?.path?.let {
+            AsyncImage(
                 modifier = Modifier
-                    .padding(start = 4.dp, end = 4.dp)
                     .fillMaxWidth()
-                    .basicMarquee(iterations = 100),
-                textAlign = TextAlign.Center,
-                text = queue?.currentItem
-                    ?.takeIf { player.state == PlayerState.PLAYING }?.mediaItem?.trackDescription
-                    ?: "idle",
-                maxLines = 1,
-                color = MaterialTheme.colors.onPrimary,
-                fontStyle = FontStyle.Italic,
-                style = MaterialTheme.typography.body2
+                    .alpha(0.3f)
+                    .clip(RoundedCornerShape(size = 16.dp)),
+                model = it,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
             )
         }
-        PlayerControls(
-            playerData = playerData,
-            playerAction = playerAction
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(vertical = 8.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+                    .basicMarquee(iterations = 100),
+                textAlign = TextAlign.Center,
+                text = player.displayName,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colors.onPrimary,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.body1
+            )
+            Row(
+                modifier = Modifier.wrapContentSize(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    modifier = Modifier
+                        .padding(start = 4.dp, end = 4.dp)
+                        .fillMaxWidth()
+                        .basicMarquee(iterations = 100),
+                    textAlign = TextAlign.Center,
+                    text = queue?.currentItem
+                        ?.takeIf { player.state == PlayerState.PLAYING }?.mediaItem?.trackDescription
+                        ?: "idle",
+                    maxLines = 1,
+                    color = MaterialTheme.colors.onPrimary,
+                    fontStyle = FontStyle.Italic,
+                    style = MaterialTheme.typography.body2
+                )
+            }
+            PlayerControls(
+                playerData = playerData,
+                playerAction = playerAction
+            )
+        }
     }
 }

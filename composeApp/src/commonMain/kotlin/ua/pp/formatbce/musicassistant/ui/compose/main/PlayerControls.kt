@@ -9,6 +9,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
 import compose.icons.FontAwesomeIcons
 import compose.icons.TablerIcons
@@ -37,6 +38,7 @@ fun PlayerControls(
 ) {
     val player = playerData.player
     val queue = playerData.queue
+    val buttonsEnabled = queue?.currentItem != null
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -61,6 +63,7 @@ fun PlayerControls(
                     TablerIcons.ArrowsRight,
                 tint = MaterialTheme.colors.onPrimary,
                 size = 18.dp,
+                enabled = buttonsEnabled,
             ) { playerAction(playerData, PlayerAction.ToggleShuffle(current = it.shuffleEnabled)) }
         }
 
@@ -68,6 +71,7 @@ fun PlayerControls(
             icon = FontAwesomeIcons.Solid.FastBackward,
             tint = MaterialTheme.colors.onPrimary,
             size = 18.dp,
+            enabled = buttonsEnabled,
         ) { playerAction(playerData, PlayerAction.Previous) }
 
         ActionIcon(
@@ -77,12 +81,14 @@ fun PlayerControls(
             },
             tint = MaterialTheme.colors.onPrimary,
             size = 24.dp,
+            enabled = buttonsEnabled,
         ) { playerAction(playerData, PlayerAction.TogglePlayPause) }
 
         ActionIcon(
             icon = FontAwesomeIcons.Solid.FastForward,
             tint = MaterialTheme.colors.onPrimary,
             size = 18.dp,
+            enabled = buttonsEnabled,
         ) { playerAction(playerData, PlayerAction.Next) }
 
         queue?.let {
@@ -98,6 +104,7 @@ fun PlayerControls(
                     RepeatMode.ONE -> MaterialTheme.colors.onPrimary
                 },
                 size = 18.dp,
+                enabled = buttonsEnabled,
             ) { playerAction(playerData, PlayerAction.ToggleRepeatMode(current = it.repeatMode)) }
         }
 

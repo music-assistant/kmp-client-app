@@ -10,6 +10,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import ua.pp.formatbce.musicassistant.MainActivity
 import ua.pp.formatbce.musicassistant.R
+import ua.pp.formatbce.musicassistant.mediaui.MediaPlaybackService.Companion.ACTION_NOTIFICATION_DISMISSED
 
 class MediaNotificationManager(
     private val context: Context,
@@ -24,6 +25,13 @@ class MediaNotificationManager(
         val pendingIntent = PendingIntent.getActivity(
             context, 0, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val dismissIntent = Intent(ACTION_NOTIFICATION_DISMISSED).apply {
+            setPackage("ua.pp.formatbce.musicassistant") // Ensures only your app receives it
+        }
+        val dismissPendingIntent = PendingIntent.getBroadcast(
+            context, 0, dismissIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_ma_logo)
@@ -42,6 +50,7 @@ class MediaNotificationManager(
                     builder.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
                 }
             }
+            .setDeleteIntent(dismissPendingIntent)
             .build()
     }
 
