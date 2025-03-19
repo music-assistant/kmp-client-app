@@ -5,7 +5,8 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import ua.pp.formatbce.musicassistant.data.model.server.Player
+import ua.pp.formatbce.musicassistant.R
+import ua.pp.formatbce.musicassistant.data.source.PlayerData
 
 class MediaNotificationManager(
     private val context: Context,
@@ -13,12 +14,12 @@ class MediaNotificationManager(
 ) {
 
     fun createNotification(
-        player: Player?
+        playerData: PlayerData?,
     ): Notification {
         return NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_menu_manage)
-            .setContentTitle(player?.currentMedia?.title?.let { "$it - ${player.currentMedia.artist}" })
-            .setContentText(player?.displayName ?: "Unknown player")
+            .setSmallIcon(R.drawable.baseline_library_music_24)
+            .setContentTitle(playerData?.queue?.currentItem?.mediaItem?.trackDescription ?: "-")
+            .setContentText("MA - " + (playerData?.player?.displayName ?: "no active players"))
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setStyle(
                 androidx.media.app.NotificationCompat.MediaStyle()

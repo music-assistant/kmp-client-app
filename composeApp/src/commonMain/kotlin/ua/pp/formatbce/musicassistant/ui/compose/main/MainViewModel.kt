@@ -2,10 +2,7 @@ package ua.pp.formatbce.musicassistant.ui.compose.main
 
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -16,7 +13,6 @@ import ua.pp.formatbce.musicassistant.data.source.SelectedPlayerData
 import ua.pp.formatbce.musicassistant.data.source.ServiceDataSource
 import ua.pp.formatbce.musicassistant.utils.ConnectionState
 
-@OptIn(FlowPreview::class)
 class MainViewModel(
     private val apiClient: ServiceClient,
     private val dataSource: ServiceDataSource,
@@ -59,16 +55,7 @@ class MainViewModel(
     }
 
     private fun watchPlayersData(): Job = screenModelScope.launch {
-        combine(
-            dataSource.players.filterNotNull().debounce(500L),
-            dataSource.queues.debounce(500L)
-        ) { players, queues ->
-            players.map { player ->
-                PlayerData(
-                    player,
-                    queues?.find { it.queueId == player.currentMedia?.queueId })
-            }
-        }.collect { playerData ->
+        dataSource.playersData.collect { playerData ->
             mutableState.update {
                 State.Data(
                     playerData,

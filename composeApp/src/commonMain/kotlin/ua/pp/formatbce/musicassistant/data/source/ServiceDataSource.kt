@@ -2,11 +2,15 @@ package ua.pp.formatbce.musicassistant.data.source
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ua.pp.formatbce.musicassistant.api.ServiceClient
@@ -33,6 +37,7 @@ import ua.pp.formatbce.musicassistant.ui.compose.main.QueueAction
 import ua.pp.formatbce.musicassistant.utils.ConnectionState
 import kotlin.coroutines.CoroutineContext
 
+@OptIn(FlowPreview::class)
 class ServiceDataSource(
     private val settings: SettingsRepository,
     private val apiClient: ServiceClient
@@ -42,10 +47,18 @@ class ServiceDataSource(
         get() = SupervisorJob() + Dispatchers.IO
 
     private val _players = MutableStateFlow<List<Player>?>(null)
-    val players = _players.asStateFlow()
-
     private val _queues = MutableStateFlow<List<PlayerQueue>?>(null)
-    val queues = _queues.asStateFlow()
+
+    val playersData = combine(
+        _players.filterNotNull().debounce(500L),
+        _queues.debounce(500L)
+    ) { players, queues ->
+        players.map { player ->
+            PlayerData(
+                player,
+                queues?.find { it.queueId == player.currentMedia?.queueId })
+        }
+    }
 
     private val _selectedPlayerData = MutableStateFlow<SelectedPlayerData?>(null)
     val selectedPlayerData = _selectedPlayerData.asStateFlow()

@@ -7,14 +7,13 @@ import android.os.Bundle
 import android.os.IBinder
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaSessionCompat
-import android.support.v4.media.session.PlaybackStateCompat.RepeatMode
-import android.support.v4.media.session.PlaybackStateCompat.ShuffleMode
 import androidx.media.MediaBrowserServiceCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
-import ua.pp.formatbce.musicassistant.data.model.server.Player
 import ua.pp.formatbce.musicassistant.data.source.PlayerData
 import ua.pp.formatbce.musicassistant.data.source.ServiceDataSource
 import ua.pp.formatbce.musicassistant.ui.compose.main.PlayerAction
@@ -26,7 +25,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     private lateinit var mediaNotificationManager: MediaNotificationManager
 
     private val dataSource: ServiceDataSource by inject()
-    private val players = mutableListOf<Player>()
+    private val players = mutableListOf<PlayerData>()
     private var activePlayerIndex = 0
 
     override fun onCreate() {
@@ -36,15 +35,18 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         mediaNotificationManager = MediaNotificationManager(this, mediaSessionHelper)
         sessionToken = mediaSessionHelper.getSessionToken()
         scope.launch {
-            dataSource.players.collect {
-                players.clear()
-                it?.let { players.addAll(it) }
-                updatePlaybackState()
-            }
+            dataSource.playersData
+                .map { list -> list.filter { it.queue?.currentItem != null } }
+                .filter { list -> list.isNotEmpty() }
+                .collect {
+                    players.clear()
+                    players.addAll(it)
+                    updatePlaybackState()
+                }
         }
     }
 
-    private val activePlayer: Player?
+    private val activePlayer: PlayerData?
         get() {
             if (activePlayerIndex >= players.size) {
                 activePlayerIndex = 0
@@ -56,43 +58,46 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         object : MediaSessionCompat.Callback() {
             override fun onPlay() {
                 activePlayer?.let {
-                    dataSource.playerAction(
-                        PlayerData(it),
-                        PlayerAction.TogglePlayPause
-                    )
+                    dataSource.playerAction(it, PlayerAction.TogglePlayPause)
                 }
             }
 
             override fun onPause() {
                 activePlayer?.let {
-                    dataSource.playerAction(
-                        PlayerData(it),
-                        PlayerAction.TogglePlayPause
-                    )
+                    dataSource.playerAction(it, PlayerAction.TogglePlayPause)
                 }
             }
 
             override fun onSkipToNext() {
-                activePlayer?.let { dataSource.playerAction(PlayerData(it), PlayerAction.Next) }
+                activePlayer?.let { dataSource.playerAction(it, PlayerAction.Next) }
             }
 
             override fun onSkipToPrevious() {
-                activePlayer?.let { dataSource.playerAction(PlayerData(it), PlayerAction.Previous) }
-            }
-
-            override fun onSetRepeatMode(@RepeatMode repeatMode: Int) {
-                //println("media session onSetRepeatMode $repeatMode")
-            }
-
-            override fun onSetShuffleMode(@ShuffleMode shuffleMode: Int) {
-                //println("media session onSetShuffleMode $shuffleMode")
+                activePlayer?.let {
+                    dataSource.playerAction(it, PlayerAction.Previous)
+                }
             }
 
             override fun onCustomAction(action: String, extras: Bundle?) {
                 when (action) {
                     "ACTION_SWITCH_PLAYER" -> switchPlayer()
-                    "ACTION_TOGGLE_SHUFFLE" -> println("ACTION_TOGGLE_SHUFFLE")
-                    "ACTION_TOGGLE_REPEAT" -> println("ACTION_TOGGLE_REPEAT")
+                    "ACTION_TOGGLE_SHUFFLE" -> activePlayer?.let { playerData ->
+                        playerData.queue?.let {
+                            dataSource.playerAction(
+                                playerData,
+                                PlayerAction.ToggleShuffle(current = it.shuffleEnabled)
+                            )
+                        }
+                    }
+
+                    "ACTION_TOGGLE_REPEAT" -> activePlayer?.let { playerData ->
+                        playerData.queue?.let {
+                            dataSource.playerAction(
+                                playerData,
+                                PlayerAction.ToggleRepeatMode(current = it.repeatMode)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -106,6 +111,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     }
 
     override fun onGetRoot(p0: String, p1: Int, p2: Bundle?): BrowserRoot? = null
+
     override fun onLoadChildren(
         parentId: String,
         result: Result<MutableList<MediaBrowserCompat.MediaItem>>
@@ -113,7 +119,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     }
 
     private fun updatePlaybackState() {
-        mediaSessionHelper.updatePlaybackState(activePlayer)
+        mediaSessionHelper.updatePlaybackState(activePlayer, players.size > 1)
         updateNotification()
     }
 
@@ -123,7 +129,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     }
 
     private fun updateNotification() {
-        val notification = mediaNotificationManager.createNotification(activePlayer)
+        val notification =
+            mediaNotificationManager.createNotification(activePlayer)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 MediaNotificationManager.NOTIFICATION_ID,
