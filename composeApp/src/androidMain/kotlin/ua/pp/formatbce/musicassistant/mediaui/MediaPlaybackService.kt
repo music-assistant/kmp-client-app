@@ -1,5 +1,6 @@
 package ua.pp.formatbce.musicassistant.mediaui
 
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -49,17 +50,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             players.getOrNull(index) ?: players.getOrNull(0)
         }.stateIn(scope, SharingStarted.Eagerly, null)
 
-    private val dismissReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            println("Notification dismissed!")
-            if (players.value.any { it.player.state == PlayerState.PLAYING }) {
-                updatePlaybackState(currentPlayerData.value, players.value.size > 1)
-            } else {
-                stopSelf()
-            }
-        }
-    }
-
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate() {
         super.onCreate()
         mediaSessionHelper =
@@ -74,11 +65,25 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 .debounce(200)
                 .collect { updatePlaybackState(it.first, it.second) }
         }
+        registerNotificationDismissReceiver()
+    }
+
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    private fun registerNotificationDismissReceiver() {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (players.value.any { it.player.state == PlayerState.PLAYING }) {
+                    updatePlaybackState(currentPlayerData.value, players.value.size > 1)
+                } else {
+                    stopSelf()
+                }
+            }
+        }
         val filter = IntentFilter(ACTION_NOTIFICATION_DISMISSED)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(dismissReceiver, filter, RECEIVER_NOT_EXPORTED)
+            registerReceiver(receiver, filter, RECEIVER_NOT_EXPORTED)
         } else {
-            registerReceiver(dismissReceiver, filter)
+            registerReceiver(receiver, filter)
         }
     }
 
