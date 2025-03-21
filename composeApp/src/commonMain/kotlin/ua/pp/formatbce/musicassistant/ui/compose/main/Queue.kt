@@ -61,6 +61,7 @@ fun Queue(
     playerData: PlayerData,
     items: List<QueueItem>,
     chosenItemsIds: Set<String>?,
+    enabled: Boolean,
     queueAction: (QueueAction) -> Unit,
     onItemChosenChanged: (String) -> Unit,
     onChosenItemsClear: () -> Unit
@@ -94,7 +95,8 @@ fun Queue(
         modifier = Modifier
             .fillMaxWidth()
             .height(44.dp)
-            .padding(4.dp),
+            .padding(4.dp)
+            .alpha(if (enabled) 1f else 0.5f),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -102,6 +104,7 @@ fun Queue(
         val chosenItems = items.filter { chosenItemsIds.contains(it.queueItemId) }
         QueueTrackControls(
             chosenItems = chosenItems,
+            enabled = enabled,
             queueAction = { queueAction(it) },
             onChosenItemsClear = onChosenItemsClear
         )
@@ -118,7 +121,7 @@ fun Queue(
                 Icon(
                     modifier = Modifier
                         .padding(start = 14.dp)
-                        .clickable { queueAction(QueueAction.ClearQueue(it.queueId)) }
+                        .clickable(enabled = enabled) { queueAction(QueueAction.ClearQueue(it.queueId)) }
                         .size(24.dp)
                         .padding(all = 2.dp)
                         .align(alignment = Alignment.CenterVertically),
@@ -141,7 +144,8 @@ fun Queue(
                         listState.scrollBy(-delta)
                     }
                 },
-            ),
+            )
+            .alpha(if (enabled) 1f else 0.5f),
         state = listState,
     ) {
         itemsIndexed(items = internalItems, key = { _, item -> item.queueItemId }) { index, item ->
@@ -150,7 +154,8 @@ fun Queue(
             val isPlayed = index < currentIndex
             ReorderableItem(
                 state = reorderableLazyListState,
-                key = item.queueItemId
+                key = item.queueItemId,
+                enabled = enabled,
             ) {
                 Row(
                     modifier = Modifier
@@ -165,6 +170,7 @@ fun Queue(
                             }
                         )
                         .combinedClickable(
+                            enabled = enabled,
                             onClick = {
                                 if (isInChooseMode) {
                                     onItemChosenChanged(item.queueItemId)

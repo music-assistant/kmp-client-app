@@ -12,42 +12,32 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Icon
+import androidx.compose.material.LinearProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import compose.icons.FontAwesomeIcons
-import compose.icons.fontawesomeicons.Solid
-import compose.icons.fontawesomeicons.solid.PhoneVolume
-import compose.icons.fontawesomeicons.solid.PlayCircle
 import kotlinx.coroutines.launch
-import ua.pp.formatbce.musicassistant.data.model.server.MediaType
 import ua.pp.formatbce.musicassistant.data.model.server.Player
-import ua.pp.formatbce.musicassistant.data.model.server.PlayerState
 import ua.pp.formatbce.musicassistant.data.source.PlayerData
 
 @Composable
@@ -96,11 +86,13 @@ fun PlayerCard(
 ) {
     val player = playerData.player
     val queue = playerData.queue
+    val currentProgress = queue?.currentItem?.duration
+        ?.let { (queue.elapsedTime?.toFloat() ?: 0f) / it.toFloat() }
     Box(
         modifier = modifier
             .padding(4.dp)
-            .width(260.dp)
-            .height(120.dp)
+            .width(320.dp)
+            .height(180.dp)
             .clip(RoundedCornerShape(size = 16.dp))
             .alpha(if (isSelected) 1f else 0.4f)
             .background(
@@ -123,13 +115,12 @@ fun PlayerCard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(vertical = 8.dp),
+                .padding(vertical = 8.dp, horizontal = 8.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp)
                     .basicMarquee(iterations = 100),
                 textAlign = TextAlign.Center,
                 text = player.displayName,
@@ -137,31 +128,31 @@ fun PlayerCard(
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colors.onPrimary,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.body1
+                style = MaterialTheme.typography.h6
             )
-            Row(
-                modifier = Modifier.wrapContentSize(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    modifier = Modifier
-                        .padding(start = 4.dp, end = 4.dp)
-                        .fillMaxWidth()
-                        .basicMarquee(iterations = 100),
-                    textAlign = TextAlign.Center,
-                    text = queue?.currentItem
-                        ?.takeIf { player.state == PlayerState.PLAYING }?.mediaItem?.trackDescription
-                        ?: "idle",
-                    maxLines = 1,
-                    color = MaterialTheme.colors.onPrimary,
-                    fontStyle = FontStyle.Italic,
-                    style = MaterialTheme.typography.body2
-                )
-            }
+            Text(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .basicMarquee(iterations = 100),
+                textAlign = TextAlign.Center,
+                text =
+                if (player.announcementInProgress == true) "ANNOUNCING"
+                else queue?.currentItem?.mediaItem?.trackDescription ?: "idle",
+                maxLines = 1,
+                color = MaterialTheme.colors.onPrimary,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.body2
+            )
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth().alpha(if (currentProgress == null) 0f else 1f),
+                progress = currentProgress ?: 0f,
+                color = MaterialTheme.colors.onPrimary,
+                strokeCap = StrokeCap.Round
+            )
             PlayerControls(
                 playerData = playerData,
-                playerAction = playerAction
+                playerAction = playerAction,
+                enabled = player.announcementInProgress != true
             )
         }
     }

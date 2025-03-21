@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -88,36 +87,12 @@ class MainScreen : Screen {
                 horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(all = 16.dp).fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = when (state.value) {
-                            is MainViewModel.State.Data -> "Connected to server"
-                            MainViewModel.State.Disconnected -> "Disconnected"
-                            MainViewModel.State.Loading -> "Loading"
-                            MainViewModel.State.NoServer -> "Please setup server connection"
-                        },
-                        style = MaterialTheme.typography.body1,
-                        color = MaterialTheme.colors.onBackground,
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Icon(
-                        modifier = Modifier
-                            .clickable { navigator.push(SettingsScreen()) }
-                            .size(24.dp)
-                            .align(alignment = Alignment.CenterVertically),
-                        imageVector = FontAwesomeIcons.Solid.Cog,
-                        contentDescription = null,
-                        tint = MaterialTheme.colors.secondary,
-                    )
-                }
                 val value = state.value
                 if (value is MainViewModel.State.Data) {
                     val playersData = value.playerData
                     val selectedPlayerData = value.selectedPlayerData
                     PlayersRow(
+                        modifier = Modifier.padding(top = 8.dp),
                         players = playersData,
                         selectedPlayerId = selectedPlayerData?.playerId,
                         playerAction = { playerData, action ->
@@ -129,7 +104,7 @@ class MainScreen : Screen {
                         .firstOrNull { it.player.playerId == selectedPlayerData?.playerId }
                         ?.let { playerData ->
                             PlayerDetails(
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier.fillMaxWidth().weight(1f),
                                 nestedScrollConnection = nestedScrollConnection,
                                 playerData = playerData,
                                 queueItems = selectedPlayerData?.queueItems,
@@ -145,6 +120,32 @@ class MainScreen : Screen {
                                 onChosenItemsClear = { viewModel.onChosenItemsClear() }
                             )
                         }
+                }
+
+                Row(
+                    modifier = Modifier.padding(vertical = 8.dp).fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .clickable { navigator.push(SettingsScreen()) }
+                            .size(24.dp)
+                            .align(alignment = Alignment.CenterVertically),
+                        imageVector = FontAwesomeIcons.Solid.Cog,
+                        contentDescription = null,
+                        tint = MaterialTheme.colors.secondary,
+                    )
+                    Text(
+                        text = when (state.value) {
+                            is MainViewModel.State.Data -> "Connected to server"
+                            MainViewModel.State.Disconnected -> "Disconnected"
+                            MainViewModel.State.Loading -> "Loading"
+                            MainViewModel.State.NoServer -> "Please setup server connection"
+                        },
+                        style = MaterialTheme.typography.body1,
+                        color = MaterialTheme.colors.onBackground,
+                    )
                 }
             }
         }

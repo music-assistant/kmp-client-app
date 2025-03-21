@@ -34,6 +34,7 @@ fun PlayerDetails(
                 playerData = playerData,
                 items = items,
                 chosenItemsIds = chosenItemsIds,
+                enabled = playerData.player.announcementInProgress != true,
                 queueAction = queueAction,
                 onItemChosenChanged = onItemChosenChanged,
                 onChosenItemsClear = onChosenItemsClear,

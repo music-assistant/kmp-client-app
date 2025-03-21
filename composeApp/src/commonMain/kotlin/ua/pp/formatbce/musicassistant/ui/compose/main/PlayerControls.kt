@@ -3,13 +3,11 @@ package ua.pp.formatbce.musicassistant.ui.compose.main
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
 import compose.icons.FontAwesomeIcons
 import compose.icons.TablerIcons
@@ -34,6 +32,7 @@ import ua.pp.formatbce.musicassistant.ui.compose.common.ActionIcon
 fun PlayerControls(
     modifier: Modifier = Modifier,
     playerData: PlayerData,
+    enabled: Boolean,
     playerAction: (PlayerData, PlayerAction) -> Unit
 ) {
     val player = playerData.player
@@ -41,9 +40,8 @@ fun PlayerControls(
     val buttonsEnabled = queue?.currentItem != null
     Row(
         modifier = modifier
-            .fillMaxWidth()
-            .height(44.dp)
-            .padding(4.dp),
+            .padding(4.dp)
+            .fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -52,6 +50,7 @@ fun PlayerControls(
                 icon = FontAwesomeIcons.Solid.VolumeDown,
                 tint = MaterialTheme.colors.onPrimary,
                 size = 20.dp,
+                enabled = enabled,
             ) { playerAction(playerData, PlayerAction.VolumeDown) }
         }
 
@@ -63,7 +62,7 @@ fun PlayerControls(
                     TablerIcons.ArrowsRight,
                 tint = MaterialTheme.colors.onPrimary,
                 size = 18.dp,
-                enabled = buttonsEnabled,
+                enabled = enabled && buttonsEnabled,
             ) { playerAction(playerData, PlayerAction.ToggleShuffle(current = it.shuffleEnabled)) }
         }
 
@@ -71,7 +70,7 @@ fun PlayerControls(
             icon = FontAwesomeIcons.Solid.FastBackward,
             tint = MaterialTheme.colors.onPrimary,
             size = 18.dp,
-            enabled = buttonsEnabled,
+            enabled = enabled && buttonsEnabled,
         ) { playerAction(playerData, PlayerAction.Previous) }
 
         ActionIcon(
@@ -81,14 +80,14 @@ fun PlayerControls(
             },
             tint = MaterialTheme.colors.onPrimary,
             size = 24.dp,
-            enabled = buttonsEnabled,
+            enabled = enabled && buttonsEnabled,
         ) { playerAction(playerData, PlayerAction.TogglePlayPause) }
 
         ActionIcon(
             icon = FontAwesomeIcons.Solid.FastForward,
             tint = MaterialTheme.colors.onPrimary,
             size = 18.dp,
-            enabled = buttonsEnabled,
+            enabled = enabled && buttonsEnabled,
         ) { playerAction(playerData, PlayerAction.Next) }
 
         queue?.let {
@@ -104,7 +103,7 @@ fun PlayerControls(
                     RepeatMode.ONE -> MaterialTheme.colors.onPrimary
                 },
                 size = 18.dp,
-                enabled = buttonsEnabled,
+                enabled = enabled && buttonsEnabled,
             ) { playerAction(playerData, PlayerAction.ToggleRepeatMode(current = it.repeatMode)) }
         }
 
@@ -113,6 +112,7 @@ fun PlayerControls(
                 icon = FontAwesomeIcons.Solid.VolumeUp,
                 tint = MaterialTheme.colors.onPrimary,
                 size = 18.dp,
+                enabled = enabled,
             ) { playerAction(playerData, PlayerAction.VolumeUp) }
         }
     }
