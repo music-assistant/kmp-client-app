@@ -5,9 +5,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
@@ -60,12 +63,20 @@ class SettingsScreen : Screen {
             }
         }
         Scaffold(
-            topBar = {
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        ) { scaffoldPadding ->
+            Column(
+                modifier = Modifier
+                    .background(color = MaterialTheme.colors.background)
+                    .fillMaxSize()
+                    .padding(scaffoldPadding)
+                    .consumeWindowInsets(scaffoldPadding)
+                    .systemBarsPadding(),
+            ) {
                 Row(
                     modifier = Modifier
-                        .background(color = MaterialTheme.colors.background)
                         .fillMaxWidth()
-                        .padding(all = 16.dp),
+                        .padding(horizontal = 16.dp),
                 ) {
                     if (connectionState.value is ConnectionState.Connected) {
                         ActionIcon(
@@ -80,25 +91,22 @@ class SettingsScreen : Screen {
                     }
                 }
             }
-        ) {
             Column(
-                modifier = Modifier
-                    .background(color = MaterialTheme.colors.background)
-                    .fillMaxSize()
-                    .padding(all = 16.dp),
+                modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 var ipAddress by remember { mutableStateOf("") }
                 var port by remember { mutableStateOf("8095") }
-                val inputFieldsEnabled = connectionState.value is ConnectionState.Disconnected
+                val inputFieldsEnabled =
+                    connectionState.value is ConnectionState.Disconnected
+                            || connectionState.value is ConnectionState.NoServer
                 LaunchedEffect(connectionInfo.value) {
                     connectionInfo.value?.let {
                         ipAddress = it.host
                         port = it.port.toString()
                     }
                 }
-
                 Text(
                     modifier = Modifier.padding(bottom = 24.dp),
                     text = "Server settings",
@@ -110,19 +118,21 @@ class SettingsScreen : Screen {
                     modifier = Modifier.padding(bottom = 24.dp),
                     text = when (val state = connectionState.value) {
                         is ConnectionState.Connected -> {
-                            "Connected to ${state.info.host}:${state.info.port}." +
-                                    (serverInfo.value?.let { "\nServer version ${it.serverVersion}, schema ${it.schemaVersion}." }
+                            "Connected to ${state.info.host}:${state.info.port}" +
+                                    (serverInfo.value?.let { "\nServer version ${it.serverVersion}, schema ${it.schemaVersion}" }
                                         ?: "")
                         }
 
                         ConnectionState.Connecting -> "Connecting to $ipAddress:$port."
-                        is ConnectionState.Disconnected -> "Disconnected${state.exception?.message?.let { ": $it" } ?: ""}."
+                        is ConnectionState.Disconnected -> "Disconnected${state.exception?.message?.let { ": $it" } ?: ""}"
                         ConnectionState.NoServer -> "Please provide server address and port."
                         null -> ""
                     },
                     color = MaterialTheme.colors.onBackground,
                     style = MaterialTheme.typography.h5,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    minLines = 2,
+                    maxLines = 2,
                 )
                 TextField(
                     modifier = Modifier.padding(bottom = 16.dp),

@@ -53,7 +53,11 @@ class ServiceClient(private val settings: SettingsRepository) {
     private val _serverInfoFlow = MutableStateFlow<ServerInfo?>(null)
     val serverInfo: Flow<ServerInfo> = _serverInfoFlow.filterNotNull()
 
-    fun connect(connection: ConnectionInfo) {
+    fun connect(connection: ConnectionInfo?) {
+        if (connection == null) {
+            _connectionStateFlow.update { ConnectionState.NoServer }
+            return
+        }
         if (isConnecting) return
         isConnecting = true
         CoroutineScope(Dispatchers.IO).launch {

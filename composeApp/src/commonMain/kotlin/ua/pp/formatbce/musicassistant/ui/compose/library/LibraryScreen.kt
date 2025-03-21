@@ -11,11 +11,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -48,16 +51,19 @@ import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import cafe.adriel.voyager.core.annotation.InternalVoyagerApi
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import cafe.adriel.voyager.navigator.internal.BackHandler
 import compose.icons.FontAwesomeIcons
 import compose.icons.TablerIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.ArrowLeft
 import compose.icons.fontawesomeicons.solid.ArrowUp
+import compose.icons.tablericons.CircleDashed
 import compose.icons.tablericons.FileMusic
 import compose.icons.tablericons.Folder
 import compose.icons.tablericons.List
@@ -71,6 +77,7 @@ import compose.icons.tablericons.Square
 import compose.icons.tablericons.SquareCheck
 import kotlinx.coroutines.launch
 import ua.pp.formatbce.musicassistant.data.model.local.MediaItem
+import ua.pp.formatbce.musicassistant.data.model.server.MediaType
 import ua.pp.formatbce.musicassistant.data.model.server.QueueOption
 import ua.pp.formatbce.musicassistant.data.source.PlayerData
 import ua.pp.formatbce.musicassistant.ui.compose.common.ActionIcon
@@ -78,17 +85,33 @@ import ua.pp.formatbce.musicassistant.ui.compose.common.Fab
 
 data class LibraryScreen(val playerData: PlayerData) : Screen {
 
+    @OptIn(InternalVoyagerApi::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val viewModel = koinScreenModel<LibraryViewModel>()
         val state = viewModel.state.collectAsStateWithLifecycle()
+        val selectedList = state.value.libraryLists.firstOrNull { it.isSelected }
+        BackHandler(enabled = true) {
+            selectedList?.let {
+                if (it.parentItems.isNotEmpty()) {
+                    viewModel.onUpClick(it.tab)
+                    return@BackHandler
+                } else if (state.value.checkedItems.isNotEmpty()) {
+                    viewModel.clearCheckedItems()
+                    return@BackHandler
+                }
+            }
+            navigator.pop()
+        }
         Library(
             state = state.value,
+            selectedList = selectedList,
             navigator = navigator,
             onListSelected = viewModel::onTabSelected,
             onItemClicked = viewModel::onItemClicked,
             onCheckChanged = viewModel::onItemCheckChanged,
+            onCheckedItemsClear = viewModel::clearCheckedItems,
             onUpClick = viewModel::onUpClick,
             onShowAlbumsChange = viewModel::onShowAlbumsChange,
             onPlaySelectedItems = { option ->
@@ -102,15 +125,16 @@ data class LibraryScreen(val playerData: PlayerData) : Screen {
     private fun Library(
         modifier: Modifier = Modifier,
         state: LibraryViewModel.State,
+        selectedList: LibraryViewModel.LibraryList?,
         navigator: Navigator,
         onListSelected: (LibraryViewModel.LibraryTab) -> Unit,
         onItemClicked: (LibraryViewModel.LibraryTab, MediaItem) -> Unit,
         onCheckChanged: (MediaItem) -> Unit,
+        onCheckedItemsClear: () -> Unit,
         onUpClick: (LibraryViewModel.LibraryTab) -> Unit,
         onShowAlbumsChange: (Boolean) -> Unit,
         onPlaySelectedItems: (QueueOption) -> Unit,
     ) {
-        val selectedList = state.libraryLists.firstOrNull { it.isSelected }
         val isFabVisible = rememberSaveable { mutableStateOf(true) }
         val nestedScrollConnection = remember {
             object : NestedScrollConnection {
@@ -118,7 +142,7 @@ data class LibraryScreen(val playerData: PlayerData) : Screen {
                     available: Offset,
                     source: NestedScrollSource
                 ): Offset {
-                    if (available.y < -1) {
+                    if (available.y < -1 && selectedList?.parentItems?.lastOrNull()?.mediaType == MediaType.ARTIST) {
                         isFabVisible.value = false
                     } else if (available.y > 1) {
                         isFabVisible.value = true
@@ -128,10 +152,31 @@ data class LibraryScreen(val playerData: PlayerData) : Screen {
             }
         }
         Scaffold(
-            topBar = {
+            floatingActionButton = {
+                if (
+                    selectedList?.tab == LibraryViewModel.LibraryTab.Artists
+                    && selectedList.listState is LibraryViewModel.ListState.Data
+                    && selectedList.parentItems.lastOrNull()?.mediaType == MediaType.ARTIST
+                ) {
+                    Fab(
+                        isVisible = isFabVisible.value,
+                        text = if (state.showAlbums) "Tracks" else "Albums",
+                        onClick = { onShowAlbumsChange(!state.showAlbums) })
+                }
+            },
+            floatingActionButtonPosition = FabPosition.End,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        ) { scaffoldPadding ->
+            Column(
+                modifier = modifier
+                    .background(color = MaterialTheme.colors.background)
+                    .fillMaxSize()
+                    .padding(scaffoldPadding)
+                    .consumeWindowInsets(scaffoldPadding)
+                    .systemBarsPadding()
+            ) {
                 Row(
                     modifier = Modifier
-                        .background(color = MaterialTheme.colors.background)
                         .height(56.dp)
                         .fillMaxWidth()
                         .padding(all = 16.dp),
@@ -161,8 +206,13 @@ data class LibraryScreen(val playerData: PlayerData) : Screen {
                             pair.takeIf { pair.second > 0 }
                                 ?.let { "${it.second} ${it.first}${if (it.second > 1) "s" else ""}" }
                         }.joinToString(separator = ", ").capitalize(Locale.current)
+                        ActionIcon(
+                            icon = TablerIcons.CircleDashed,
+                            size = 24.dp,
+                        ) { onCheckedItemsClear() }
                         Text(
-                            modifier = Modifier.padding(start = 16.dp).weight(1f).basicMarquee(iterations = 100),
+                            modifier = Modifier.padding(start = 8.dp).weight(1f)
+                                .basicMarquee(iterations = 100),
                             text = "$chosenItemsDescription, player: ${playerData.player.displayName}",
                         )
                         ActionIcon(
@@ -183,22 +233,6 @@ data class LibraryScreen(val playerData: PlayerData) : Screen {
                         ) { onPlaySelectedItems(QueueOption.REPLACE) }
                     }
                 }
-            },
-            floatingActionButton = {
-                if (selectedList?.tab == LibraryViewModel.LibraryTab.Artists) {
-                    Fab(
-                        isVisible = isFabVisible.value,
-                        text = if (state.showAlbums) "Tracks" else "Albums",
-                        onClick = { onShowAlbumsChange(!state.showAlbums) })
-                }
-            },
-            floatingActionButtonPosition = FabPosition.End,
-        ) {
-            Column(
-                modifier = modifier
-                    .background(color = MaterialTheme.colors.background)
-                    .fillMaxSize()
-            ) {
                 TabRow(selectedTabIndex = state.libraryLists.indexOf(selectedList)) {
                     state.libraryLists.forEach { list ->
                         Tab(

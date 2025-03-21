@@ -91,18 +91,17 @@ class ServiceDataSource(
                         watchJob = null
                     }
 
-                    is ConnectionState.Disconnected,
-                    ConnectionState.NoServer -> {
+                    is ConnectionState.Disconnected -> {
                         _players.update { null }
                         _queues.update { null }
                         watchJob?.cancel()
                         watchJob = null
-                        if (it is ConnectionState.Disconnected && it.exception == null) {
-                            settings.connectionInfo.value?.let { connection ->
-                                apiClient.connect(connection)
-                            }
+                        if (it.exception == null) {
+                            apiClient.connect(settings.connectionInfo.value)
                         }
                     }
+
+                    ConnectionState.NoServer -> Unit
                 }
             }
         }

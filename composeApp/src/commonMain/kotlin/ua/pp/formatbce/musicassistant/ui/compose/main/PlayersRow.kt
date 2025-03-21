@@ -144,7 +144,7 @@ fun PlayerCard(
                 style = MaterialTheme.typography.body2
             )
             LinearProgressIndicator(
-                modifier = Modifier.fillMaxWidth().alpha(if (currentProgress == null) 0f else 1f),
+                modifier = Modifier.fillMaxWidth(),
                 progress = currentProgress ?: 0f,
                 color = MaterialTheme.colors.onPrimary,
                 strokeCap = StrokeCap.Round

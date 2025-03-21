@@ -3,18 +3,22 @@ package ua.pp.formatbce.musicassistant.ui.compose.main
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material.FabPosition
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -28,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
@@ -75,79 +80,127 @@ class MainScreen : Screen {
                         })
                 }
             },
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             floatingActionButtonPosition = FabPosition.End,
-        ) {
-            if (state.value is MainViewModel.State.NoServer) {
-                navigator.push(SettingsScreen())
+        ) { scaffoldPadding ->
+            val stateValue = state.value
+            LaunchedEffect(state.value) {
+                if (state.value is MainViewModel.State.NoServer) {
+                    navigator.push(SettingsScreen())
+                }
             }
-            Column(
-                Modifier
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(scaffoldPadding)
+                    .consumeWindowInsets(scaffoldPadding)
+                    .systemBarsPadding()
                     .background(color = MaterialTheme.colors.background)
-                    .fillMaxSize(),
-                horizontalAlignment = Alignment.Start,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val value = state.value
-                if (value is MainViewModel.State.Data) {
-                    val playersData = value.playerData
-                    val selectedPlayerData = value.selectedPlayerData
-                    PlayersRow(
-                        modifier = Modifier.padding(top = 8.dp),
-                        players = playersData,
-                        selectedPlayerId = selectedPlayerData?.playerId,
-                        playerAction = { playerData, action ->
-                            viewModel.playerAction(playerData, action)
-                        },
-                    ) { viewModel.selectPlayer(it) }
-
-                    playersData
-                        .firstOrNull { it.player.playerId == selectedPlayerData?.playerId }
-                        ?.let { playerData ->
-                            PlayerDetails(
-                                modifier = Modifier.fillMaxWidth().weight(1f),
-                                nestedScrollConnection = nestedScrollConnection,
-                                playerData = playerData,
-                                queueItems = selectedPlayerData?.queueItems,
-                                chosenItemsIds = selectedPlayerData?.chosenItemsIds,
-                                queueAction = { action ->
-                                    viewModel.queueAction(action)
-                                },
-                                onItemChosenChanged = { id ->
-                                    viewModel.onItemChosenChanged(
-                                        id
-                                    )
-                                },
-                                onChosenItemsClear = { viewModel.onChosenItemsClear() }
-                            )
-                        }
-                }
-
-                Row(
-                    modifier = Modifier.padding(vertical = 8.dp).fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp)
-                            .clickable { navigator.push(SettingsScreen()) }
-                            .size(24.dp)
-                            .align(alignment = Alignment.CenterVertically),
-                        imageVector = FontAwesomeIcons.Solid.Cog,
-                        contentDescription = null,
-                        tint = MaterialTheme.colors.secondary,
+                when (stateValue) {
+                    MainViewModel.State.Disconnected,
+                    MainViewModel.State.Loading,
+                    MainViewModel.State.NoServer -> ServiceLayout(
+                        stateValue = stateValue,
+                        navigator = navigator
                     )
-                    Text(
-                        text = when (state.value) {
-                            is MainViewModel.State.Data -> "Connected to server"
-                            MainViewModel.State.Disconnected -> "Disconnected"
-                            MainViewModel.State.Loading -> "Loading"
-                            MainViewModel.State.NoServer -> "Please setup server connection"
-                        },
-                        style = MaterialTheme.typography.body1,
-                        color = MaterialTheme.colors.onBackground,
+
+                    is MainViewModel.State.Data -> DataLayout(
+                        state = stateValue,
+                        nestedScrollConnection = nestedScrollConnection,
+                        viewModel = viewModel,
+                        navigator = navigator
                     )
                 }
             }
+        }
+    }
+
+    @Composable
+    private fun ServiceLayout(
+        stateValue: MainViewModel.State,
+        navigator: Navigator
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = when (stateValue) {
+                    is MainViewModel.State.Data -> "Connected to server"
+                    MainViewModel.State.Disconnected -> "Disconnected"
+                    MainViewModel.State.Loading -> "Loading"
+                    MainViewModel.State.NoServer -> "Please setup server connection"
+                },
+                style = MaterialTheme.typography.h5,
+                color = MaterialTheme.colors.onBackground,
+            )
+            Icon(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .clickable { navigator.push(SettingsScreen()) }
+                    .size(48.dp),
+                imageVector = FontAwesomeIcons.Solid.Cog,
+                contentDescription = null,
+                tint = MaterialTheme.colors.secondary,
+            )
+        }
+    }
+
+
+    @Composable
+    private fun DataLayout(
+        state: MainViewModel.State.Data,
+        nestedScrollConnection: NestedScrollConnection,
+        viewModel: MainViewModel,
+        navigator: Navigator
+    ) {
+        Column(
+            Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.Start,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val playersData = state.playerData
+            val selectedPlayerData = state.selectedPlayerData
+            PlayersRow(
+                modifier = Modifier.padding(top = 8.dp),
+                players = playersData,
+                selectedPlayerId = selectedPlayerData?.playerId,
+                playerAction = { playerData, action ->
+                    viewModel.playerAction(playerData, action)
+                },
+            ) { viewModel.selectPlayer(it) }
+
+            playersData
+                .firstOrNull { it.player.playerId == selectedPlayerData?.playerId }
+                ?.let { playerData ->
+                    PlayerDetails(
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        nestedScrollConnection = nestedScrollConnection,
+                        playerData = playerData,
+                        queueItems = selectedPlayerData?.queueItems,
+                        chosenItemsIds = selectedPlayerData?.chosenItemsIds,
+                        queueAction = { action ->
+                            viewModel.queueAction(action)
+                        },
+                        onItemChosenChanged = { id ->
+                            viewModel.onItemChosenChanged(
+                                id
+                            )
+                        },
+                        onChosenItemsClear = { viewModel.onChosenItemsClear() }
+                    )
+                }
+            Icon(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .clickable { navigator.push(SettingsScreen()) }
+                    .size(24.dp),
+                imageVector = FontAwesomeIcons.Solid.Cog,
+                contentDescription = null,
+                tint = MaterialTheme.colors.secondary,
+            )
         }
     }
 }

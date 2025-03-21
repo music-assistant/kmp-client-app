@@ -75,6 +75,8 @@ class LibraryViewModel(
         }
     }
 
+    fun clearCheckedItems() = mutableState.update { s -> s.copy(checkedItems = emptySet()) }
+
     fun onItemClicked(tab: LibraryTab, mediaItem: MediaItem) {
         if (mediaItem is MediaItem.Track) {
             onItemCheckChanged(mediaItem)
