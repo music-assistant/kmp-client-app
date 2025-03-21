@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.os.IBinder
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaSessionCompat
+import android.widget.Toast
 import androidx.media.MediaBrowserServiceCompat
 import coil3.BitmapImage
 import coil3.ImageLoader
@@ -21,8 +22,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -59,31 +63,49 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         sessionToken = mediaSessionHelper.getSessionToken()
         scope.launch {
             combine(
-                currentPlayerData,
+                currentPlayerData.filterNotNull(),
                 players.map { it.size > 1 }
             ) { player, moreThanOnePlayer -> Pair(player, moreThanOnePlayer) }
                 .debounce(200)
                 .collect { updatePlaybackState(it.first, it.second) }
         }
-        registerNotificationDismissReceiver()
-    }
-
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
-    private fun registerNotificationDismissReceiver() {
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) {
-                if (players.value.any { it.player.state == PlayerState.PLAYING }) {
-                    updatePlaybackState(currentPlayerData.value, players.value.size > 1)
-                } else {
+        scope.launch {
+            dataSource.doesAnythingHavePlayableItem.collect {
+                if (!it) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
                 }
             }
         }
+        registerNotificationDismissReceiver()
+    }
+
+    private val notificationDismissReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            players.value
+                .indexOfFirst { it.player.state == PlayerState.PLAYING }
+                .takeIf { it >= 0 }
+                ?.let {
+                    activePlayerIndex.update { it }
+                    Toast.makeText(
+                        this@MediaPlaybackService,
+                        "You have playing players",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } ?: run {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
+        }
+    }
+
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    private fun registerNotificationDismissReceiver() {
         val filter = IntentFilter(ACTION_NOTIFICATION_DISMISSED)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(receiver, filter, RECEIVER_NOT_EXPORTED)
+            registerReceiver(notificationDismissReceiver, filter, RECEIVER_NOT_EXPORTED)
         } else {
-            registerReceiver(receiver, filter)
+            registerReceiver(notificationDismissReceiver, filter)
         }
     }
 
@@ -149,6 +171,11 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         return super.onBind(intent)
     }
 
+    override fun onDestroy() {
+        unregisterReceiver(notificationDismissReceiver)
+        super.onDestroy()
+    }
+
     override fun onGetRoot(p0: String, p1: Int, p2: Bundle?): BrowserRoot? = null
 
     override fun onLoadChildren(
@@ -165,9 +192,9 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         }
     }
 
-    private fun updatePlaybackState(player: PlayerData?, showPlayersSwitch: Boolean) {
+    private fun updatePlaybackState(player: PlayerData, showPlayersSwitch: Boolean) {
         scope.launch {
-            val bitmap = player?.queue?.currentItem?.image?.path?.let {
+            val bitmap = player.queue?.currentItem?.image?.path?.let {
                 ((ImageLoader(this@MediaPlaybackService)
                     .execute(
                         ImageRequest.Builder(this@MediaPlaybackService).data(it).build()

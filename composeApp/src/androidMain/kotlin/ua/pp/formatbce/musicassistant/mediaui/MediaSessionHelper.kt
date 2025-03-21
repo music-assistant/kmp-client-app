@@ -25,12 +25,11 @@ class MediaSessionHelper(context: Context, callback: MediaSessionCompat.Callback
     }
 
     fun updatePlaybackState(
-        playerData: PlayerData?,
+        playerData: PlayerData,
         bitmap: Bitmap?,
         showNextPlayerButton: Boolean,
     ) {
-        println("updatePlaybackState")
-        val state = if (playerData?.player?.state == PlayerState.PLAYING)
+        val state = if (playerData.player.state == PlayerState.PLAYING)
             PlaybackStateCompat.STATE_PLAYING
         else
             PlaybackStateCompat.STATE_PAUSED
@@ -44,13 +43,13 @@ class MediaSessionHelper(context: Context, callback: MediaSessionCompat.Callback
             )
             .setState(
                 state,
-                playerData?.queue?.elapsedTime?.toLong()?.let { it * 1000 }
+                playerData.queue?.elapsedTime?.toLong()?.let { it * 1000 }
                     ?: PlaybackState.PLAYBACK_POSITION_UNKNOWN,
                 1f
             )
             .setActiveQueueItemId(MediaSessionCompat.QueueItem.UNKNOWN_ID.toLong())
             .also { builder ->
-                playerData?.queue?.shuffleEnabled?.let { shuffle ->
+                playerData.queue?.shuffleEnabled?.let { shuffle ->
                     builder.addCustomAction(
                         PlaybackStateCompat.CustomAction.Builder(
                             "ACTION_TOGGLE_SHUFFLE",
@@ -68,7 +67,7 @@ class MediaSessionHelper(context: Context, callback: MediaSessionCompat.Callback
                         ).build()
                     )
                 } else {
-                    playerData?.queue?.repeatMode?.let { repeatMode ->
+                    playerData.queue?.repeatMode?.let { repeatMode ->
                         builder.addCustomAction(
                             PlaybackStateCompat.CustomAction.Builder(
                                 "ACTION_TOGGLE_REPEAT",
@@ -85,15 +84,15 @@ class MediaSessionHelper(context: Context, callback: MediaSessionCompat.Callback
         val metadata = MediaMetadataCompat.Builder()
             .putString(
                 MediaMetadataCompat.METADATA_KEY_TITLE,
-                playerData?.queue?.currentItem?.mediaItem?.trackDescription ?: "-"
+                playerData.queue?.currentItem?.mediaItem?.trackDescription ?: "-"
             )
             .putString(
                 MediaMetadataCompat.METADATA_KEY_ARTIST,
-                "Music Assistant - " + (playerData?.player?.displayName ?: "no active players")
+                "Music Assistant - " + (playerData.player.displayName)
             )
             .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, bitmap)
             .also { builder ->
-                playerData?.queue?.currentItem?.duration?.toLong()?.let {
+                playerData.queue?.currentItem?.duration?.toLong()?.let {
                     builder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, it * 1000)
                 }
             }

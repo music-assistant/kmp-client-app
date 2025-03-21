@@ -7,10 +7,13 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ua.pp.formatbce.musicassistant.api.ServiceClient
@@ -24,6 +27,7 @@ import ua.pp.formatbce.musicassistant.api.playerQueueSetRepeatModeRequest
 import ua.pp.formatbce.musicassistant.api.playerQueueSetShuffleRequest
 import ua.pp.formatbce.musicassistant.api.simplePlayerRequest
 import ua.pp.formatbce.musicassistant.data.model.server.Player
+import ua.pp.formatbce.musicassistant.data.model.server.PlayerState
 import ua.pp.formatbce.musicassistant.data.model.server.RepeatMode
 import ua.pp.formatbce.musicassistant.data.model.server.events.MediaItemPlayedEvent
 import ua.pp.formatbce.musicassistant.data.model.server.events.PlayerQueue
@@ -59,7 +63,14 @@ class ServiceDataSource(
                 player,
                 queues?.find { it.queueId == player.currentMedia?.queueId })
         }
-    }
+    }.stateIn(this, SharingStarted.Eagerly, emptyList())
+
+    val isAnythingPlaying =
+        playersData.map { it.any { data -> data.player.state == PlayerState.PLAYING } }
+            .stateIn(this, SharingStarted.Eagerly, false)
+    val doesAnythingHavePlayableItem =
+        playersData.map { it.any { data -> data.queue?.currentItem != null } }
+            .stateIn(this, SharingStarted.Eagerly, false)
 
     private val _selectedPlayerData = MutableStateFlow<SelectedPlayerData?>(null)
     val selectedPlayerData = _selectedPlayerData.asStateFlow()
@@ -271,6 +282,7 @@ class ServiceDataSource(
                                 }
                             }
                         }
+
                         is MediaItemPlayedEvent -> {
                             // do nothing
                         }
