@@ -6,7 +6,8 @@ import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.receiveDeserialized
 import io.ktor.client.plugins.websocket.sendSerialized
-import io.ktor.client.plugins.websocket.webSocket
+import io.ktor.client.plugins.websocket.ws
+import io.ktor.client.plugins.websocket.wss
 import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import io.ktor.websocket.close
@@ -71,18 +72,34 @@ class ServiceClient(private val settings: SettingsRepository) {
             }
             _connectionStateFlow.update { ConnectionState.Connecting }
             try {
-                client.webSocket(
-                    HttpMethod.Get,
-                    connection.host,
-                    connection.port,
-                    "/ws",
-                ) {
-                    session = this
-                    _connectionStateFlow.update { ConnectionState.Connected(connection) }
-                    if (connection != currentConnection) {
-                        settings.updateConnectionInfo(connection)
+                if (connection.isTls) {
+                    client.wss(
+                        HttpMethod.Get,
+                        connection.host,
+                        connection.port,
+                        "/ws",
+                    ) {
+                        session = this
+                        _connectionStateFlow.update { ConnectionState.Connected(connection) }
+                        if (connection != currentConnection) {
+                            settings.updateConnectionInfo(connection)
+                        }
+                        listenForMessages()
                     }
-                    listenForMessages()
+                } else {
+                    client.ws(
+                        HttpMethod.Get,
+                        connection.host,
+                        connection.port,
+                        "/ws",
+                    ) {
+                        session = this
+                        _connectionStateFlow.update { ConnectionState.Connected(connection) }
+                        if (connection != currentConnection) {
+                            settings.updateConnectionInfo(connection)
+                        }
+                        listenForMessages()
+                    }
                 }
             } catch (e: Exception) {
                 _connectionStateFlow.update {

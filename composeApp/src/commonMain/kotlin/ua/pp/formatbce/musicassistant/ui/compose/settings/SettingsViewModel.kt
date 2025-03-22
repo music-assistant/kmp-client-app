@@ -14,8 +14,8 @@ class SettingsViewModel(
     val connectionState = apiClient.connectionState
     val serverInfo = apiClient.serverInfo
 
-    fun attemptConnection(host: String, port: String) {
-        apiClient.connect(connection = ConnectionInfo(host, port.toInt()))
+    fun attemptConnection(host: String, port: String, isTls: Boolean) {
+        apiClient.connect(connection = ConnectionInfo(host, port.toInt(), isTls))
     }
 
     fun disconnect() {

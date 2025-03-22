@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material.Button
+import androidx.compose.material.Checkbox
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
@@ -76,7 +77,7 @@ class SettingsScreen : Screen {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(all = 16.dp),
                 ) {
                     if (connectionState.value is ConnectionState.Connected) {
                         ActionIcon(
@@ -98,6 +99,7 @@ class SettingsScreen : Screen {
             ) {
                 var ipAddress by remember { mutableStateOf("") }
                 var port by remember { mutableStateOf("8095") }
+                var isTls by remember { mutableStateOf(false) }
                 val inputFieldsEnabled =
                     connectionState.value is ConnectionState.Disconnected
                             || connectionState.value is ConnectionState.NoServer
@@ -105,6 +107,7 @@ class SettingsScreen : Screen {
                     connectionInfo.value?.let {
                         ipAddress = it.host
                         port = it.port.toString()
+                        isTls = it.isTls
                     }
                 }
                 Text(
@@ -160,13 +163,24 @@ class SettingsScreen : Screen {
                         textColor = MaterialTheme.colors.onBackground,
                     )
                 )
+                Row(
+                    modifier = Modifier.padding(bottom = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        modifier = Modifier.align(Alignment.CenterVertically),
+                        enabled = inputFieldsEnabled,
+                        checked = isTls,
+                        onCheckedChange = { isTls = it })
+                    Text(modifier = Modifier.align(Alignment.CenterVertically), text = "Use TLS")
+                }
                 Button(
                     enabled = ipAddress.isIpAddress() && port.isIpPort() && connectionState.value != ConnectionState.Connecting,
                     onClick = {
                         if (connectionState.value is ConnectionState.Connected)
                             viewModel.disconnect()
                         else
-                            viewModel.attemptConnection(ipAddress, port)
+                            viewModel.attemptConnection(ipAddress, port, isTls)
                     }
                 ) {
                     Text(

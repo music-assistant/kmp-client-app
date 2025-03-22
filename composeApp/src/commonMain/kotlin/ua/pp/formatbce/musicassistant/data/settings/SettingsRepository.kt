@@ -26,7 +26,7 @@ class SettingsRepository(
     private val _connectionInfo = MutableStateFlow(
         settings.getStringOrNull("host")?.takeIf { it.isNotBlank() }?.let { host ->
             settings.getIntOrNull("port")?.takeIf { it > 0 }?.let { port ->
-                ConnectionInfo(host, port)
+                ConnectionInfo(host, port, settings.getBoolean("isTls", false))
             }
         }
     )
@@ -36,6 +36,7 @@ class SettingsRepository(
         if (connectionInfo != this._connectionInfo.value) {
             settings.putString("host", connectionInfo?.host ?: "")
             settings.putInt("port", connectionInfo?.port ?: 0)
+            settings.putBoolean("isTls", connectionInfo?.isTls == true)
             _connectionInfo.update { connectionInfo }
         }
     }
