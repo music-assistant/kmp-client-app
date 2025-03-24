@@ -149,10 +149,10 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                     }
 
                     "ACTION_TOGGLE_REPEAT" -> currentPlayerData.value?.let { playerData ->
-                        playerData.queue?.let {
+                        playerData.queue?.repeatMode?.let { repeatMode ->
                             dataSource.playerAction(
                                 playerData,
-                                PlayerAction.ToggleRepeatMode(current = it.repeatMode)
+                                PlayerAction.ToggleRepeatMode(current = repeatMode)
                             )
                         }
                     }

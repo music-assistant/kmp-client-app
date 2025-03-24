@@ -29,7 +29,7 @@ data class ServerPlayer(
     //@SerialName("synced_to") val syncedTo: String? = null,
     //@SerialName("group_volume") val groupVolume: Double,
     @SerialName("display_name") val displayName: String,
-    @SerialName("hidden") val hidden: Boolean,
+    @SerialName("hidden") val hidden: Boolean? = null,
     //@SerialName("icon") val icon: String,
     //@SerialName("power_control") val powerControl: String,
     //@SerialName("volume_control") val volumeControl: String,
@@ -42,7 +42,7 @@ data class ServerPlayer(
 ): Player {
     override val id = playerId
     override val name = displayName
-    override val shouldBeShown = available && enabled && !hidden
+    override val shouldBeShown = available && enabled && (hidden != true)
     override val canSetVolume = supportedFeatures.contains(PlayerFeature.VOLUME_SET)
     override val currentQueueId = currentMedia?.queueId ?: activeSource
     override val isPlaying = state == PlayerState.PLAYING
