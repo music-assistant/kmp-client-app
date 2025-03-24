@@ -49,16 +49,16 @@ import compose.icons.tablericons.GripVertical
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
-import ua.pp.formatbce.musicassistant.data.model.server.events.QueueItem
-import ua.pp.formatbce.musicassistant.data.source.PlayerData
+import ua.pp.formatbce.musicassistant.data.model.common.Queue
+import ua.pp.formatbce.musicassistant.data.model.server.QueueItem
 import ua.pp.formatbce.musicassistant.utils.toMinSec
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun Queue(
+fun QueueUI(
     nestedScrollConnection: NestedScrollConnection,
-    playerData: PlayerData,
+    queue: Queue?,
     items: List<QueueItem>,
     chosenItemsIds: Set<String>?,
     enabled: Boolean,
@@ -71,7 +71,7 @@ fun Queue(
     var dragEndIndex by remember { mutableStateOf<Int?>(null) }
     val listState = rememberLazyListState()
     val currentIndex = internalItems.indexOfFirst {
-        it.queueItemId == playerData.queue?.currentItem?.queueItemId
+        it.queueItemId == queue?.currentItem?.queueItemId
     }
     val reorderableLazyListState = rememberReorderableLazyListState(listState) { from, to ->
         if (to.index <= currentIndex) {
@@ -85,7 +85,7 @@ fun Queue(
     val coroutineScope = rememberCoroutineScope()
     val queueInfo = "${currentIndex + 1}/${internalItems.size}"
     val isInChooseMode = (chosenItemsIds?.size ?: 0) > 0
-    LaunchedEffect(playerData.queue?.currentItem?.queueItemId) {
+    LaunchedEffect(queue?.currentItem?.queueItemId) {
         if (currentIndex != -1) {
             val targetIndex = maxOf(0, currentIndex - 2) // Ensure it doesn't go negative
             listState.animateScrollToItem(targetIndex)
@@ -100,15 +100,15 @@ fun Queue(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-    if (chosenItemsIds?.isNotEmpty() == true) {
-        val chosenItems = items.filter { chosenItemsIds.contains(it.queueItemId) }
-        QueueTrackControls(
-            chosenItems = chosenItems,
-            enabled = enabled,
-            queueAction = { queueAction(it) },
-            onChosenItemsClear = onChosenItemsClear
-        )
-    } else {
+        if (chosenItemsIds?.isNotEmpty() == true) {
+            val chosenItems = items.filter { chosenItemsIds.contains(it.queueItemId) }
+            QueueTrackControls(
+                chosenItems = chosenItems,
+                enabled = enabled,
+                queueAction = { queueAction(it) },
+                onChosenItemsClear = onChosenItemsClear
+            )
+        } else {
             Text(
                 text = "Queue ($queueInfo)",
                 maxLines = 1,
@@ -117,11 +117,11 @@ fun Queue(
                 style = MaterialTheme.typography.body2,
                 fontWeight = FontWeight.Bold
             )
-            playerData.queue?.let {
+            queue?.let {
                 Icon(
                     modifier = Modifier
                         .padding(start = 14.dp)
-                        .clickable(enabled = enabled) { queueAction(QueueAction.ClearQueue(it.queueId)) }
+                        .clickable(enabled = enabled) { queueAction(QueueAction.ClearQueue(it.id)) }
                         .size(24.dp)
                         .padding(all = 2.dp)
                         .align(alignment = Alignment.CenterVertically),
@@ -149,7 +149,7 @@ fun Queue(
         state = listState,
     ) {
         itemsIndexed(items = internalItems, key = { _, item -> item.queueItemId }) { index, item ->
-            val isCurrent = item.queueItemId == playerData.queue?.currentItem?.queueItemId
+            val isCurrent = item.queueItemId == queue?.currentItem?.queueItemId
             val isChosen = chosenItemsIds?.contains(item.queueItemId) == true
             val isPlayed = index < currentIndex
             ReorderableItem(

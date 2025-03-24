@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
-import ua.pp.formatbce.musicassistant.data.model.server.PlayerState
 import ua.pp.formatbce.musicassistant.data.source.PlayerData
 import ua.pp.formatbce.musicassistant.data.source.ServiceDataSource
 import ua.pp.formatbce.musicassistant.ui.compose.main.PlayerAction
@@ -81,7 +80,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     private val notificationDismissReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             players.value
-                .indexOfFirst { it.player.state == PlayerState.PLAYING }
+                .indexOfFirst { it.player.isPlaying }
                 .takeIf { it >= 0 }
                 ?.let {
                     activePlayerIndex.update { it }

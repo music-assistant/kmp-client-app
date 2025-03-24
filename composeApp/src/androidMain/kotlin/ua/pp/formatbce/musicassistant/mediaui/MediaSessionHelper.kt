@@ -7,7 +7,6 @@ import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import ua.pp.formatbce.musicassistant.R
-import ua.pp.formatbce.musicassistant.data.model.server.PlayerState
 import ua.pp.formatbce.musicassistant.data.model.server.RepeatMode
 import ua.pp.formatbce.musicassistant.data.source.PlayerData
 
@@ -29,7 +28,7 @@ class MediaSessionHelper(context: Context, callback: MediaSessionCompat.Callback
         bitmap: Bitmap?,
         showNextPlayerButton: Boolean,
     ) {
-        val state = if (playerData.player.state == PlayerState.PLAYING)
+        val state = if (playerData.player.isPlaying)
             PlaybackStateCompat.STATE_PLAYING
         else
             PlaybackStateCompat.STATE_PAUSED
@@ -88,7 +87,7 @@ class MediaSessionHelper(context: Context, callback: MediaSessionCompat.Callback
             )
             .putString(
                 MediaMetadataCompat.METADATA_KEY_ARTIST,
-                "Music Assistant - " + (playerData.player.displayName)
+                "Music Assistant - " + (playerData.player.name)
             )
             .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, bitmap)
             .also { builder ->

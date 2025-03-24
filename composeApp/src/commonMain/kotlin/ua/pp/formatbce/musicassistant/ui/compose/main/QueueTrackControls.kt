@@ -9,7 +9,7 @@ import compose.icons.TablerIcons
 import compose.icons.tablericons.CircleDashed
 import compose.icons.tablericons.CircleX
 import compose.icons.tablericons.PlayerPlay
-import ua.pp.formatbce.musicassistant.data.model.server.events.QueueItem
+import ua.pp.formatbce.musicassistant.data.model.server.QueueItem
 import ua.pp.formatbce.musicassistant.ui.compose.common.ActionIcon
 
 @Composable

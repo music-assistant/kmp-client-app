@@ -14,6 +14,7 @@ import ua.pp.formatbce.musicassistant.api.getPlaylistTracksRequest
 import ua.pp.formatbce.musicassistant.api.getPlaylistsRequest
 import ua.pp.formatbce.musicassistant.api.playMediaRequest
 import ua.pp.formatbce.musicassistant.data.model.local.MediaItem
+import ua.pp.formatbce.musicassistant.data.model.local.MediaItem.Companion.toMediaItemList
 import ua.pp.formatbce.musicassistant.data.model.server.QueueOption
 import ua.pp.formatbce.musicassistant.data.model.server.ServerMediaItem
 import ua.pp.formatbce.musicassistant.data.source.PlayerData
@@ -123,7 +124,7 @@ class LibraryViewModel(
             apiClient.sendRequest(
                 playMediaRequest(
                     media = state.value.checkedItems.mapNotNull { it.uri },
-                    queueOrPlayerId = playerData.queue?.queueId ?: playerData.player.playerId,
+                    queueOrPlayerId = playerData.queue?.id ?: playerData.player.id,
                     option = option,
                     radioMode = false
                 )
@@ -201,7 +202,8 @@ class LibraryViewModel(
                 })
         }
         apiClient.sendRequest(request)?.resultAs<List<ServerMediaItem>>()
-            ?.mapNotNull { smi -> MediaItem.from(smi)?.takeIf { predicate(it) } }
+            ?.toMediaItemList()
+            ?.filter { predicate(it) }
             ?.let { list ->
                 mutableState.update { s ->
                     s.copy(

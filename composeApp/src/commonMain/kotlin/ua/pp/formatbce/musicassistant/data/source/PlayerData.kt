@@ -1,9 +1,9 @@
 package ua.pp.formatbce.musicassistant.data.source
 
-import ua.pp.formatbce.musicassistant.data.model.server.Player
-import ua.pp.formatbce.musicassistant.data.model.server.events.PlayerQueue
+import ua.pp.formatbce.musicassistant.data.model.common.Player
+import ua.pp.formatbce.musicassistant.data.model.common.Queue
 
 data class PlayerData(
     val player: Player,
-    val queue: PlayerQueue? = null
+    val queue: Queue? = null
 )

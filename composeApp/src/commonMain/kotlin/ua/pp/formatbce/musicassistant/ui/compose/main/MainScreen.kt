@@ -73,7 +73,7 @@ class MainScreen : Screen {
                         text = "Library",
                         onClick = {
                             val data = state.value as? MainViewModel.State.Data
-                            data?.playerData?.firstOrNull { it.player.playerId == data.selectedPlayerData?.playerId }
+                            data?.playerData?.firstOrNull { it.player.id == data.selectedPlayerData?.playerId }
                                 ?.let { selected ->
                                     navigator.push(LibraryScreen(selected))
                                 }
@@ -173,7 +173,7 @@ class MainScreen : Screen {
             ) { viewModel.selectPlayer(it) }
 
             playersData
-                .firstOrNull { it.player.playerId == selectedPlayerData?.playerId }
+                .firstOrNull { it.player.id == selectedPlayerData?.playerId }
                 ?.let { playerData ->
                     PlayerDetails(
                         modifier = Modifier.fillMaxWidth().weight(1f),

@@ -5,8 +5,6 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import ua.pp.formatbce.musicassistant.data.model.server.EventType
 import ua.pp.formatbce.musicassistant.data.model.server.events.Event
 import ua.pp.formatbce.musicassistant.data.model.server.events.GenericEvent
-import ua.pp.formatbce.musicassistant.data.model.server.events.MediaItemPlayedEvent
-import ua.pp.formatbce.musicassistant.data.model.server.events.MediaItemUpdatedEvent
 import ua.pp.formatbce.musicassistant.data.model.server.events.PlayerUpdatedEvent
 import ua.pp.formatbce.musicassistant.data.model.server.events.QueueItemsUpdatedEvent
 import ua.pp.formatbce.musicassistant.data.model.server.events.QueueTimeUpdatedEvent
@@ -23,9 +21,9 @@ data class Event(
         EventType.PLAYER_UPDATED -> myJson.decodeFromJsonElement<PlayerUpdatedEvent>(json)
         EventType.QUEUE_UPDATED -> myJson.decodeFromJsonElement<QueueUpdatedEvent>(json)
         EventType.QUEUE_TIME_UPDATED -> myJson.decodeFromJsonElement<QueueTimeUpdatedEvent>(json)
-        EventType.MEDIA_ITEM_PLAYED -> myJson.decodeFromJsonElement<MediaItemPlayedEvent>(json)
-        EventType.MEDIA_ITEM_UPDATED -> myJson.decodeFromJsonElement<MediaItemUpdatedEvent>(json)
         EventType.QUEUE_ITEMS_UPDATED -> myJson.decodeFromJsonElement<QueueItemsUpdatedEvent>(json)
+        EventType.MEDIA_ITEM_PLAYED, //-> myJson.decodeFromJsonElement<MediaItemPlayedEvent>(json)
+        EventType.MEDIA_ITEM_UPDATED, //-> myJson.decodeFromJsonElement<MediaItemUpdatedEvent>(json)
         EventType.PLAYER_ADDED,
         EventType.PLAYER_REMOVED,
         EventType.PLAYER_SETTINGS_UPDATED,
@@ -44,6 +42,6 @@ data class Event(
             println("Unparsed event: $json")
             null
         }
-    }/*.also { println("Raw: $json") }*/
+    }
 
 }

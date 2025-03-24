@@ -26,13 +26,13 @@ import ua.pp.formatbce.musicassistant.api.playerQueueSeekRequest
 import ua.pp.formatbce.musicassistant.api.playerQueueSetRepeatModeRequest
 import ua.pp.formatbce.musicassistant.api.playerQueueSetShuffleRequest
 import ua.pp.formatbce.musicassistant.api.simplePlayerRequest
-import ua.pp.formatbce.musicassistant.data.model.server.Player
-import ua.pp.formatbce.musicassistant.data.model.server.PlayerState
+import ua.pp.formatbce.musicassistant.data.model.common.Player
+import ua.pp.formatbce.musicassistant.data.model.common.Queue
+import ua.pp.formatbce.musicassistant.data.model.server.QueueItem
 import ua.pp.formatbce.musicassistant.data.model.server.RepeatMode
-import ua.pp.formatbce.musicassistant.data.model.server.events.MediaItemPlayedEvent
-import ua.pp.formatbce.musicassistant.data.model.server.events.PlayerQueue
+import ua.pp.formatbce.musicassistant.data.model.server.ServerPlayer
+import ua.pp.formatbce.musicassistant.data.model.server.ServerQueue
 import ua.pp.formatbce.musicassistant.data.model.server.events.PlayerUpdatedEvent
-import ua.pp.formatbce.musicassistant.data.model.server.events.QueueItem
 import ua.pp.formatbce.musicassistant.data.model.server.events.QueueItemsUpdatedEvent
 import ua.pp.formatbce.musicassistant.data.model.server.events.QueueTimeUpdatedEvent
 import ua.pp.formatbce.musicassistant.data.model.server.events.QueueUpdatedEvent
@@ -52,7 +52,7 @@ class ServiceDataSource(
         get() = SupervisorJob() + Dispatchers.IO
 
     private val _players = MutableStateFlow<List<Player>?>(null)
-    private val _queues = MutableStateFlow<List<PlayerQueue>?>(null)
+    private val _queues = MutableStateFlow<List<Queue>?>(null)
 
     val playersData = combine(
         _players.filterNotNull().debounce(500L),
@@ -61,12 +61,12 @@ class ServiceDataSource(
         players.map { player ->
             PlayerData(
                 player,
-                queues?.find { it.queueId == player.currentMedia?.queueId })
+                queues?.find { it.id == player.currentQueueId })
         }
     }.stateIn(this, SharingStarted.Eagerly, emptyList())
 
     val isAnythingPlaying =
-        playersData.map { it.any { data -> data.player.state == PlayerState.PLAYING } }
+        playersData.map { it.any { data -> data.player.isPlaying } }
             .stateIn(this, SharingStarted.Eagerly, false)
     val doesAnythingHavePlayableItem =
         playersData.map { it.any { data -> data.queue?.currentItem != null } }
@@ -108,8 +108,8 @@ class ServiceDataSource(
     }
 
     fun selectPlayer(player: Player) {
-        _selectedPlayerData.update { SelectedPlayerData(player.playerId) }
-        player.currentMedia?.queueId?.let { updatePlayerQueueItems(player) }
+        _selectedPlayerData.update { SelectedPlayerData(player.id) }
+        player.currentQueueId?.let { updatePlayerQueueItems(player) }
     }
 
     fun onItemChosenChanged(id: String) {
@@ -137,26 +137,26 @@ class ServiceDataSource(
             when (action) {
                 PlayerAction.TogglePlayPause -> {
                     apiClient.sendRequest(
-                        simplePlayerRequest(playerId = data.player.playerId, command = "play_pause")
+                        simplePlayerRequest(playerId = data.player.id, command = "play_pause")
                     )
                 }
 
                 PlayerAction.Next -> {
                     apiClient.sendRequest(
-                        simplePlayerRequest(playerId = data.player.playerId, command = "next")
+                        simplePlayerRequest(playerId = data.player.id, command = "next")
                     )
                 }
 
                 PlayerAction.Previous -> {
                     apiClient.sendRequest(
-                        simplePlayerRequest(playerId = data.player.playerId, command = "previous")
+                        simplePlayerRequest(playerId = data.player.id, command = "previous")
                     )
                 }
 
                 is PlayerAction.SeekTo -> {
                     apiClient.sendRequest(
                         playerQueueSeekRequest(
-                            queueId = data.queue?.queueId ?: return@launch,
+                            queueId = data.queue?.id ?: return@launch,
                             position = action.pos
                         )
                     )
@@ -164,7 +164,7 @@ class ServiceDataSource(
 
                 is PlayerAction.ToggleRepeatMode -> apiClient.sendRequest(
                     playerQueueSetRepeatModeRequest(
-                        queueId = data.queue?.queueId ?: return@launch,
+                        queueId = data.queue?.id ?: return@launch,
                         repeatMode = when (action.current) {
                             RepeatMode.OFF -> RepeatMode.ALL
                             RepeatMode.ALL -> RepeatMode.ONE
@@ -175,17 +175,17 @@ class ServiceDataSource(
 
                 is PlayerAction.ToggleShuffle -> apiClient.sendRequest(
                     playerQueueSetShuffleRequest(
-                        queueId = data.queue?.queueId ?: return@launch,
+                        queueId = data.queue?.id ?: return@launch,
                         enabled = !action.current
                     )
                 )
 
                 PlayerAction.VolumeDown -> apiClient.sendRequest(
-                    simplePlayerRequest(playerId = data.player.playerId, command = "volume_down")
+                    simplePlayerRequest(playerId = data.player.id, command = "volume_down")
                 )
 
                 PlayerAction.VolumeUp -> apiClient.sendRequest(
-                    simplePlayerRequest(playerId = data.player.playerId, command = "volume_up")
+                    simplePlayerRequest(playerId = data.player.id, command = "volume_up")
                 )
             }
         }
@@ -248,7 +248,7 @@ class ServiceDataSource(
                         is PlayerUpdatedEvent -> {
                             _players.update {
                                 players.map {
-                                    if (it.playerId == event.data.playerId) event.data else it
+                                    if (it.id == event.data.playerId) event.data else it
                                 }
                             }
                         }
@@ -256,20 +256,20 @@ class ServiceDataSource(
                         is QueueUpdatedEvent -> {
                             _queues.update {
                                 _queues.value?.map {
-                                    if (it.queueId == event.data.queueId) event.data else it
+                                    if (it.id == event.data.queueId) event.data else it
                                 }
                             }
                         }
 
                         is QueueItemsUpdatedEvent -> {
                             _players.value?.firstOrNull {
-                                (it.currentMedia?.queueId ?: it.activeSource) == event.data.queueId
+                                it.currentQueueId == event.data.queueId
                             }
-                                ?.takeIf { it.playerId == _selectedPlayerData.value?.playerId }
+                                ?.takeIf { it.id == _selectedPlayerData.value?.playerId }
                                 ?.let { updatePlayerQueueItems(it) }
                             _queues.update {
                                 _queues.value?.map {
-                                    if (it.queueId == event.data.queueId) event.data else it
+                                    if (it.id == event.data.queueId) event.data else it
                                 }
                             }
                         }
@@ -277,13 +277,9 @@ class ServiceDataSource(
                         is QueueTimeUpdatedEvent -> {
                             _queues.update {
                                 _queues.value?.map {
-                                    if (it.queueId == event.objectId) it.copy(elapsedTime = event.data) else it
+                                    if (it.id == event.objectId) it.makeCopy(elapsedTime = event.data) else it
                                 }
                             }
-                        }
-
-                        is MediaItemPlayedEvent -> {
-                            // do nothing
                         }
 
                         else -> println("Unhandled event: $event")
@@ -294,14 +290,14 @@ class ServiceDataSource(
     private fun sendInitCommands() {
         launch {
             apiClient.sendCommand("players/all")
-                ?.resultAs<List<Player>>()?.let { list ->
-                    _players.update { list.filter { it.available && it.enabled } }
+                ?.resultAs<List<ServerPlayer>>()?.let { list ->
+                    _players.update { list.filter { it.available && it.enabled && !it.hidden } }
                 }
             if (_selectedPlayerData.value == null) {
                 _players.value?.firstOrNull()?.let { player -> selectPlayer(player) }
             }
             apiClient.sendCommand("player_queues/all")
-                ?.resultAs<List<PlayerQueue>>()?.let { list ->
+                ?.resultAs<List<ServerQueue>>()?.let { list ->
                     _queues.update { list.filter { it.available } }
                 }
         }
@@ -309,13 +305,13 @@ class ServiceDataSource(
 
     private fun updatePlayerQueueItems(player: Player) {
         launch {
-            (player.currentMedia?.queueId ?: player.activeSource)
-                ?.takeIf { player.playerId == _selectedPlayerData.value?.playerId }
+            player.currentQueueId
+                ?.takeIf { player.id == _selectedPlayerData.value?.playerId }
                 ?.let { queueId ->
                     apiClient.sendRequest(playerQueueItemsRequest(queueId))
                         ?.resultAs<List<QueueItem>>()?.let { list ->
                             _selectedPlayerData.update {
-                                SelectedPlayerData(player.playerId, list)
+                                SelectedPlayerData(player.id, list)
                             }
                         }
                 }

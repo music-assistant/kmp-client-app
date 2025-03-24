@@ -64,18 +64,18 @@ enum class EventType {
     @SerialName("*") ALL
 }
 
-enum class AlbumType {
-    @SerialName("album") ALBUM,
-    @SerialName("single") SINGLE,
-    @SerialName("compilation") COMPILATION,
-    @SerialName("ep") EP,
-    @SerialName("unknown") UNKNOWN,
-}
+//enum class AlbumType {
+//    @SerialName("album") ALBUM,
+//    @SerialName("single") SINGLE,
+//    @SerialName("compilation") COMPILATION,
+//    @SerialName("ep") EP,
+//    @SerialName("unknown") UNKNOWN,
+//}
 
 enum class QueueOption {
     @SerialName("play") PLAY,
     @SerialName("replace") REPLACE,
     @SerialName("next") NEXT,
-    @SerialName("replace_next") REPLACE_NEXT,
+    //@SerialName("replace_next") REPLACE_NEXT,
     @SerialName("add") ADD,
 }

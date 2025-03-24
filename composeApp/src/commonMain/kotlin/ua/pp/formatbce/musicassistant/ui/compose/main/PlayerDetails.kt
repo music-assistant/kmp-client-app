@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import ua.pp.formatbce.musicassistant.data.model.server.events.QueueItem
+import ua.pp.formatbce.musicassistant.data.model.server.QueueItem
 import ua.pp.formatbce.musicassistant.data.source.PlayerData
 
 @Composable
@@ -29,12 +29,12 @@ fun PlayerDetails(
         modifier = modifier,
     ) {
         queueItems?.takeIf { it.isNotEmpty() }?.let { items ->
-            Queue(
+            QueueUI(
                 nestedScrollConnection = nestedScrollConnection,
-                playerData = playerData,
+                queue = playerData.queue,
                 items = items,
                 chosenItemsIds = chosenItemsIds,
-                enabled = playerData.player.announcementInProgress != true,
+                enabled = !playerData.player.isAnnouncing,
                 queueAction = queueAction,
                 onItemChosenChanged = onItemChosenChanged,
                 onChosenItemsClear = onChosenItemsClear,

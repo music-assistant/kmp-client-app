@@ -213,7 +213,7 @@ data class LibraryScreen(val playerData: PlayerData) : Screen {
                         Text(
                             modifier = Modifier.padding(start = 8.dp).weight(1f)
                                 .basicMarquee(iterations = 100),
-                            text = "$chosenItemsDescription, player: ${playerData.player.displayName}",
+                            text = "$chosenItemsDescription, player: ${playerData.player.name}",
                         )
                         ActionIcon(
                             icon = TablerIcons.PlayerPlay,

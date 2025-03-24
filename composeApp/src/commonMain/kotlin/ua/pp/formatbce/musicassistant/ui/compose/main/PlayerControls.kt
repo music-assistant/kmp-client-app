@@ -22,8 +22,6 @@ import compose.icons.tablericons.ArrowsRight
 import compose.icons.tablericons.Repeat
 import compose.icons.tablericons.RepeatOnce
 import compose.icons.tablericons.Switch2
-import ua.pp.formatbce.musicassistant.data.model.server.PlayerFeature
-import ua.pp.formatbce.musicassistant.data.model.server.PlayerState
 import ua.pp.formatbce.musicassistant.data.model.server.RepeatMode
 import ua.pp.formatbce.musicassistant.data.source.PlayerData
 import ua.pp.formatbce.musicassistant.ui.compose.common.ActionIcon
@@ -45,7 +43,7 @@ fun PlayerControls(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (player.supportedFeatures.contains(PlayerFeature.VOLUME_SET)) {
+        if (player.canSetVolume) {
             ActionIcon(
                 icon = FontAwesomeIcons.Solid.VolumeDown,
                 tint = MaterialTheme.colors.onPrimary,
@@ -74,9 +72,9 @@ fun PlayerControls(
         ) { playerAction(playerData, PlayerAction.Previous) }
 
         ActionIcon(
-            icon = when (player.state) {
-                PlayerState.PLAYING -> FontAwesomeIcons.Solid.Pause
-                else -> FontAwesomeIcons.Solid.Play
+            icon = when (player.isPlaying) {
+                true -> FontAwesomeIcons.Solid.Pause
+                false -> FontAwesomeIcons.Solid.Play
             },
             tint = MaterialTheme.colors.onPrimary,
             size = 26.dp,
@@ -91,23 +89,29 @@ fun PlayerControls(
         ) { playerAction(playerData, PlayerAction.Next) }
 
         queue?.let {
+            val repeatMode = it.repeatMode
             ActionIcon(
-                icon = when (it.repeatMode) {
+                icon = when (repeatMode) {
                     RepeatMode.ONE -> TablerIcons.RepeatOnce
                     RepeatMode.OFF,
-                    RepeatMode.ALL -> TablerIcons.Repeat
+                    RepeatMode.ALL,
+                    null -> TablerIcons.Repeat
                 },
-                tint = when (it.repeatMode) {
-                    RepeatMode.OFF -> MaterialTheme.colors.onPrimary.copy(alpha = 0.5f)
+                tint = when (repeatMode) {
+                    RepeatMode.OFF, null -> MaterialTheme.colors.onPrimary.copy(alpha = 0.5f)
                     RepeatMode.ALL,
                     RepeatMode.ONE -> MaterialTheme.colors.onPrimary
                 },
                 size = 22.dp,
-                enabled = enabled && buttonsEnabled,
-            ) { playerAction(playerData, PlayerAction.ToggleRepeatMode(current = it.repeatMode)) }
+                enabled = enabled && buttonsEnabled && repeatMode != null,
+            ) {
+                repeatMode?.let {
+                    playerAction(playerData, PlayerAction.ToggleRepeatMode(current = repeatMode))
+                }
+            }
         }
 
-        if (player.supportedFeatures.contains(PlayerFeature.VOLUME_SET)) {
+        if (player.canSetVolume) {
             ActionIcon(
                 icon = FontAwesomeIcons.Solid.VolumeUp,
                 tint = MaterialTheme.colors.onPrimary,

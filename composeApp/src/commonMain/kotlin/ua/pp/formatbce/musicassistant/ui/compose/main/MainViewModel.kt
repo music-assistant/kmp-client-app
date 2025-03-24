@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ua.pp.formatbce.musicassistant.api.ServiceClient
-import ua.pp.formatbce.musicassistant.data.model.server.Player
+import ua.pp.formatbce.musicassistant.data.model.common.Player
 import ua.pp.formatbce.musicassistant.data.source.PlayerData
 import ua.pp.formatbce.musicassistant.data.source.SelectedPlayerData
 import ua.pp.formatbce.musicassistant.data.source.ServiceDataSource

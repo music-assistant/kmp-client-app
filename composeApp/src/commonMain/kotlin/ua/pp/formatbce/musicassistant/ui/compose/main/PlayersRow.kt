@@ -37,7 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
-import ua.pp.formatbce.musicassistant.data.model.server.Player
+import ua.pp.formatbce.musicassistant.data.model.common.Player
 import ua.pp.formatbce.musicassistant.data.source.PlayerData
 
 @Composable
@@ -47,9 +47,7 @@ fun PlayersRow(
     selectedPlayerId: String?,
     playerAction: (PlayerData, PlayerAction) -> Unit,
     onItemClick: (Player) -> Unit = {},
-
     ) {
-
     val scrollState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     LazyRow(
@@ -69,7 +67,7 @@ fun PlayersRow(
             val player = playerData.player
             PlayerCard(
                 playerData = playerData,
-                isSelected = selectedPlayerId == player.playerId,
+                isSelected = selectedPlayerId == player.id,
                 playerAction = playerAction
             ) { onItemClick(player) }
         }
@@ -123,7 +121,7 @@ fun PlayerCard(
                     .fillMaxWidth()
                     .basicMarquee(iterations = 100),
                 textAlign = TextAlign.Center,
-                text = player.displayName,
+                text = player.name,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colors.onPrimary,
@@ -136,7 +134,7 @@ fun PlayerCard(
                     .basicMarquee(iterations = 100),
                 textAlign = TextAlign.Center,
                 text =
-                if (player.announcementInProgress == true) "ANNOUNCING"
+                if (player.isAnnouncing) "ANNOUNCING"
                 else queue?.currentItem?.mediaItem?.trackDescription ?: "idle",
                 maxLines = 1,
                 color = MaterialTheme.colors.onPrimary,
@@ -152,7 +150,7 @@ fun PlayerCard(
             PlayerControls(
                 playerData = playerData,
                 playerAction = playerAction,
-                enabled = player.announcementInProgress != true
+                enabled = !player.isAnnouncing
             )
         }
     }
