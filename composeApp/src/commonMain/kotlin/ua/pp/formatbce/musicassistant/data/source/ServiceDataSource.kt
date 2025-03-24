@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -28,6 +27,8 @@ import ua.pp.formatbce.musicassistant.api.playerQueueSetShuffleRequest
 import ua.pp.formatbce.musicassistant.api.simplePlayerRequest
 import ua.pp.formatbce.musicassistant.data.model.common.Player
 import ua.pp.formatbce.musicassistant.data.model.common.Queue
+import ua.pp.formatbce.musicassistant.data.model.local.LocalPlayer
+import ua.pp.formatbce.musicassistant.data.model.local.LocalQueue
 import ua.pp.formatbce.musicassistant.data.model.server.QueueItem
 import ua.pp.formatbce.musicassistant.data.model.server.RepeatMode
 import ua.pp.formatbce.musicassistant.data.model.server.ServerPlayer
@@ -51,17 +52,32 @@ class ServiceDataSource(
     override val coroutineContext: CoroutineContext
         get() = SupervisorJob() + Dispatchers.IO
 
-    private val _players = MutableStateFlow<List<Player>?>(null)
-    private val _queues = MutableStateFlow<List<Queue>?>(null)
+    private val _serverPlayers = MutableStateFlow<List<ServerPlayer>>(emptyList())
+    private val _serverQueues = MutableStateFlow<List<Queue>>(emptyList())
+    private val _localPlayer = MutableStateFlow(LocalPlayer(isPlaying = false))
+    private val _localQueue = MutableStateFlow(
+        LocalQueue(
+            shuffleEnabled = false,
+            elapsedTime = null,
+            currentItem = null
+        )
+    )
+
+    private val _players = combine(_serverPlayers, _localPlayer) { server, local ->
+        listOf(local) + server
+    }
+    private val _queues = combine(_serverQueues, _localQueue) { server, local ->
+        listOf(local) + server
+    }
 
     val playersData = combine(
-        _players.filterNotNull().debounce(500L),
+        _players.debounce(500L),
         _queues.debounce(500L)
     ) { players, queues ->
         players.map { player ->
             PlayerData(
                 player,
-                queues?.find { it.id == player.currentQueueId })
+                queues.find { it.id == player.currentQueueId })
         }
     }.stateIn(this, SharingStarted.Eagerly, emptyList())
 
@@ -84,6 +100,9 @@ class ServiceDataSource(
                     is ConnectionState.Connected -> {
                         watchJob = watchApiEvents()
                         sendInitCommands()
+                        if (_selectedPlayerData.value == null) {
+                            selectPlayer(_localPlayer.value)
+                        }
                     }
 
                     ConnectionState.Connecting -> {
@@ -92,8 +111,8 @@ class ServiceDataSource(
                     }
 
                     is ConnectionState.Disconnected -> {
-                        _players.update { null }
-                        _queues.update { null }
+                        _serverPlayers.update { emptyList() }
+                        _serverQueues.update { emptyList() }
                         watchJob?.cancel()
                         watchJob = null
                         if (it.exception == null) {
@@ -243,10 +262,10 @@ class ServiceDataSource(
         launch {
             apiClient.events
                 .collect { event ->
-                    val players = _players.value?.takeIf { it.isNotEmpty() } ?: return@collect
+                    val players = _serverPlayers.value.takeIf { it.isNotEmpty() } ?: return@collect
                     when (event) {
                         is PlayerUpdatedEvent -> {
-                            _players.update {
+                            _serverPlayers.update {
                                 players.map {
                                     if (it.id == event.data.playerId) event.data else it
                                 }
@@ -254,29 +273,29 @@ class ServiceDataSource(
                         }
 
                         is QueueUpdatedEvent -> {
-                            _queues.update {
-                                _queues.value?.map {
+                            _serverQueues.update {
+                                _serverQueues.value.map {
                                     if (it.id == event.data.queueId) event.data else it
                                 }
                             }
                         }
 
                         is QueueItemsUpdatedEvent -> {
-                            _players.value?.firstOrNull {
+                            _serverPlayers.value.firstOrNull {
                                 it.currentQueueId == event.data.queueId
                             }
                                 ?.takeIf { it.id == _selectedPlayerData.value?.playerId }
                                 ?.let { updatePlayerQueueItems(it) }
-                            _queues.update {
-                                _queues.value?.map {
+                            _serverQueues.update {
+                                _serverQueues.value.map {
                                     if (it.id == event.data.queueId) event.data else it
                                 }
                             }
                         }
 
                         is QueueTimeUpdatedEvent -> {
-                            _queues.update {
-                                _queues.value?.map {
+                            _serverQueues.update {
+                                _serverQueues.value.map {
                                     if (it.id == event.objectId) it.makeCopy(elapsedTime = event.data) else it
                                 }
                             }
@@ -291,14 +310,14 @@ class ServiceDataSource(
         launch {
             apiClient.sendCommand("players/all")
                 ?.resultAs<List<ServerPlayer>>()?.let { list ->
-                    _players.update { list.filter { it.available && it.enabled && !it.hidden } }
+                    _serverPlayers.update {
+                        list.filter { it.available && it.enabled && !it.hidden }
+                    }
+
                 }
-            if (_selectedPlayerData.value == null) {
-                _players.value?.firstOrNull()?.let { player -> selectPlayer(player) }
-            }
             apiClient.sendCommand("player_queues/all")
                 ?.resultAs<List<ServerQueue>>()?.let { list ->
-                    _queues.update { list.filter { it.available } }
+                    _serverQueues.update { list.filter { it.available } }
                 }
         }
     }
