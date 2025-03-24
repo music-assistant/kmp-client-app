@@ -1,7 +1,7 @@
 package ua.pp.formatbce.musicassistant.ui.theme
 
 import androidx.lifecycle.ViewModel
-import ua.pp.formatbce.musicassistant.data.settings.SettingsRepository
+import ua.pp.formatbce.musicassistant.settings.SettingsRepository
 
 class ThemeViewModel(
     private val settingsRepository: SettingsRepository

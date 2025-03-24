@@ -13,11 +13,11 @@ import ua.pp.formatbce.musicassistant.api.getArtistsRequest
 import ua.pp.formatbce.musicassistant.api.getPlaylistTracksRequest
 import ua.pp.formatbce.musicassistant.api.getPlaylistsRequest
 import ua.pp.formatbce.musicassistant.api.playMediaRequest
-import ua.pp.formatbce.musicassistant.data.model.local.MediaItem
-import ua.pp.formatbce.musicassistant.data.model.local.MediaItem.Companion.toMediaItemList
+import ua.pp.formatbce.musicassistant.data.model.client.MediaItem
+import ua.pp.formatbce.musicassistant.data.model.client.MediaItem.Companion.toMediaItemList
 import ua.pp.formatbce.musicassistant.data.model.server.QueueOption
 import ua.pp.formatbce.musicassistant.data.model.server.ServerMediaItem
-import ua.pp.formatbce.musicassistant.data.source.PlayerData
+import ua.pp.formatbce.musicassistant.data.model.client.PlayerData
 import ua.pp.formatbce.musicassistant.utils.ConnectionState
 
 class LibraryViewModel(

@@ -76,10 +76,10 @@ import compose.icons.tablericons.Replace
 import compose.icons.tablericons.Square
 import compose.icons.tablericons.SquareCheck
 import kotlinx.coroutines.launch
-import ua.pp.formatbce.musicassistant.data.model.local.MediaItem
+import ua.pp.formatbce.musicassistant.data.model.client.MediaItem
 import ua.pp.formatbce.musicassistant.data.model.server.MediaType
 import ua.pp.formatbce.musicassistant.data.model.server.QueueOption
-import ua.pp.formatbce.musicassistant.data.source.PlayerData
+import ua.pp.formatbce.musicassistant.data.model.client.PlayerData
 import ua.pp.formatbce.musicassistant.ui.compose.common.ActionIcon
 import ua.pp.formatbce.musicassistant.ui.compose.common.Fab
 

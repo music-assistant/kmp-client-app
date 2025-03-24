@@ -1,6 +1,7 @@
-package ua.pp.formatbce.musicassistant.data.model.local
+package ua.pp.formatbce.musicassistant.data.model.client
 
 import ua.pp.formatbce.musicassistant.data.model.server.MediaType
+import ua.pp.formatbce.musicassistant.data.model.server.Metadata
 import ua.pp.formatbce.musicassistant.data.model.server.ServerMediaItem
 
 abstract class MediaItem(
@@ -40,7 +41,7 @@ abstract class MediaItem(
 //        providerMappings: List<ProviderMapping>?,
 //        metadata: Metadata?,
 //        favorite: Boolean?,
-        mediaType: MediaType,
+//        mediaType: MediaType,
         //sortName: String?,
         uri: String?,
 //        isPlayable: Boolean?,
@@ -54,7 +55,7 @@ abstract class MediaItem(
         //providerMappings,
         //metadata,
         //favorite,
-        mediaType,
+        MediaType.ARTIST,
         //sortName,
         uri,
         //isPlayable,
@@ -69,7 +70,7 @@ abstract class MediaItem(
 //        providerMappings: List<ProviderMapping>?,
 //        metadata: Metadata?,
 //        favorite: Boolean?,
-        mediaType: MediaType,
+//        mediaType: MediaType,
 //        sortName: String?,
         uri: String?,
 //        isPlayable: Boolean?,
@@ -87,7 +88,7 @@ abstract class MediaItem(
         //providerMappings,
         //metadata,
         //favorite,
-        mediaType,
+        MediaType.ALBUM,
         //sortName,
         uri,
         //isPlayable,
@@ -100,9 +101,9 @@ abstract class MediaItem(
         provider: String,
         name: String,
 //        providerMappings: List<ProviderMapping>?,
-//        metadata: Metadata?,
+        metadata: Metadata?,
 //        favorite: Boolean?,
-        mediaType: MediaType,
+//        mediaType: MediaType,
 //        sortName: String?,
         uri: String?,
 //        isPlayable: Boolean?,
@@ -110,9 +111,9 @@ abstract class MediaItem(
 //        timestampModified: Long?,
 //        val musicbrainzId: String?,
         //val version: String?,
-        //val duration: Double?,
+        val duration: Double?,
 //        val isrc: String?,
-//        val artists: List<Artist>?,
+        val artists: List<Artist>?,
 // album track only
 //        val album: Album?,
 //        val discNumber: Int?,
@@ -126,13 +127,17 @@ abstract class MediaItem(
         //providerMappings,
         //metadata,
         //favorite,
-        mediaType,
+        MediaType.TRACK,
         //sortName,
         uri,
         //isPlayable,
         //timestampAdded,
         //timestampModified,
-    )
+    ) {
+        val description: String =
+            "${artists?.joinToString(separator = ", ") { it.name } ?: "Unknown"} - $name"
+        val imageUrl: String? = metadata?.images?.getOrNull(0)?.path
+    }
 
     class Playlist(
         itemId: String,
@@ -141,7 +146,7 @@ abstract class MediaItem(
         //providerMappings: List<ProviderMapping>?,
         //metadata: Metadata?,
         //favorite: Boolean?,
-        mediaType: MediaType,
+        //mediaType: MediaType,
         //sortName: String?,
         uri: String?,
         //isPlayable: Boolean?,
@@ -156,7 +161,7 @@ abstract class MediaItem(
         //providerMappings,
         //metadata,
         //favorite,
-        mediaType,
+        MediaType.PLAYLIST,
         //sortName,
         uri,
         //isPlayable,
@@ -165,7 +170,7 @@ abstract class MediaItem(
     )
 
     companion object {
-        private fun ServerMediaItem.toMediaItem(): MediaItem? =
+        fun ServerMediaItem.toMediaItem(): MediaItem? =
             when (mediaType) {
                 MediaType.ARTIST -> Artist(
                     itemId = itemId,
@@ -174,7 +179,7 @@ abstract class MediaItem(
 //                    providerMappings = providerMappings,
 //                    metadata = metadata,
 //                    favorite = favorite,
-                    mediaType = mediaType,
+//                    mediaType = mediaType,
 //                    sortName = sortName,
                     uri = uri,
 //                    isPlayable = isPlayable,
@@ -190,7 +195,7 @@ abstract class MediaItem(
 //                    providerMappings = providerMappings,
 //                    metadata = metadata,
 //                    favorite = favorite,
-                    mediaType = mediaType,
+//                    mediaType = mediaType,
 //                    sortName = sortName,
                     uri = uri,
 //                    isPlayable = isPlayable,
@@ -208,9 +213,9 @@ abstract class MediaItem(
                     provider = provider,
                     name = name,
 //                    providerMappings = providerMappings,
-//                    metadata = metadata,
+                    metadata = metadata,
 //                    favorite = favorite,
-                    mediaType = mediaType,
+//                    mediaType = mediaType,
 //                    sortName = sortName,
                     uri = uri,
 //                    isPlayable = isPlayable,
@@ -218,9 +223,9 @@ abstract class MediaItem(
 //                    timestampModified = timestampModified,
 //                    musicbrainzId = musicbrainzId,
                     //version = version,
-                    //duration = duration,
+                    duration = duration,
 //                    isrc = isrc,
-//                    artists = artists?.mapNotNull { from(it) as? Artist },
+                    artists = artists?.mapNotNull { it.toMediaItem() as? Artist },
 //                    album = album?.let { from(it) as? Album },
 //                    discNumber = discNumber,
 //                    trackNumber = trackNumber,
@@ -232,9 +237,9 @@ abstract class MediaItem(
                     provider = provider,
                     name = name,
                     //providerMappings = providerMappings,
-                    //metadata = metadata,
+//                    metadata = metadata,
                     //favorite = favorite,
-                    mediaType = mediaType,
+//                    mediaType = mediaType,
 //                    sortName = sortName,
                     uri = uri,
                     //isPlayable = isPlayable,

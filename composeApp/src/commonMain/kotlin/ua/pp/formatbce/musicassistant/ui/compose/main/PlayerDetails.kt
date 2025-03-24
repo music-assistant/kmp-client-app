@@ -11,15 +11,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import ua.pp.formatbce.musicassistant.data.model.server.QueueItem
-import ua.pp.formatbce.musicassistant.data.source.PlayerData
+import ua.pp.formatbce.musicassistant.data.model.client.PlayerData
+import ua.pp.formatbce.musicassistant.data.model.client.QueueTrack
 
 @Composable
 fun PlayerDetails(
     modifier: Modifier = Modifier,
     nestedScrollConnection: NestedScrollConnection,
     playerData: PlayerData,
-    queueItems: List<QueueItem>?,
+    queueItems: List<QueueTrack>?,
     chosenItemsIds: Set<String>?,
     queueAction: (QueueAction) -> Unit,
     onItemChosenChanged: (String) -> Unit,

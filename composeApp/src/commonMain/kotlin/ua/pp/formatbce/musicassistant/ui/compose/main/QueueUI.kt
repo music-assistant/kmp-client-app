@@ -49,8 +49,8 @@ import compose.icons.tablericons.GripVertical
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
-import ua.pp.formatbce.musicassistant.data.model.common.Queue
-import ua.pp.formatbce.musicassistant.data.model.server.QueueItem
+import ua.pp.formatbce.musicassistant.data.model.client.Queue
+import ua.pp.formatbce.musicassistant.data.model.client.QueueTrack
 import ua.pp.formatbce.musicassistant.utils.toMinSec
 import kotlin.time.Duration.Companion.seconds
 
@@ -59,7 +59,7 @@ import kotlin.time.Duration.Companion.seconds
 fun QueueUI(
     nestedScrollConnection: NestedScrollConnection,
     queue: Queue?,
-    items: List<QueueItem>,
+    items: List<QueueTrack>,
     chosenItemsIds: Set<String>?,
     enabled: Boolean,
     queueAction: (QueueAction) -> Unit,
@@ -71,7 +71,7 @@ fun QueueUI(
     var dragEndIndex by remember { mutableStateOf<Int?>(null) }
     val listState = rememberLazyListState()
     val currentIndex = internalItems.indexOfFirst {
-        it.queueItemId == queue?.currentItem?.queueItemId
+        it.id == queue?.currentItem?.id
     }
     val reorderableLazyListState = rememberReorderableLazyListState(listState) { from, to ->
         if (to.index <= currentIndex) {
@@ -85,7 +85,7 @@ fun QueueUI(
     val coroutineScope = rememberCoroutineScope()
     val queueInfo = "${currentIndex + 1}/${internalItems.size}"
     val isInChooseMode = (chosenItemsIds?.size ?: 0) > 0
-    LaunchedEffect(queue?.currentItem?.queueItemId) {
+    LaunchedEffect(queue?.currentItem?.id) {
         if (currentIndex != -1) {
             val targetIndex = maxOf(0, currentIndex - 2) // Ensure it doesn't go negative
             listState.animateScrollToItem(targetIndex)
@@ -101,8 +101,9 @@ fun QueueUI(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (chosenItemsIds?.isNotEmpty() == true) {
-            val chosenItems = items.filter { chosenItemsIds.contains(it.queueItemId) }
+            val chosenItems = items.filter { chosenItemsIds.contains(it.id) }
             QueueTrackControls(
+                queueId = queue?.id,
                 chosenItems = chosenItems,
                 enabled = enabled,
                 queueAction = { queueAction(it) },
@@ -148,13 +149,13 @@ fun QueueUI(
             .alpha(if (enabled) 1f else 0.5f),
         state = listState,
     ) {
-        itemsIndexed(items = internalItems, key = { _, item -> item.queueItemId }) { index, item ->
-            val isCurrent = item.queueItemId == queue?.currentItem?.queueItemId
-            val isChosen = chosenItemsIds?.contains(item.queueItemId) == true
+        itemsIndexed(items = internalItems, key = { _, item -> item.id }) { index, item ->
+            val isCurrent = item.id == queue?.currentItem?.id
+            val isChosen = chosenItemsIds?.contains(item.id) == true
             val isPlayed = index < currentIndex
             ReorderableItem(
                 state = reorderableLazyListState,
-                key = item.queueItemId,
+                key = item.id,
                 enabled = enabled,
             ) {
                 Row(
@@ -173,17 +174,19 @@ fun QueueUI(
                             enabled = enabled,
                             onClick = {
                                 if (isInChooseMode) {
-                                    onItemChosenChanged(item.queueItemId)
+                                    onItemChosenChanged(item.id)
                                 } else if (!isCurrent) {
-                                    queueAction(
-                                        QueueAction.PlayQueueItem(
-                                            item.queueId, item.queueItemId
+                                    queue?.id?.let { queueId ->
+                                        queueAction(
+                                            QueueAction.PlayQueueItem(
+                                                queueId, item.id
+                                            )
                                         )
-                                    )
+                                    }
                                 }
                             },
                             onLongClick = {
-                                onItemChosenChanged(item.queueItemId)
+                                onItemChosenChanged(item.id)
                             },
                         )
                         .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -213,8 +216,8 @@ fun QueueUI(
                     }
                     Text(
                         modifier = Modifier.weight(1f),
-                        text = "${item.mediaItem.trackDescription} " +
-                                "(${item.duration?.toInt()?.seconds.toMinSec()})",
+                        text = "${item.media.description} " +
+                                "(${item.media.duration?.toInt()?.seconds.toMinSec()})",
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         color = when {
@@ -233,14 +236,16 @@ fun QueueUI(
                                 .draggableHandle(
                                     onDragStopped = {
                                         dragEndIndex?.let { to ->
-                                            queueAction(
-                                                QueueAction.MoveItem(
-                                                    item.queueId,
-                                                    item.queueItemId,
-                                                    from = index,
-                                                    to = to
+                                            queue?.id?.let { queueId ->
+                                                queueAction(
+                                                    QueueAction.MoveItem(
+                                                        queueId,
+                                                        item.id,
+                                                        from = index,
+                                                        to = to
+                                                    )
                                                 )
-                                            )
+                                            }
                                         }
                                     }
                                 )

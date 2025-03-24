@@ -1,4 +1,4 @@
-package ua.pp.formatbce.musicassistant.data.settings
+package ua.pp.formatbce.musicassistant.settings
 
 import android.content.Context
 import android.content.SharedPreferences

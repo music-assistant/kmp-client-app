@@ -1,4 +1,4 @@
-package ua.pp.formatbce.musicassistant.data.source
+package ua.pp.formatbce.musicassistant.data
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,19 +25,22 @@ import ua.pp.formatbce.musicassistant.api.playerQueueSeekRequest
 import ua.pp.formatbce.musicassistant.api.playerQueueSetRepeatModeRequest
 import ua.pp.formatbce.musicassistant.api.playerQueueSetShuffleRequest
 import ua.pp.formatbce.musicassistant.api.simplePlayerRequest
-import ua.pp.formatbce.musicassistant.data.model.common.Player
-import ua.pp.formatbce.musicassistant.data.model.common.Queue
-import ua.pp.formatbce.musicassistant.data.model.local.LocalPlayer
-import ua.pp.formatbce.musicassistant.data.model.local.LocalQueue
-import ua.pp.formatbce.musicassistant.data.model.server.QueueItem
+import ua.pp.formatbce.musicassistant.data.model.client.Player
+import ua.pp.formatbce.musicassistant.data.model.client.Player.Companion.toPlayer
+import ua.pp.formatbce.musicassistant.data.model.client.PlayerData
+import ua.pp.formatbce.musicassistant.data.model.client.Queue
+import ua.pp.formatbce.musicassistant.data.model.client.Queue.Companion.toQueue
+import ua.pp.formatbce.musicassistant.data.model.client.QueueTrack.Companion.toQueueTrack
+import ua.pp.formatbce.musicassistant.data.model.client.SelectedPlayerData
 import ua.pp.formatbce.musicassistant.data.model.server.RepeatMode
 import ua.pp.formatbce.musicassistant.data.model.server.ServerPlayer
 import ua.pp.formatbce.musicassistant.data.model.server.ServerQueue
+import ua.pp.formatbce.musicassistant.data.model.server.ServerQueueItem
 import ua.pp.formatbce.musicassistant.data.model.server.events.PlayerUpdatedEvent
 import ua.pp.formatbce.musicassistant.data.model.server.events.QueueItemsUpdatedEvent
 import ua.pp.formatbce.musicassistant.data.model.server.events.QueueTimeUpdatedEvent
 import ua.pp.formatbce.musicassistant.data.model.server.events.QueueUpdatedEvent
-import ua.pp.formatbce.musicassistant.data.settings.SettingsRepository
+import ua.pp.formatbce.musicassistant.settings.SettingsRepository
 import ua.pp.formatbce.musicassistant.ui.compose.main.PlayerAction
 import ua.pp.formatbce.musicassistant.ui.compose.main.QueueAction
 import ua.pp.formatbce.musicassistant.utils.ConnectionState
@@ -52,11 +55,12 @@ class ServiceDataSource(
     override val coroutineContext: CoroutineContext
         get() = SupervisorJob() + Dispatchers.IO
 
-    private val _serverPlayers = MutableStateFlow<List<ServerPlayer>>(emptyList())
+    private val _serverPlayers = MutableStateFlow<List<Player>>(emptyList())
     private val _serverQueues = MutableStateFlow<List<Queue>>(emptyList())
-    private val _localPlayer = MutableStateFlow(LocalPlayer(isPlaying = false))
+    private val _localPlayer = MutableStateFlow(Player.local(isPlaying = false))
+    // TODO most probably won't be required, if MA server will hold built-in player queue
     private val _localQueue = MutableStateFlow(
-        LocalQueue(
+        Queue.local(
             shuffleEnabled = false,
             elapsedTime = null,
             currentItem = null
@@ -64,10 +68,12 @@ class ServiceDataSource(
     )
 
     private val _players = combine(_serverPlayers, _localPlayer) { server, local ->
-        listOf(local) + server
+        // TODO uncomment when local player is implemented
+        /*listOf(local) +*/ server
     }
     private val _queues = combine(_serverQueues, _localQueue) { server, local ->
-        listOf(local) + server
+        // TODO uncomment when local player is implemented
+        /*listOf(local) +*/ server
     }
 
     val playersData = combine(
@@ -77,7 +83,7 @@ class ServiceDataSource(
         players.map { player ->
             PlayerData(
                 player,
-                queues.find { it.id == player.currentQueueId })
+                queues.find { it.id == player.queueId })
         }
     }.stateIn(this, SharingStarted.Eagerly, emptyList())
 
@@ -100,9 +106,9 @@ class ServiceDataSource(
                     is ConnectionState.Connected -> {
                         watchJob = watchApiEvents()
                         sendInitCommands()
-                        if (_selectedPlayerData.value == null) {
-                            selectPlayer(_localPlayer.value)
-                        }
+//                        if (_selectedPlayerData.value == null) {
+//                            selectPlayer(_localPlayer.value)
+//                        }
                     }
 
                     ConnectionState.Connecting -> {
@@ -128,7 +134,7 @@ class ServiceDataSource(
 
     fun selectPlayer(player: Player) {
         _selectedPlayerData.update { SelectedPlayerData(player.id) }
-        player.currentQueueId?.let { updatePlayerQueueItems(player) }
+        player.queueId?.let { updatePlayerQueueItems(player) }
     }
 
     fun onItemChosenChanged(id: String) {
@@ -265,30 +271,33 @@ class ServiceDataSource(
                     val players = _serverPlayers.value.takeIf { it.isNotEmpty() } ?: return@collect
                     when (event) {
                         is PlayerUpdatedEvent -> {
+                            val data = event.player()
                             _serverPlayers.update {
                                 players.map {
-                                    if (it.id == event.data.playerId) event.data else it
+                                    if (it.id == data.id) data else it
                                 }
                             }
                         }
 
                         is QueueUpdatedEvent -> {
+                            val data = event.queue()
                             _serverQueues.update {
                                 _serverQueues.value.map {
-                                    if (it.id == event.data.queueId) event.data else it
+                                    if (it.id == data.id) data else it
                                 }
                             }
                         }
 
                         is QueueItemsUpdatedEvent -> {
+                            val data = event.queue()
                             _serverPlayers.value.firstOrNull {
-                                it.currentQueueId == event.data.queueId
+                                it.queueId == event.data.queueId
                             }
                                 ?.takeIf { it.id == _selectedPlayerData.value?.playerId }
                                 ?.let { updatePlayerQueueItems(it) }
                             _serverQueues.update {
                                 _serverQueues.value.map {
-                                    if (it.id == event.data.queueId) event.data else it
+                                    if (it.id == data.id) data else it
                                 }
                             }
                         }
@@ -296,7 +305,7 @@ class ServiceDataSource(
                         is QueueTimeUpdatedEvent -> {
                             _serverQueues.update {
                                 _serverQueues.value.map {
-                                    if (it.id == event.objectId) it.makeCopy(elapsedTime = event.data) else it
+                                    if (it.id == event.objectId) it.copy(elapsedTime = event.data) else it
                                 }
                             }
                         }
@@ -309,14 +318,17 @@ class ServiceDataSource(
     private fun sendInitCommands() {
         launch {
             apiClient.sendCommand("players/all")
-                ?.resultAs<List<ServerPlayer>>()?.let { list ->
+                ?.resultAs<List<ServerPlayer>>()?.map { it.toPlayer() }?.let { list ->
                     _serverPlayers.update {
-                        list.filter { it.available && it.enabled && !it.hidden }
+                        list.filter { it.shouldBeShown }
+                    }
+                    if (_selectedPlayerData.value == null) {
+                        _serverPlayers.value.firstOrNull()?.let { player -> selectPlayer(player) }
                     }
 
                 }
             apiClient.sendCommand("player_queues/all")
-                ?.resultAs<List<ServerQueue>>()?.let { list ->
+                ?.resultAs<List<ServerQueue>>()?.map { it.toQueue() }?.let { list ->
                     _serverQueues.update { list.filter { it.available } }
                 }
         }
@@ -324,11 +336,12 @@ class ServiceDataSource(
 
     private fun updatePlayerQueueItems(player: Player) {
         launch {
-            player.currentQueueId
+            player.queueId
                 ?.takeIf { player.id == _selectedPlayerData.value?.playerId }
                 ?.let { queueId ->
                     apiClient.sendRequest(playerQueueItemsRequest(queueId))
-                        ?.resultAs<List<QueueItem>>()?.let { list ->
+                        ?.resultAs<List<ServerQueueItem>>()?.mapNotNull { it.toQueueTrack() }
+                        ?.let { list ->
                             _selectedPlayerData.update {
                                 SelectedPlayerData(player.id, list)
                             }

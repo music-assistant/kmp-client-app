@@ -2,7 +2,6 @@ package ua.pp.formatbce.musicassistant.data.model.server
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import ua.pp.formatbce.musicassistant.data.model.common.Player
 
 @Serializable
 data class ServerPlayer(
@@ -39,16 +38,7 @@ data class ServerPlayer(
     //@SerialName("poll_interval") val pollInterval: Int? = null,
     //@SerialName("extra_data") val extraData: Map<String, String>? = null,
     @SerialName("announcement_in_progress") val announcementInProgress: Boolean? = null,
-): Player {
-    override val id = playerId
-    override val name = displayName
-    override val shouldBeShown = available && enabled && (hidden != true)
-    override val canSetVolume = supportedFeatures.contains(PlayerFeature.VOLUME_SET)
-    override val currentQueueId = currentMedia?.queueId ?: activeSource
-    override val isPlaying = state == PlayerState.PLAYING
-    override val isAnnouncing = announcementInProgress == true
-
-}
+)
 
 //@Serializable
 //data class DeviceInfo(

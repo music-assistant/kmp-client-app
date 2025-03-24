@@ -10,7 +10,7 @@ data class ServerMediaItem(
     @SerialName("provider") val provider: String,
     @SerialName("name") val name: String,
     //@SerialName("provider_mappings") val providerMappings: List<ProviderMapping>? = null,
-    //@SerialName("metadata") val metadata: Metadata? = null,
+    @SerialName("metadata") val metadata: Metadata? = null,
    // @SerialName("favorite") val favorite: Boolean? = null,
     @SerialName("media_type") val mediaType: MediaType,
     //@SerialName("sort_name") val sortName: String? = null,
@@ -31,16 +31,13 @@ data class ServerMediaItem(
     //@SerialName("owner") val owner: String? = null,
     //@SerialName("is_editable") val isEditable: Boolean? = null,
     // Track only
-    //@SerialName("duration") val duration: Double? = null,
+    @SerialName("duration") val duration: Double? = null,
     //@SerialName("isrc") val isrc: String? = null,
     // album track only
     //@SerialName("album") val album: ServerMediaItem? = null,
     //@SerialName("disc_number") val discNumber: Int? = null,
     //@SerialName("track_number") val trackNumber: Int? = null,
-) {
-    val trackDescription: String =
-        "${artists?.joinToString(separator = ", ") { it.name } ?: "Unknown"} - $name"
-}
+)
 
 @Serializable
 data class Metadata(

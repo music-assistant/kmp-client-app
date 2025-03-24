@@ -8,7 +8,7 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import ua.pp.formatbce.musicassistant.R
 import ua.pp.formatbce.musicassistant.data.model.server.RepeatMode
-import ua.pp.formatbce.musicassistant.data.source.PlayerData
+import ua.pp.formatbce.musicassistant.data.model.client.PlayerData
 
 class MediaSessionHelper(context: Context, callback: MediaSessionCompat.Callback) {
     private val mediaSession: MediaSessionCompat = MediaSessionCompat(context, "RemoteMediaSession")
@@ -91,7 +91,7 @@ class MediaSessionHelper(context: Context, callback: MediaSessionCompat.Callback
             )
             .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, bitmap)
             .also { builder ->
-                playerData.queue?.currentItem?.duration?.toLong()?.let {
+                playerData.queue?.currentItem?.mediaItem?.duration?.toLong()?.let {
                     builder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, it * 1000)
                 }
             }

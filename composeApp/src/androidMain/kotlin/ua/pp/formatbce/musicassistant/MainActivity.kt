@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.asLiveData
 import org.koin.android.ext.android.inject
-import ua.pp.formatbce.musicassistant.data.source.ServiceDataSource
+import ua.pp.formatbce.musicassistant.data.ServiceDataSource
 import ua.pp.formatbce.musicassistant.mediaui.MediaPlaybackService
 import ua.pp.formatbce.musicassistant.ui.compose.App
 

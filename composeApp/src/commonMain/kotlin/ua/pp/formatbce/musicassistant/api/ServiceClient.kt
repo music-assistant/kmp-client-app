@@ -28,7 +28,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import ua.pp.formatbce.musicassistant.data.model.server.ServerInfo
 import ua.pp.formatbce.musicassistant.data.model.server.events.Event
-import ua.pp.formatbce.musicassistant.data.settings.SettingsRepository
+import ua.pp.formatbce.musicassistant.settings.SettingsRepository
 import ua.pp.formatbce.musicassistant.utils.ConnectionState
 import ua.pp.formatbce.musicassistant.utils.ServerDataChangedException
 import ua.pp.formatbce.musicassistant.utils.myJson

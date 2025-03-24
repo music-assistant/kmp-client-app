@@ -37,8 +37,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
-import ua.pp.formatbce.musicassistant.data.model.common.Player
-import ua.pp.formatbce.musicassistant.data.source.PlayerData
+import ua.pp.formatbce.musicassistant.data.model.client.Player
+import ua.pp.formatbce.musicassistant.data.model.client.PlayerData
 
 @Composable
 fun PlayersRow(
@@ -47,7 +47,7 @@ fun PlayersRow(
     selectedPlayerId: String?,
     playerAction: (PlayerData, PlayerAction) -> Unit,
     onItemClick: (Player) -> Unit = {},
-    ) {
+) {
     val scrollState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     LazyRow(
@@ -84,7 +84,7 @@ fun PlayerCard(
 ) {
     val player = playerData.player
     val queue = playerData.queue
-    val currentProgress = queue?.currentItem?.duration
+    val currentProgress = queue?.currentItem?.media?.duration
         ?.let { (queue.elapsedTime?.toFloat() ?: 0f) / it.toFloat() }
     Box(
         modifier = modifier
@@ -99,7 +99,7 @@ fun PlayerCard(
             )
             .clickable(enabled = !isSelected) { onClick() }
     ) {
-        queue?.currentItem?.image?.path?.let {
+        queue?.currentItem?.media?.imageUrl?.let {
             AsyncImage(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -135,7 +135,7 @@ fun PlayerCard(
                 textAlign = TextAlign.Center,
                 text =
                 if (player.isAnnouncing) "ANNOUNCING"
-                else queue?.currentItem?.mediaItem?.trackDescription ?: "idle",
+                else queue?.currentItem?.media?.description ?: "idle",
                 maxLines = 1,
                 color = MaterialTheme.colors.onPrimary,
                 fontWeight = FontWeight.Bold,

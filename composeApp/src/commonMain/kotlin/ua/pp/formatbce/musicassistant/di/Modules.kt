@@ -4,9 +4,9 @@ import org.koin.compose.viewmodel.dsl.viewModelOf
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 import ua.pp.formatbce.musicassistant.api.ServiceClient
-import ua.pp.formatbce.musicassistant.data.settings.SettingsRepository
-import ua.pp.formatbce.musicassistant.data.settings.provideSettings
-import ua.pp.formatbce.musicassistant.data.source.ServiceDataSource
+import ua.pp.formatbce.musicassistant.settings.SettingsRepository
+import ua.pp.formatbce.musicassistant.settings.provideSettings
+import ua.pp.formatbce.musicassistant.data.ServiceDataSource
 import ua.pp.formatbce.musicassistant.ui.compose.library.LibraryViewModel
 import ua.pp.formatbce.musicassistant.ui.compose.main.MainViewModel
 import ua.pp.formatbce.musicassistant.ui.compose.settings.SettingsViewModel

@@ -23,7 +23,7 @@ import compose.icons.tablericons.Repeat
 import compose.icons.tablericons.RepeatOnce
 import compose.icons.tablericons.Switch2
 import ua.pp.formatbce.musicassistant.data.model.server.RepeatMode
-import ua.pp.formatbce.musicassistant.data.source.PlayerData
+import ua.pp.formatbce.musicassistant.data.model.client.PlayerData
 import ua.pp.formatbce.musicassistant.ui.compose.common.ActionIcon
 
 @Composable

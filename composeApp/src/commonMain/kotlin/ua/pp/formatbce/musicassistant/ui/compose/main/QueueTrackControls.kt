@@ -9,12 +9,13 @@ import compose.icons.TablerIcons
 import compose.icons.tablericons.CircleDashed
 import compose.icons.tablericons.CircleX
 import compose.icons.tablericons.PlayerPlay
-import ua.pp.formatbce.musicassistant.data.model.server.QueueItem
+import ua.pp.formatbce.musicassistant.data.model.client.QueueTrack
 import ua.pp.formatbce.musicassistant.ui.compose.common.ActionIcon
 
 @Composable
 fun QueueTrackControls(
-    chosenItems: List<QueueItem>,
+    queueId: String?,
+    chosenItems: List<QueueTrack>,
     enabled: Boolean,
     queueAction: (QueueAction) -> Unit,
     onChosenItemsClear: () -> Unit
@@ -31,30 +32,27 @@ fun QueueTrackControls(
         style = MaterialTheme.typography.body2,
         fontWeight = FontWeight.Bold
     )
-    if (chosenItems.size == 1) {
+    queueId?.let {
+        if (chosenItems.size == 1) {
+            ActionIcon(
+                icon = TablerIcons.PlayerPlay,
+                size = 24.dp,
+                enabled = enabled
+            ) {
+                queueAction(
+                    QueueAction.PlayQueueItem(it, chosenItems.first().id)
+                )
+            }
+        }
         ActionIcon(
-            icon = TablerIcons.PlayerPlay,
+            icon = TablerIcons.CircleX,
             size = 24.dp,
             enabled = enabled
         ) {
             queueAction(
-                QueueAction.PlayQueueItem(
-                    chosenItems.first().queueId,
-                    chosenItems.first().queueItemId
-                )
+                QueueAction.RemoveItems(it, chosenItems.map { it.id })
             )
         }
-    }
-    ActionIcon(
-        icon = TablerIcons.CircleX,
-        size = 24.dp,
-        enabled = enabled
-    ) {
-        queueAction(
-            QueueAction.RemoveItems(
-                chosenItems.first().queueId,
-                chosenItems.map { it.queueItemId })
-        )
     }
 
 }

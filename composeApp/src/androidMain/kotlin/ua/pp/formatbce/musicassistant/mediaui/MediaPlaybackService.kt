@@ -30,8 +30,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
-import ua.pp.formatbce.musicassistant.data.source.PlayerData
-import ua.pp.formatbce.musicassistant.data.source.ServiceDataSource
+import ua.pp.formatbce.musicassistant.data.model.client.PlayerData
+import ua.pp.formatbce.musicassistant.data.ServiceDataSource
 import ua.pp.formatbce.musicassistant.ui.compose.main.PlayerAction
 
 @OptIn(FlowPreview::class)
@@ -191,12 +191,14 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     private fun updatePlaybackState(player: PlayerData, showPlayersSwitch: Boolean) {
         scope.launch {
-            val bitmap = player.queue?.currentItem?.image?.path?.let {
-                ((ImageLoader(this@MediaPlaybackService)
-                    .execute(
-                        ImageRequest.Builder(this@MediaPlaybackService).data(it).build()
-                    ) as? SuccessResult)?.image as? BitmapImage)?.bitmap
-            }
+            val bitmap =
+                player.queue?.currentItem?.mediaItem?.metadata?.images?.getOrNull(0)?.path
+                    ?.let {
+                        ((ImageLoader(this@MediaPlaybackService)
+                            .execute(
+                                ImageRequest.Builder(this@MediaPlaybackService).data(it).build()
+                            ) as? SuccessResult)?.image as? BitmapImage)?.bitmap
+                    }
             mediaSessionHelper.updatePlaybackState(player, bitmap, showPlayersSwitch)
             val notification =
                 mediaNotificationManager.createNotification(bitmap)
