@@ -79,6 +79,7 @@ class MainViewModel(
     fun queueAction(action: QueueAction) = dataSource.queueAction(action)
     fun onItemChosenChanged(id: String) = dataSource.onItemChosenChanged(id)
     fun onChosenItemsClear() = dataSource.onChosenItemsClear()
+    fun onPlayersSortChanged(newSort: List<String>) = dataSource.onPlayersSortChanged(newSort)
 
     sealed class State {
         data object Loading : State()

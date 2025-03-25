@@ -83,7 +83,7 @@ class MediaSessionHelper(context: Context, callback: MediaSessionCompat.Callback
         val metadata = MediaMetadataCompat.Builder()
             .putString(
                 MediaMetadataCompat.METADATA_KEY_TITLE,
-                playerData.queue?.currentItem?.mediaItem?.trackDescription ?: "-"
+                playerData.queue?.currentItem?.track?.description ?: "-"
             )
             .putString(
                 MediaMetadataCompat.METADATA_KEY_ARTIST,
@@ -91,7 +91,7 @@ class MediaSessionHelper(context: Context, callback: MediaSessionCompat.Callback
             )
             .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, bitmap)
             .also { builder ->
-                playerData.queue?.currentItem?.mediaItem?.duration?.toLong()?.let {
+                playerData.queue?.currentItem?.track?.duration?.toLong()?.let {
                     builder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, it * 1000)
                 }
             }

@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -58,6 +60,7 @@ class ServiceDataSource(
     private val _serverPlayers = MutableStateFlow<List<Player>>(emptyList())
     private val _serverQueues = MutableStateFlow<List<Queue>>(emptyList())
     private val _localPlayer = MutableStateFlow(Player.local(isPlaying = false))
+
     // TODO most probably won't be required, if MA server will hold built-in player queue
     private val _localQueue = MutableStateFlow(
         Queue.local(
@@ -67,12 +70,17 @@ class ServiceDataSource(
         )
     )
 
-    private val _players = combine(_serverPlayers, _localPlayer) { server, local ->
-        // TODO uncomment when local player is implemented
-        /*listOf(local) +*/ server
-    }
+    private val _players =
+        combine(_serverPlayers, _localPlayer, settings.playersSorting) { server, local, sortedIds ->
+            // TODO revise when local player is implemented
+            /*listOf(local) +*/ sortedIds?.let {
+            server.sortedBy { player ->
+                sortedIds.indexOf(player.id).takeIf { it >= 0 } ?: Int.MAX_VALUE
+            }
+        } ?: server.sortedBy { it.name }
+        }
     private val _queues = combine(_serverQueues, _localQueue) { server, local ->
-        // TODO uncomment when local player is implemented
+        // TODO revise when local player is implemented
         /*listOf(local) +*/ server
     }
 
@@ -128,6 +136,13 @@ class ServiceDataSource(
 
                     ConnectionState.NoServer -> Unit
                 }
+            }
+        }
+        launch {
+            playersData.filter { it.isNotEmpty() }.first {
+                _selectedPlayerData.value == null
+            }.let {
+                selectPlayer(it.first().player)
             }
         }
     }
@@ -264,6 +279,8 @@ class ServiceDataSource(
         }
     }
 
+    fun onPlayersSortChanged(newSort: List<String>) = settings.updatePlayersSorting(newSort)
+
     private fun watchApiEvents() =
         launch {
             apiClient.events
@@ -322,10 +339,6 @@ class ServiceDataSource(
                     _serverPlayers.update {
                         list.filter { it.shouldBeShown }
                     }
-                    if (_selectedPlayerData.value == null) {
-                        _serverPlayers.value.firstOrNull()?.let { player -> selectPlayer(player) }
-                    }
-
                 }
             apiClient.sendCommand("player_queues/all")
                 ?.resultAs<List<ServerQueue>>()?.map { it.toQueue() }?.let { list ->

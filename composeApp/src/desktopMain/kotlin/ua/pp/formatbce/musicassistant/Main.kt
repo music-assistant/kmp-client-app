@@ -18,7 +18,7 @@ fun main() {
             // state = windowState,
             title = "MusicAssistantClient",
         ) {
-            window.minimumSize = Dimension(800, 800)
+            window.minimumSize = Dimension(800, 900)
             App()
         }
     }

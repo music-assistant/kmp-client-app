@@ -136,7 +136,7 @@ data class LibraryScreen(val playerData: PlayerData) : Screen {
         onPlaySelectedItems: (QueueOption) -> Unit,
     ) {
         val isFabVisible = rememberSaveable { mutableStateOf(true) }
-        val nestedScrollConnection = remember {
+        val nestedScrollConnection = remember(selectedList?.parentItems) {
             object : NestedScrollConnection {
                 override fun onPreScroll(
                     available: Offset,

@@ -40,4 +40,14 @@ class SettingsRepository(
             _connectionInfo.update { connectionInfo }
         }
     }
+
+    private val _playersSorting = MutableStateFlow(
+        settings.getStringOrNull("players_sort")?.split(",")
+    )
+    val playersSorting = _playersSorting.asStateFlow()
+
+    fun updatePlayersSorting(newValue: List<String>) {
+        settings.putString("players_sort", newValue.joinToString(","))
+        _playersSorting.update { newValue }
+    }
 }

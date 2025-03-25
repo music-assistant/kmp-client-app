@@ -16,16 +16,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Icon
 import androidx.compose.material.LinearProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -36,7 +43,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import compose.icons.TablerIcons
+import compose.icons.tablericons.GripVertical
 import kotlinx.coroutines.launch
+import sh.calvin.reorderable.ReorderableCollectionItemScope
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import ua.pp.formatbce.musicassistant.data.model.client.Player
 import ua.pp.formatbce.musicassistant.data.model.client.PlayerData
 
@@ -46,10 +58,17 @@ fun PlayersRow(
     players: List<PlayerData> = emptyList(),
     selectedPlayerId: String?,
     playerAction: (PlayerData, PlayerAction) -> Unit,
-    onItemClick: (Player) -> Unit = {},
+    onListReordered: (List<String>) -> Unit,
+    onItemClick: (Player) -> Unit,
 ) {
+    var internalItems by remember(players) { mutableStateOf(players) }
     val scrollState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val reorderableLazyListState = rememberReorderableLazyListState(scrollState) { from, to ->
+        internalItems = internalItems.toMutableList().apply {
+            add(to.index, removeAt(from.index))
+        }
+    }
     LazyRow(
         modifier = modifier.draggable(
             orientation = Orientation.Horizontal,
@@ -63,13 +82,23 @@ fun PlayersRow(
         flingBehavior = rememberSnapFlingBehavior(lazyListState = scrollState),
         contentPadding = PaddingValues(horizontal = 8.dp),
     ) {
-        items(items = players) { playerData ->
+        items(items = internalItems, key = { it.player.id }) { playerData ->
             val player = playerData.player
-            PlayerCard(
-                playerData = playerData,
-                isSelected = selectedPlayerId == player.id,
-                playerAction = playerAction
-            ) { onItemClick(player) }
+            ReorderableItem(
+                state = reorderableLazyListState,
+                key = player.id,
+            ) {
+                PlayerCard(
+                    playerData = playerData,
+                    isSelected = selectedPlayerId == player.id,
+                    playerAction = playerAction,
+                    reorderScope = this,
+                    onItemMoved = {
+                        if (internalItems != players)
+                            onListReordered(internalItems.map { it.player.id })
+                    }
+                ) { onItemClick(player) }
+            }
         }
     }
 }
@@ -80,11 +109,13 @@ fun PlayerCard(
     playerData: PlayerData,
     isSelected: Boolean,
     playerAction: (PlayerData, PlayerAction) -> Unit,
+    reorderScope: ReorderableCollectionItemScope,
+    onItemMoved: () -> Unit,
     onClick: () -> Unit,
 ) {
     val player = playerData.player
     val queue = playerData.queue
-    val currentProgress = queue?.currentItem?.media?.duration
+    val currentProgress = queue?.currentItem?.track?.duration
         ?.let { (queue.elapsedTime?.toFloat() ?: 0f) / it.toFloat() }
     Box(
         modifier = modifier
@@ -99,7 +130,7 @@ fun PlayerCard(
             )
             .clickable(enabled = !isSelected) { onClick() }
     ) {
-        queue?.currentItem?.media?.imageUrl?.let {
+        queue?.currentItem?.track?.imageUrl?.let {
             AsyncImage(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -130,12 +161,13 @@ fun PlayerCard(
             )
             Text(
                 modifier = Modifier
+                    .padding(horizontal = 16.dp)
                     .fillMaxWidth()
                     .basicMarquee(iterations = 100),
                 textAlign = TextAlign.Center,
                 text =
                 if (player.isAnnouncing) "ANNOUNCING"
-                else queue?.currentItem?.media?.description ?: "idle",
+                else queue?.currentItem?.track?.description ?: "idle",
                 maxLines = 1,
                 color = MaterialTheme.colors.onPrimary,
                 fontWeight = FontWeight.Bold,
@@ -153,5 +185,23 @@ fun PlayerCard(
                 enabled = !player.isAnnouncing
             )
         }
+        Icon(
+            modifier = with(reorderScope) {
+                Modifier
+                    .draggableHandle(
+                        onDragStopped = {
+                            onItemMoved()
+                            println("Moving ${player.id}")
+                        },
+                        onDragStarted = { println("Moving ${player.id}") }
+                    )
+                    .padding(vertical = 12.dp, horizontal = 8.dp)
+                    .size(16.dp)
+                    .align(Alignment.TopEnd)
+            },
+            imageVector = TablerIcons.GripVertical,
+            contentDescription = null,
+            tint = MaterialTheme.colors.onPrimary,
+        )
     }
 }

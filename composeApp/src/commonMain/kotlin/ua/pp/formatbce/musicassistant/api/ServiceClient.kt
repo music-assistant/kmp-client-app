@@ -181,7 +181,7 @@ class ServiceClient(private val settings: SettingsRepository) {
         }
     }
 
-    private fun reconnect(settings: ConnectionInfo, reason: Exception? = null) {
+    private fun reconnect(settings: ConnectionInfo, reason: Exception) {
         if (isReconnecting) return
         isReconnecting = true
         CoroutineScope(Dispatchers.IO).launch {

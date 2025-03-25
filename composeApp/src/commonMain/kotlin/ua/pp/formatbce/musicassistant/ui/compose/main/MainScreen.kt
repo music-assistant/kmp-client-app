@@ -170,6 +170,7 @@ class MainScreen : Screen {
                 playerAction = { playerData, action ->
                     viewModel.playerAction(playerData, action)
                 },
+                onListReordered = viewModel::onPlayersSortChanged,
             ) { viewModel.selectPlayer(it) }
 
             playersData

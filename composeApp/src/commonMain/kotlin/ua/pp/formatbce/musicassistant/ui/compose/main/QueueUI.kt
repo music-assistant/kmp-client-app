@@ -70,6 +70,7 @@ fun QueueUI(
     var internalItems by remember(items) { mutableStateOf(items) }
     var dragEndIndex by remember { mutableStateOf<Int?>(null) }
     val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
     val currentIndex = internalItems.indexOfFirst {
         it.id == queue?.currentItem?.id
     }
@@ -82,7 +83,6 @@ fun QueueUI(
         }
         dragEndIndex = to.index
     }
-    val coroutineScope = rememberCoroutineScope()
     val queueInfo = "${currentIndex + 1}/${internalItems.size}"
     val isInChooseMode = (chosenItemsIds?.size ?: 0) > 0
     LaunchedEffect(queue?.currentItem?.id) {
@@ -216,8 +216,8 @@ fun QueueUI(
                     }
                     Text(
                         modifier = Modifier.weight(1f),
-                        text = "${item.media.description} " +
-                                "(${item.media.duration?.toInt()?.seconds.toMinSec()})",
+                        text = "${item.track.description} " +
+                                "(${item.track.duration?.toInt()?.seconds.toMinSec()})",
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         color = when {

@@ -192,7 +192,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     private fun updatePlaybackState(player: PlayerData, showPlayersSwitch: Boolean) {
         scope.launch {
             val bitmap =
-                player.queue?.currentItem?.mediaItem?.metadata?.images?.getOrNull(0)?.path
+                player.queue?.currentItem?.track?.imageUrl
                     ?.let {
                         ((ImageLoader(this@MediaPlaybackService)
                             .execute(
