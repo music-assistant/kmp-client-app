@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.material.Button
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.FabPosition
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
@@ -19,9 +21,11 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -46,10 +50,8 @@ class MainScreen : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val viewModel = koinScreenModel<MainViewModel>()
-        val state = viewModel.state.collectAsStateWithLifecycle(
-            MainViewModel.State.Loading
-        )
-        val isFabVisible = rememberSaveable { mutableStateOf(true) }
+        val state by viewModel.state.collectAsStateWithLifecycle(MainViewModel.State.Loading)
+        var isFabVisible by rememberSaveable { mutableStateOf(true) }
         val nestedScrollConnection = remember {
             object : NestedScrollConnection {
                 override fun onPreScroll(
@@ -57,9 +59,9 @@ class MainScreen : Screen {
                     source: NestedScrollSource
                 ): Offset {
                     if (available.y < -1) {
-                        isFabVisible.value = false
+                        isFabVisible = false
                     } else if (available.y > 1) {
-                        isFabVisible.value = true
+                        isFabVisible = true
                     }
                     return Offset.Zero
                 }
@@ -67,12 +69,12 @@ class MainScreen : Screen {
         }
         Scaffold(
             floatingActionButton = {
-                if (state.value is MainViewModel.State.Data) {
+                if (state is MainViewModel.State.Data) {
                     Fab(
-                        isVisible = isFabVisible.value,
+                        isVisible = isFabVisible,
                         text = "Library",
                         onClick = {
-                            val data = state.value as? MainViewModel.State.Data
+                            val data = state as? MainViewModel.State.Data
                             data?.playerData?.firstOrNull { it.player.id == data.selectedPlayerData?.playerId }
                                 ?.let { selected ->
                                     navigator.push(LibraryScreen(selected))
@@ -83,10 +85,13 @@ class MainScreen : Screen {
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             floatingActionButtonPosition = FabPosition.End,
         ) { scaffoldPadding ->
-            val stateValue = state.value
-            LaunchedEffect(state.value) {
-                if (state.value is MainViewModel.State.NoServer) {
+            var lastDataState by remember { mutableStateOf<MainViewModel.State.Data?>(null) }
+            LaunchedEffect(state) {
+                if (state is MainViewModel.State.NoServer) {
                     navigator.push(SettingsScreen())
+                }
+                if (state is MainViewModel.State.Data) {
+                    lastDataState = state as MainViewModel.State.Data
                 }
             }
             Box(
@@ -97,20 +102,23 @@ class MainScreen : Screen {
                     .systemBarsPadding()
                     .background(color = MaterialTheme.colors.background)
             ) {
-                when (stateValue) {
-                    MainViewModel.State.Disconnected,
-                    MainViewModel.State.Loading,
-                    MainViewModel.State.NoServer -> ServiceLayout(
-                        stateValue = stateValue,
-                        navigator = navigator
-                    )
-
-                    is MainViewModel.State.Data -> DataLayout(
-                        state = stateValue,
+                lastDataState?.let {
+                    DataLayout(
+                        state = it,
                         nestedScrollConnection = nestedScrollConnection,
                         viewModel = viewModel,
                         navigator = navigator
                     )
+                }
+                when (state) {
+                    MainViewModel.State.Disconnected,
+                    MainViewModel.State.Loading,
+                    MainViewModel.State.NoServer -> ServiceLayout(
+                        stateValue = state,
+                        navigator = navigator
+                    )
+
+                    is MainViewModel.State.Data -> Unit
                 }
             }
         }
@@ -122,29 +130,32 @@ class MainScreen : Screen {
         navigator: Navigator
     ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize()
+                .background(color = MaterialTheme.colors.background.copy(alpha = 0.9f))
+                .clickable() { /* Absorb interaction*/ },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
+                modifier = Modifier
+                    .padding(all = 16.dp),
                 text = when (stateValue) {
                     is MainViewModel.State.Data -> "Connected to server"
                     MainViewModel.State.Disconnected -> "Disconnected"
-                    MainViewModel.State.Loading -> "Loading"
+                    MainViewModel.State.Loading -> "Connecting to server"
                     MainViewModel.State.NoServer -> "Please setup server connection"
                 },
                 style = MaterialTheme.typography.h5,
                 color = MaterialTheme.colors.onBackground,
             )
-            Icon(
+            CircularProgressIndicator()
+            Button(
                 modifier = Modifier
-                    .padding(horizontal = 16.dp)
-                    .clickable { navigator.push(SettingsScreen()) }
-                    .size(48.dp),
-                imageVector = FontAwesomeIcons.Solid.Cog,
-                contentDescription = null,
-                tint = MaterialTheme.colors.secondary,
-            )
+                    .padding(all = 16.dp),
+                onClick = { navigator.push(SettingsScreen()) }
+            ) {
+                Text(text = "Settings")
+            }
         }
     }
 

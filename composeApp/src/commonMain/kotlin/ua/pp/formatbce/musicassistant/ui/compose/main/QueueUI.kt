@@ -51,6 +51,7 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import ua.pp.formatbce.musicassistant.data.model.client.Queue
 import ua.pp.formatbce.musicassistant.data.model.client.QueueTrack
+import ua.pp.formatbce.musicassistant.utils.conditional
 import ua.pp.formatbce.musicassistant.utils.toMinSec
 import kotlin.time.Duration.Companion.seconds
 
@@ -170,12 +171,10 @@ fun QueueUI(
                                 else -> Color.Transparent
                             }
                         )
-                        .combinedClickable(
-                            enabled = enabled,
-                            onClick = {
-                                if (isInChooseMode) {
-                                    onItemChosenChanged(item.id)
-                                } else if (!isCurrent) {
+                        .conditional(
+                            condition = isPlayed,
+                            ifTrue = {
+                                clickable(!isInChooseMode) {
                                     queue?.id?.let { queueId ->
                                         queueAction(
                                             QueueAction.PlayQueueItem(
@@ -185,9 +184,27 @@ fun QueueUI(
                                     }
                                 }
                             },
-                            onLongClick = {
-                                onItemChosenChanged(item.id)
-                            },
+                            ifFalse = {
+                                combinedClickable(
+                                    enabled = enabled,
+                                    onClick = {
+                                        if (isInChooseMode) {
+                                            onItemChosenChanged(item.id)
+                                        } else if (!isCurrent) {
+                                            queue?.id?.let { queueId ->
+                                                queueAction(
+                                                    QueueAction.PlayQueueItem(
+                                                        queueId, item.id
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    },
+                                    onLongClick = {
+                                        onItemChosenChanged(item.id)
+                                    },
+                                )
+                            }
                         )
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,

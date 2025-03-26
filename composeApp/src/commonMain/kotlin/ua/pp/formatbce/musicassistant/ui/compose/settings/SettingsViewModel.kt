@@ -11,14 +11,11 @@ class SettingsViewModel(
 ) : ScreenModel {
 
     val connectionInfo = settings.connectionInfo
-    val connectionState = apiClient.connectionState
+    val connectionState = apiClient.sessionState
     val serverInfo = apiClient.serverInfo
 
-    fun attemptConnection(host: String, port: String, isTls: Boolean) {
+    fun attemptConnection(host: String, port: String, isTls: Boolean) =
         apiClient.connect(connection = ConnectionInfo(host, port.toInt(), isTls))
-    }
 
-    fun disconnect() {
-        apiClient.disconnect()
-    }
+    fun disconnect() = apiClient.disconnectByUser()
 }

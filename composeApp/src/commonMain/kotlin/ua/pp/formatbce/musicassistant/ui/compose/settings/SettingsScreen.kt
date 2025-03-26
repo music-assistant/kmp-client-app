@@ -43,7 +43,7 @@ import org.koin.core.annotation.KoinExperimentalAPI
 import ua.pp.formatbce.musicassistant.ui.compose.common.ActionIcon
 import ua.pp.formatbce.musicassistant.ui.theme.ThemeSetting
 import ua.pp.formatbce.musicassistant.ui.theme.ThemeViewModel
-import ua.pp.formatbce.musicassistant.utils.ConnectionState
+import ua.pp.formatbce.musicassistant.utils.SessionState
 import ua.pp.formatbce.musicassistant.utils.isIpAddress
 import ua.pp.formatbce.musicassistant.utils.isIpPort
 
@@ -55,11 +55,18 @@ class SettingsScreen : Screen {
         val theme = themeViewModel.theme.collectAsStateWithLifecycle(ThemeSetting.FollowSystem)
         val navigator = LocalNavigator.currentOrThrow
         val viewModel = koinScreenModel<SettingsViewModel>()
-        val connectionInfo = viewModel.connectionInfo.collectAsStateWithLifecycle(null)
-        val connectionState = viewModel.connectionState.collectAsStateWithLifecycle(null)
+        val connectionInfo by viewModel.connectionInfo.collectAsStateWithLifecycle(null)
+        val sessionState by viewModel.connectionState.collectAsStateWithLifecycle(
+            SessionState.Disconnected.Initial
+        )
         val serverInfo = viewModel.serverInfo.collectAsStateWithLifecycle(null)
+        var shouldPopOnConnected by remember { mutableStateOf(sessionState !is SessionState.Connected) }
+        if (sessionState is SessionState.Connected && shouldPopOnConnected) {
+            navigator.pop()
+            shouldPopOnConnected = false
+        }
         BackHandler(enabled = true) {
-            if (connectionState.value is ConnectionState.Connected) {
+            if (sessionState is SessionState.Connected) {
                 navigator.pop()
             }
         }
@@ -79,7 +86,7 @@ class SettingsScreen : Screen {
                         .fillMaxWidth()
                         .padding(all = 16.dp),
                 ) {
-                    if (connectionState.value is ConnectionState.Connected) {
+                    if (sessionState is SessionState.Connected) {
                         ActionIcon(
                             icon = FontAwesomeIcons.Solid.ArrowLeft,
                         ) {
@@ -100,11 +107,9 @@ class SettingsScreen : Screen {
                 var ipAddress by remember { mutableStateOf("") }
                 var port by remember { mutableStateOf("8095") }
                 var isTls by remember { mutableStateOf(false) }
-                val inputFieldsEnabled =
-                    connectionState.value is ConnectionState.Disconnected
-                            || connectionState.value is ConnectionState.NoServer
-                LaunchedEffect(connectionInfo.value) {
-                    connectionInfo.value?.let {
+                val inputFieldsEnabled = sessionState is SessionState.Disconnected
+                LaunchedEffect(connectionInfo) {
+                    connectionInfo?.let {
                         ipAddress = it.host
                         port = it.port.toString()
                         isTls = it.isTls
@@ -119,17 +124,22 @@ class SettingsScreen : Screen {
                 )
                 Text(
                     modifier = Modifier.padding(bottom = 24.dp),
-                    text = when (val state = connectionState.value) {
-                        is ConnectionState.Connected -> {
-                            "Connected to ${state.info.host}:${state.info.port}" +
+                    text = when (val state = sessionState) {
+                        is SessionState.Connected -> {
+                            "Connected to ${state.connectionInfo.host}:${state.connectionInfo.port}" +
                                     (serverInfo.value?.let { "\nServer version ${it.serverVersion}, schema ${it.schemaVersion}" }
                                         ?: "")
                         }
 
-                        ConnectionState.Connecting -> "Connecting to $ipAddress:$port."
-                        is ConnectionState.Disconnected -> "Disconnected${state.exception?.message?.let { ": $it" } ?: ""}"
-                        ConnectionState.NoServer -> "Please provide server address and port."
-                        null -> ""
+                        is SessionState.Connecting -> "Connecting to $ipAddress:$port."
+                        is SessionState.Disconnected -> {
+                            when (state) {
+                                SessionState.Disconnected.ByUser -> ""
+                                is SessionState.Disconnected.Error -> "Disconnected${state.reason?.message?.let { ": $it" } ?: ""}"
+                                SessionState.Disconnected.Initial -> ""
+                                SessionState.Disconnected.NoServerData -> "Please provide server address and port."
+                            }
+                        }
                     },
                     color = MaterialTheme.colors.onBackground,
                     style = MaterialTheme.typography.h5,
@@ -175,16 +185,17 @@ class SettingsScreen : Screen {
                     Text(modifier = Modifier.align(Alignment.CenterVertically), text = "Use TLS")
                 }
                 Button(
-                    enabled = ipAddress.isIpAddress() && port.isIpPort() && connectionState.value != ConnectionState.Connecting,
+                    enabled = ipAddress.isIpAddress() && port.isIpPort() && sessionState !is SessionState.Connecting,
                     onClick = {
-                        if (connectionState.value is ConnectionState.Connected)
+                        if (sessionState is SessionState.Connected)
                             viewModel.disconnect()
                         else
-                            viewModel.attemptConnection(ipAddress, port, isTls)
+                            shouldPopOnConnected = true
+                        viewModel.attemptConnection(ipAddress, port, isTls)
                     }
                 ) {
                     Text(
-                        text = if (connectionState.value is ConnectionState.Connected)
+                        text = if (sessionState is SessionState.Connected)
                             "Disconnect"
                         else
                             "Connect"

@@ -11,7 +11,7 @@ import ua.pp.formatbce.musicassistant.data.model.client.Player
 import ua.pp.formatbce.musicassistant.data.model.client.PlayerData
 import ua.pp.formatbce.musicassistant.data.model.client.SelectedPlayerData
 import ua.pp.formatbce.musicassistant.data.ServiceDataSource
-import ua.pp.formatbce.musicassistant.utils.ConnectionState
+import ua.pp.formatbce.musicassistant.utils.SessionState
 
 class MainViewModel(
     private val apiClient: ServiceClient,
@@ -22,28 +22,34 @@ class MainViewModel(
 
     init {
         screenModelScope.launch {
-            apiClient.connectionState.collect {
+            apiClient.sessionState.collect {
                 when (it) {
-                    is ConnectionState.Connected -> {
+                    is SessionState.Connected -> {
                         jobs.add(watchPlayersData())
                         jobs.add(watchSelectedPlayerData())
                     }
 
-                    ConnectionState.Connecting -> {
+                    is SessionState.Connecting -> {
                         mutableState.update { State.Loading }
                         stopJobs()
                     }
 
-                    is ConnectionState.Disconnected -> {
-                        mutableState.update { State.Disconnected }
-                        stopJobs()
-                    }
+                    is SessionState.Disconnected -> {
+                        when (it) {
+                            is SessionState.Disconnected.Error,
+                            SessionState.Disconnected.Initial,
+                            SessionState.Disconnected.ByUser -> {
+                                mutableState.update { State.Disconnected }
+                                stopJobs()
+                            }
 
-                    ConnectionState.NoServer -> {
-                        mutableState.update { State.NoServer }
-                        stopJobs()
-                    }
+                            SessionState.Disconnected.NoServerData -> {
+                                mutableState.update { State.NoServer }
+                                stopJobs()
+                            }
+                        }
 
+                    }
                 }
             }
         }
@@ -56,12 +62,13 @@ class MainViewModel(
 
     private fun watchPlayersData(): Job = screenModelScope.launch {
         dataSource.playersData.collect { playerData ->
-            mutableState.update {
-                State.Data(
-                    playerData,
-                    dataSource.selectedPlayerData.value
-                )
-            }
+            if (playerData.isNotEmpty() || mutableState.value is State.Data)
+                mutableState.update {
+                    State.Data(
+                        playerData,
+                        dataSource.selectedPlayerData.value
+                    )
+                }
         }
     }
 

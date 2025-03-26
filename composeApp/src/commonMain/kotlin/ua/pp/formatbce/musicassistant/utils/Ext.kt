@@ -1,5 +1,6 @@
 package ua.pp.formatbce.musicassistant.utils
 
+import androidx.compose.ui.Modifier
 import kotlin.time.Duration
 
 fun Duration?.toMinSec() =
@@ -24,3 +25,18 @@ fun String.isIpPort() : Boolean {
     val port = this.toIntOrNull()
     return port != null && port in 1..65535
 }
+
+fun Modifier.conditional(
+    condition: Boolean,
+    ifTrue: Modifier.() -> Modifier,
+    ifFalse: (Modifier.() -> Modifier)? = null,
+): Modifier {
+    return if (condition) {
+        then(ifTrue(Modifier))
+    } else if (ifFalse != null) {
+        then(ifFalse(Modifier))
+    } else {
+        this
+    }
+}
+

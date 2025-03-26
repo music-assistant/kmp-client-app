@@ -2,7 +2,6 @@ package ua.pp.formatbce.musicassistant.api
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.receiveDeserialized
 import io.ktor.client.plugins.websocket.sendSerialized
@@ -14,14 +13,13 @@ import io.ktor.websocket.close
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
@@ -29,8 +27,7 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import ua.pp.formatbce.musicassistant.data.model.server.ServerInfo
 import ua.pp.formatbce.musicassistant.data.model.server.events.Event
 import ua.pp.formatbce.musicassistant.settings.SettingsRepository
-import ua.pp.formatbce.musicassistant.utils.ConnectionState
-import ua.pp.formatbce.musicassistant.utils.ServerDataChangedException
+import ua.pp.formatbce.musicassistant.utils.SessionState
 import ua.pp.formatbce.musicassistant.utils.myJson
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -40,83 +37,93 @@ class ServiceClient(private val settings: SettingsRepository) {
     private val client = HttpClient(CIO) {
         install(WebSockets) { contentConverter = KotlinxWebsocketSerializationConverter(myJson) }
     }
-    private var session: DefaultClientWebSocketSession? = null
-    private val pendingResponses = mutableMapOf<String, (Answer) -> Unit>()
-    private var isConnecting = false
-    private var isReconnecting = false
-    private val _connectionStateFlow =
-        MutableStateFlow<ConnectionState>(ConnectionState.Disconnected(null))
-    val connectionState: StateFlow<ConnectionState> = _connectionStateFlow.asStateFlow()
+    private var listeningJob: Job? = null
+
+    private var _sessionState: MutableStateFlow<SessionState> =
+        MutableStateFlow(SessionState.Disconnected.Initial)
+    val sessionState = _sessionState.onEach {
+        when (it) {
+            is SessionState.Connected -> {
+                settings.updateConnectionInfo(it.connectionInfo)
+            }
+
+            is SessionState.Disconnected -> {
+                listeningJob?.cancel()
+                listeningJob = null
+                when (it) {
+                    SessionState.Disconnected.ByUser,
+                    SessionState.Disconnected.NoServerData -> Unit
+
+                    is SessionState.Disconnected.Error,
+                    SessionState.Disconnected.Initial -> {
+                        settings.connectionInfo.value?.let { connectionInfo ->
+                            connect(connectionInfo)
+                        } ?: _sessionState.update { SessionState.Disconnected.NoServerData }
+                    }
+                }
+            }
+
+            is SessionState.Connecting -> Unit
+        }
+    }
 
     private val _eventsFlow = MutableSharedFlow<Event<out Any>>(extraBufferCapacity = 10)
     val events: Flow<Event<out Any>> = _eventsFlow.asSharedFlow()
-
     private val _serverInfoFlow = MutableStateFlow<ServerInfo?>(null)
     val serverInfo: Flow<ServerInfo> = _serverInfoFlow.filterNotNull()
 
-    fun connect(connection: ConnectionInfo?) {
-        if (connection == null) {
-            _connectionStateFlow.update { ConnectionState.NoServer }
-            return
-        }
-        if (isConnecting) return
-        isConnecting = true
-        CoroutineScope(Dispatchers.IO).launch {
-            val currentConnection = settings.connectionInfo.value
-            if (session != null) {
-                isConnecting = false
-                if (currentConnection != null && connection != currentConnection) {
-                    reconnect(connection, ServerDataChangedException)
-                }
-                return@launch
-            }
-            _connectionStateFlow.update { ConnectionState.Connecting }
-            try {
-                if (connection.isTls) {
-                    client.wss(
-                        HttpMethod.Get,
-                        connection.host,
-                        connection.port,
-                        "/ws",
-                    ) {
-                        session = this
-                        _connectionStateFlow.update { ConnectionState.Connected(connection) }
-                        if (connection != currentConnection) {
-                            settings.updateConnectionInfo(connection)
+    private val pendingResponses = mutableMapOf<String, (Answer) -> Unit>()
+
+    fun connect(connection: ConnectionInfo) {
+        when (_sessionState.value) {
+            is SessionState.Connecting,
+            is SessionState.Connected -> return
+
+            is SessionState.Disconnected -> {
+                _sessionState.update { SessionState.Connecting(connection) }
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        if (connection.isTls) {
+                            client.wss(
+                                HttpMethod.Get,
+                                connection.host,
+                                connection.port,
+                                "/ws",
+                            ) {
+                                _sessionState.update { SessionState.Connected(this, connection) }
+                                listenForMessages()
+                            }
+                        } else {
+                            client.ws(
+                                HttpMethod.Get,
+                                connection.host,
+                                connection.port,
+                                "/ws",
+                            ) {
+                                _sessionState.update { SessionState.Connected(this, connection) }
+                                listenForMessages()
+                            }
                         }
-                        listenForMessages()
-                    }
-                } else {
-                    client.ws(
-                        HttpMethod.Get,
-                        connection.host,
-                        connection.port,
-                        "/ws",
-                    ) {
-                        session = this
-                        _connectionStateFlow.update { ConnectionState.Connected(connection) }
-                        if (connection != currentConnection) {
-                            settings.updateConnectionInfo(connection)
+                    } catch (e: Exception) {
+                        _sessionState.update {
+                            SessionState.Disconnected.Error(Exception("Connection failed: ${e.message}"))
                         }
-                        listenForMessages()
                     }
                 }
-            } catch (e: Exception) {
-                _connectionStateFlow.update {
-                    ConnectionState.disconnected(
-                        Exception("Connection failed: ${e.message}"),
-                        settings.connectionInfo.value != null
-                    )
-                }
             }
-            isConnecting = false
         }
+
+
     }
 
     private suspend fun listenForMessages() {
         try {
-            while (session != null) {
-                val message = session?.receiveDeserialized<JsonObject>() ?: continue
+            while (true) {
+                val state = _sessionState.value
+                if (state !is SessionState.Connected) {
+                    continue
+                }
+                val message = state.session.receiveDeserialized<JsonObject>()
                 when {
                     message.containsKey("message_id") -> {
                         val commandAnswer = Answer(message)
@@ -135,12 +142,12 @@ class ServiceClient(private val settings: SettingsRepository) {
                 }
             }
         } catch (e: Exception) {
-            val state = _connectionStateFlow.value
-            if (state is ConnectionState.Disconnected && state.exception == null) {
+            val state = _sessionState.value
+            if (state is SessionState.Disconnected.ByUser) {
                 return
             }
-            settings.connectionInfo.value?.let {
-                reconnect(it, Exception("Message receiving error: ${e.message}"))
+            if (state is SessionState.Connected) {
+                disconnect(SessionState.Disconnected.Error(Exception("Session error: ${e.message}")))
             }
         }
     }
@@ -152,43 +159,33 @@ class ServiceClient(private val settings: SettingsRepository) {
             continuation.resume(response)
         }
         CoroutineScope(Dispatchers.IO).launch {
-            try {
-                session?.sendSerialized(request) ?: run {
+            val state = _sessionState.value as? SessionState.Connected
+                ?: run {
                     pendingResponses.remove(request.messageId)
                     continuation.resume(null)
+                    return@launch
                 }
+            try {
+                state.session.sendSerialized(request)
             } catch (e: Exception) {
                 pendingResponses.remove(request.messageId)
                 continuation.resume(null)
-                if (!isConnecting && !isReconnecting) {
-                    disconnect(Exception("Error sending command: ${e.message}"))
-                }
+                disconnect(SessionState.Disconnected.Error(Exception("Error sending command: ${e.message}")))
             }
         }
     }
 
-
-    fun disconnect(reason: Exception? = null) {
-        CoroutineScope(Dispatchers.IO).launch {
-            _connectionStateFlow.update {
-                ConnectionState.disconnected(
-                    reason,
-                    settings.connectionInfo.value != null
-                )
-            }
-            session?.close()
-            session = null
-        }
+    fun disconnectByUser() {
+        disconnect(SessionState.Disconnected.ByUser)
     }
 
-    private fun reconnect(settings: ConnectionInfo, reason: Exception) {
-        if (isReconnecting) return
-        isReconnecting = true
+
+    private fun disconnect(newState: SessionState.Disconnected) {
         CoroutineScope(Dispatchers.IO).launch {
-            disconnect(reason)
-            delay(300)
-            connect(settings)
-            isReconnecting = false
+            (_sessionState.value as? SessionState.Connected)?.let {
+                it.session.close()
+                _sessionState.update { newState }
+            }
         }
     }
 }

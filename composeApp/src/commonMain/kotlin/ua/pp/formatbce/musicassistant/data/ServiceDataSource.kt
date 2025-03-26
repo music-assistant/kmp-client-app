@@ -45,7 +45,7 @@ import ua.pp.formatbce.musicassistant.data.model.server.events.QueueUpdatedEvent
 import ua.pp.formatbce.musicassistant.settings.SettingsRepository
 import ua.pp.formatbce.musicassistant.ui.compose.main.PlayerAction
 import ua.pp.formatbce.musicassistant.ui.compose.main.QueueAction
-import ua.pp.formatbce.musicassistant.utils.ConnectionState
+import ua.pp.formatbce.musicassistant.utils.SessionState
 import kotlin.coroutines.CoroutineContext
 
 @OptIn(FlowPreview::class)
@@ -109,32 +109,24 @@ class ServiceDataSource(
 
     init {
         launch {
-            apiClient.connectionState.collect {
+            apiClient.sessionState.collect {
                 when (it) {
-                    is ConnectionState.Connected -> {
+                    is SessionState.Connected -> {
                         watchJob = watchApiEvents()
                         sendInitCommands()
-//                        if (_selectedPlayerData.value == null) {
-//                            selectPlayer(_localPlayer.value)
-//                        }
                     }
 
-                    ConnectionState.Connecting -> {
+                    is SessionState.Connecting -> {
                         watchJob?.cancel()
                         watchJob = null
                     }
 
-                    is ConnectionState.Disconnected -> {
+                    is SessionState.Disconnected -> {
                         _serverPlayers.update { emptyList() }
                         _serverQueues.update { emptyList() }
                         watchJob?.cancel()
                         watchJob = null
-                        if (it.exception == null) {
-                            apiClient.connect(settings.connectionInfo.value)
-                        }
                     }
-
-                    ConnectionState.NoServer -> Unit
                 }
             }
         }

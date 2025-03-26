@@ -15,16 +15,16 @@ import ua.pp.formatbce.musicassistant.api.getPlaylistsRequest
 import ua.pp.formatbce.musicassistant.api.playMediaRequest
 import ua.pp.formatbce.musicassistant.data.model.client.MediaItem
 import ua.pp.formatbce.musicassistant.data.model.client.MediaItem.Companion.toMediaItemList
+import ua.pp.formatbce.musicassistant.data.model.client.PlayerData
 import ua.pp.formatbce.musicassistant.data.model.server.QueueOption
 import ua.pp.formatbce.musicassistant.data.model.server.ServerMediaItem
-import ua.pp.formatbce.musicassistant.data.model.client.PlayerData
-import ua.pp.formatbce.musicassistant.utils.ConnectionState
+import ua.pp.formatbce.musicassistant.utils.SessionState
 
 class LibraryViewModel(
     private val apiClient: ServiceClient,
 ) : StateScreenModel<LibraryViewModel.State>(
     State(
-        connectionState = ConnectionState.Disconnected(null),
+        connectionState = SessionState.Disconnected.Initial,
         libraryLists = LibraryTab.entries.map {
             LibraryList(
                 tab = it,
@@ -38,14 +38,14 @@ class LibraryViewModel(
     )
 ) {
 
-    private val connectionState = apiClient.connectionState
+    private val connectionState = apiClient.sessionState
 
 
     init {
         screenModelScope.launch {
             connectionState.collect { connection ->
                 mutableState.update { state -> state.copy(connectionState = connection) }
-                if (connection is ConnectionState.Connected
+                if (connection is SessionState.Connected
                     && state.value.libraryLists.any { it.listState is ListState.NoData }
                 ) {
                     screenModelScope.launch {
@@ -248,7 +248,7 @@ class LibraryViewModel(
     }
 
     data class State(
-        val connectionState: ConnectionState,
+        val connectionState: SessionState,
         val libraryLists: List<LibraryList>,
         val checkedItems: Set<MediaItem>,
         val showAlbums: Boolean
