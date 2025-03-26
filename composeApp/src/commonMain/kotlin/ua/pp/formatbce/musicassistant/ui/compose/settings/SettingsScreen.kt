@@ -60,7 +60,10 @@ class SettingsScreen : Screen {
             SessionState.Disconnected.Initial
         )
         val serverInfo = viewModel.serverInfo.collectAsStateWithLifecycle(null)
-        var shouldPopOnConnected by remember { mutableStateOf(sessionState !is SessionState.Connected) }
+        var shouldPopOnConnected by remember {
+            mutableStateOf(sessionState !is SessionState.Connected
+                    && sessionState != SessionState.Disconnected.Initial)
+        }
         if (sessionState is SessionState.Connected && shouldPopOnConnected) {
             navigator.pop()
             shouldPopOnConnected = false

@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
+import androidx.compose.material.ExtendedFloatingActionButton
 import androidx.compose.material.FabPosition
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
@@ -81,7 +82,7 @@ import ua.pp.formatbce.musicassistant.data.model.server.MediaType
 import ua.pp.formatbce.musicassistant.data.model.server.QueueOption
 import ua.pp.formatbce.musicassistant.data.model.client.PlayerData
 import ua.pp.formatbce.musicassistant.ui.compose.common.ActionIcon
-import ua.pp.formatbce.musicassistant.ui.compose.common.Fab
+import ua.pp.formatbce.musicassistant.ui.compose.common.VerticalHidingContainer
 
 data class LibraryScreen(val playerData: PlayerData) : Screen {
 
@@ -158,10 +159,20 @@ data class LibraryScreen(val playerData: PlayerData) : Screen {
                     && selectedList.listState is LibraryViewModel.ListState.Data
                     && selectedList.parentItems.lastOrNull()?.mediaType == MediaType.ARTIST
                 ) {
-                    Fab(
+                    VerticalHidingContainer(
                         isVisible = isFabVisible.value,
-                        text = if (state.showAlbums) "Tracks" else "Albums",
-                        onClick = { onShowAlbumsChange(!state.showAlbums) })
+                    ) {
+                        ExtendedFloatingActionButton(
+                            modifier = modifier,
+                            onClick = { onShowAlbumsChange(!state.showAlbums) },
+                            text = {
+                                Text(
+                                    text = if (state.showAlbums) "Tracks" else "Albums",
+                                    style = MaterialTheme.typography.button
+                                )
+                            }
+                        )
+                    }
                 }
             },
             floatingActionButtonPosition = FabPosition.End,

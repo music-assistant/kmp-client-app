@@ -10,7 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
 @Composable
-fun Fab(
+fun VerticalHidingContainer(
     modifier: Modifier = Modifier,
     isVisible: Boolean,
     text: String,
@@ -31,5 +31,19 @@ fun Fab(
                 )
             }
         )
+    }
+}
+
+@Composable
+fun VerticalHidingContainer(
+    isVisible: Boolean,
+    content: @Composable () -> Unit,
+) {
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = slideInVertically(initialOffsetY = { it * 2 }),
+        exit = slideOutVertically(targetOffsetY = { it * 2 }),
+    ) {
+        content()
     }
 }

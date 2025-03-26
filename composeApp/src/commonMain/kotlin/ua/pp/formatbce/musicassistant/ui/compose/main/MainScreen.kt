@@ -12,9 +12,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.material.Button
 import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.ExtendedFloatingActionButton
 import androidx.compose.material.FabPosition
+import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
@@ -36,12 +37,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
-import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.Cog
-import ua.pp.formatbce.musicassistant.ui.compose.common.Fab
+import ua.pp.formatbce.musicassistant.ui.compose.common.VerticalHidingContainer
 import ua.pp.formatbce.musicassistant.ui.compose.library.LibraryScreen
 import ua.pp.formatbce.musicassistant.ui.compose.settings.SettingsScreen
 
@@ -69,17 +69,40 @@ class MainScreen : Screen {
         }
         Scaffold(
             floatingActionButton = {
-                if (state is MainViewModel.State.Data) {
-                    Fab(
-                        isVisible = isFabVisible,
-                        text = "Library",
-                        onClick = {
-                            val data = state as? MainViewModel.State.Data
-                            data?.playerData?.firstOrNull { it.player.id == data.selectedPlayerData?.playerId }
-                                ?.let { selected ->
-                                    navigator.push(LibraryScreen(selected))
+                VerticalHidingContainer(
+                    isVisible = isFabVisible,
+                ) {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        FloatingActionButton(
+                            modifier = Modifier.padding(start = 30.dp).align(Alignment.BottomStart),
+                            onClick = { navigator.push(SettingsScreen()) },
+                        ) {
+                            Icon(
+                                modifier = Modifier.size(24.dp),
+                                imageVector = FontAwesomeIcons.Solid.Cog,
+                                contentDescription = null,
+                            )
+                        }
+
+                        if (state is MainViewModel.State.Data) {
+                            ExtendedFloatingActionButton(
+                                modifier = Modifier.align(Alignment.BottomEnd),
+                                onClick = {
+                                    val data = state as? MainViewModel.State.Data
+                                    data?.playerData?.firstOrNull { it.player.id == data.selectedPlayerData?.playerId }
+                                        ?.let { selected ->
+                                            navigator.push(LibraryScreen(selected))
+                                        }
+                                },
+                                text = {
+                                    Text(
+                                        text = "Library",
+                                        style = MaterialTheme.typography.button
+                                    )
                                 }
-                        })
+                            )
+                        }
+                    }
                 }
             },
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -107,7 +130,6 @@ class MainScreen : Screen {
                         state = it,
                         nestedScrollConnection = nestedScrollConnection,
                         viewModel = viewModel,
-                        navigator = navigator
                     )
                 }
                 when (state) {
@@ -115,7 +137,6 @@ class MainScreen : Screen {
                     MainViewModel.State.Loading,
                     MainViewModel.State.NoServer -> ServiceLayout(
                         stateValue = state,
-                        navigator = navigator
                     )
 
                     is MainViewModel.State.Data -> Unit
@@ -127,12 +148,11 @@ class MainScreen : Screen {
     @Composable
     private fun ServiceLayout(
         stateValue: MainViewModel.State,
-        navigator: Navigator
     ) {
         Column(
             modifier = Modifier.fillMaxSize()
                 .background(color = MaterialTheme.colors.background.copy(alpha = 0.9f))
-                .clickable() { /* Absorb interaction*/ },
+                .clickable { /* Absorb interaction*/ },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -149,13 +169,6 @@ class MainScreen : Screen {
                 color = MaterialTheme.colors.onBackground,
             )
             CircularProgressIndicator()
-            Button(
-                modifier = Modifier
-                    .padding(all = 16.dp),
-                onClick = { navigator.push(SettingsScreen()) }
-            ) {
-                Text(text = "Settings")
-            }
         }
     }
 
@@ -165,7 +178,6 @@ class MainScreen : Screen {
         state: MainViewModel.State.Data,
         nestedScrollConnection: NestedScrollConnection,
         viewModel: MainViewModel,
-        navigator: Navigator
     ) {
         Column(
             Modifier.fillMaxSize(),
@@ -188,7 +200,7 @@ class MainScreen : Screen {
                 .firstOrNull { it.player.id == selectedPlayerData?.playerId }
                 ?.let { playerData ->
                     PlayerDetails(
-                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        modifier = Modifier.fillMaxSize(),
                         nestedScrollConnection = nestedScrollConnection,
                         playerData = playerData,
                         queueItems = selectedPlayerData?.queueItems,
@@ -204,15 +216,6 @@ class MainScreen : Screen {
                         onChosenItemsClear = { viewModel.onChosenItemsClear() }
                     )
                 }
-            Icon(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .clickable { navigator.push(SettingsScreen()) }
-                    .size(24.dp),
-                imageVector = FontAwesomeIcons.Solid.Cog,
-                contentDescription = null,
-                tint = MaterialTheme.colors.secondary,
-            )
         }
     }
 }
