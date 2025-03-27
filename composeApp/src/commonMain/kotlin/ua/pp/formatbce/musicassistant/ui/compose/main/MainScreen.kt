@@ -1,5 +1,6 @@
 package ua.pp.formatbce.musicassistant.ui.compose.main
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,9 +10,12 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.ExtendedFloatingActionButton
 import androidx.compose.material.FabPosition
@@ -52,6 +56,7 @@ class MainScreen : Screen {
         val viewModel = koinScreenModel<MainViewModel>()
         val state by viewModel.state.collectAsStateWithLifecycle(MainViewModel.State.Loading)
         var isFabVisible by rememberSaveable { mutableStateOf(true) }
+        var isPlayersRowCollapsed by remember { mutableStateOf(false) }
         val nestedScrollConnection = remember {
             object : NestedScrollConnection {
                 override fun onPreScroll(
@@ -60,8 +65,10 @@ class MainScreen : Screen {
                 ): Offset {
                     if (available.y < -1) {
                         isFabVisible = false
+                        isPlayersRowCollapsed = true
                     } else if (available.y > 1) {
                         isFabVisible = true
+                        isPlayersRowCollapsed = false
                     }
                     return Offset.Zero
                 }
@@ -127,10 +134,11 @@ class MainScreen : Screen {
             ) {
                 lastDataState?.let {
                     DataLayout(
+                        isPlayersRowCollapsed,
                         state = it,
                         nestedScrollConnection = nestedScrollConnection,
                         viewModel = viewModel,
-                    )
+                    ) { isPlayersRowCollapsed = false }
                 }
                 when (state) {
                     MainViewModel.State.Disconnected,
@@ -175,9 +183,11 @@ class MainScreen : Screen {
 
     @Composable
     private fun DataLayout(
+        collapsed: Boolean,
         state: MainViewModel.State.Data,
         nestedScrollConnection: NestedScrollConnection,
         viewModel: MainViewModel,
+        onPlayerClick: () -> Unit
     ) {
         Column(
             Modifier.fillMaxSize(),
@@ -186,15 +196,34 @@ class MainScreen : Screen {
         ) {
             val playersData = state.playerData
             val selectedPlayerData = state.selectedPlayerData
-            PlayersRow(
-                modifier = Modifier.padding(top = 8.dp),
-                players = playersData,
-                selectedPlayerId = selectedPlayerData?.playerId,
-                playerAction = { playerData, action ->
-                    viewModel.playerAction(playerData, action)
-                },
-                onListReordered = viewModel::onPlayersSortChanged,
-            ) { viewModel.selectPlayer(it) }
+
+            val minPlayersRowHeight = 80.dp
+            val maxPlayersRowHeight = 200.dp
+            val playersRowHeight = if (collapsed) minPlayersRowHeight else maxPlayersRowHeight
+            val animatedHeight by animateDpAsState(
+                targetValue = playersRowHeight,
+                label = "TopSectionHeight"
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+                    .heightIn(min = minPlayersRowHeight, max = animatedHeight)
+                    .padding(top = 8.dp)
+            ) {
+                PlayersRow(
+                    collapsed = collapsed,
+                    players = playersData,
+                    selectedPlayerId = selectedPlayerData?.playerId,
+                    playerAction = { playerData, action ->
+                        viewModel.playerAction(playerData, action)
+                    },
+                    onListReordered = viewModel::onPlayersSortChanged,
+                ) {
+                    onPlayerClick()
+                    viewModel.selectPlayer(it)
+                }
+            }
 
             playersData
                 .firstOrNull { it.player.id == selectedPlayerData?.playerId }
