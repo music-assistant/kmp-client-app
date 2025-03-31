@@ -33,6 +33,7 @@ import org.koin.android.ext.android.inject
 import ua.pp.formatbce.musicassistant.data.model.client.PlayerData
 import ua.pp.formatbce.musicassistant.data.ServiceDataSource
 import ua.pp.formatbce.musicassistant.ui.compose.main.PlayerAction
+import kotlin.math.max
 
 @OptIn(FlowPreview::class)
 class MediaPlaybackService : MediaBrowserServiceCompat() {
@@ -45,18 +46,28 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     private val players = dataSource.playersData
         .map { list -> list.filter { it.queue?.currentItem != null } }
         .stateIn(scope, SharingStarted.Eagerly, emptyList())
-    private val activePlayerIndex = MutableStateFlow(0)
+    private val activePlayerIndex =
+        MutableStateFlow(-1)
     private val currentPlayerData =
         combine(players, activePlayerIndex) { players, index ->
+            // if some player is playing and we still have no valid index, show playing player
+            if (index < 0 && players.isNotEmpty()) {
+                activePlayerIndex.update { max(0, players.indexOfFirst { it.player.isPlaying }) }
+            }
             players.getOrNull(index) ?: players.getOrNull(0)
         }.stateIn(scope, SharingStarted.Eagerly, null)
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate() {
         super.onCreate()
+        println("TEST onCreate")
         mediaSessionHelper =
             MediaSessionHelper(this, createCallback())
         mediaNotificationManager = MediaNotificationManager(this, mediaSessionHelper)
+        startForeground(
+            MediaNotificationManager.NOTIFICATION_ID,
+            mediaNotificationManager.createNotification(null)
+        )
         sessionToken = mediaSessionHelper.getSessionToken()
         scope.launch {
             combine(
@@ -82,8 +93,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             players.value
                 .indexOfFirst { it.player.isPlaying }
                 .takeIf { it >= 0 }
-                ?.let {
-                    activePlayerIndex.update { it }
+                ?.let { playingPosition ->
+                    activePlayerIndex.update { playingPosition }
                     Toast.makeText(
                         this@MediaPlaybackService,
                         "You have playing players",
