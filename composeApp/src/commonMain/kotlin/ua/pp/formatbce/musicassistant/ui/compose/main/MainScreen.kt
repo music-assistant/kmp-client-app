@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -137,10 +138,7 @@ class MainScreen : Screen {
                         state = it,
                         nestedScrollConnection = nestedScrollConnection,
                         viewModel = viewModel,
-                    ) {
-                        isPlayersRowCollapsed = false
-                        isFabVisible = true
-                    }
+                    ) { isPlayersRowCollapsed = false }
                 }
                 when (state) {
                     MainViewModel.State.Disconnected,
@@ -189,7 +187,7 @@ class MainScreen : Screen {
         state: MainViewModel.State.Data,
         nestedScrollConnection: NestedScrollConnection,
         viewModel: MainViewModel,
-        onPlayerChosen: () -> Unit
+        onPlayerClick: () -> Unit
     ) {
         Column(
             Modifier.fillMaxSize(),
@@ -222,7 +220,7 @@ class MainScreen : Screen {
                     },
                     onListReordered = viewModel::onPlayersSortChanged,
                 ) {
-                    onPlayerChosen()
+                    onPlayerClick()
                     viewModel.selectPlayer(it)
                 }
             }

@@ -3,6 +3,7 @@ package ua.pp.formatbce.musicassistant.ui.compose.main
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -28,13 +29,11 @@ import androidx.compose.material.LinearProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -48,14 +47,12 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import compose.icons.TablerIcons
 import compose.icons.tablericons.GripVertical
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableCollectionItemScope
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import ua.pp.formatbce.musicassistant.data.model.client.Player
 import ua.pp.formatbce.musicassistant.data.model.client.PlayerData
-import kotlin.math.abs
 
 @Composable
 fun PlayersRow(
@@ -65,7 +62,7 @@ fun PlayersRow(
     selectedPlayerId: String?,
     playerAction: (PlayerData, PlayerAction) -> Unit,
     onListReordered: (List<String>) -> Unit,
-    onItemChosen: (Player) -> Unit,
+    onItemClick: (Player) -> Unit,
 ) {
     var internalItems by remember(players) { mutableStateOf(players) }
     val scrollState = rememberLazyListState()
@@ -74,23 +71,6 @@ fun PlayersRow(
         internalItems = internalItems.toMutableList().apply {
             add(to.index, removeAt(from.index))
         }
-    }
-
-    LaunchedEffect(scrollState, internalItems) {
-        snapshotFlow { scrollState.isScrollInProgress }
-            .distinctUntilChanged()
-            .collect { isScrolling ->
-                if (!isScrolling) {
-                    val layoutInfo = scrollState.layoutInfo
-                    val viewportCenter = layoutInfo.viewportEndOffset / 2
-
-                    val snappedItem = layoutInfo.visibleItemsInfo.minByOrNull { item ->
-                        abs((item.offset + item.size / 2) - viewportCenter)
-                    }
-
-                    snappedItem?.let { onItemChosen(internalItems[it.index].player) }
-                }
-            }
     }
     LazyRow(
         modifier = modifier.draggable(
@@ -121,7 +101,7 @@ fun PlayersRow(
                         if (internalItems != players)
                             onListReordered(internalItems.map { it.player.id })
                     }
-                )
+                ) { onItemClick(player) }
             }
         }
     }
@@ -136,6 +116,7 @@ fun PlayerCard(
     playerAction: (PlayerData, PlayerAction) -> Unit,
     reorderScope: ReorderableCollectionItemScope,
     onItemMoved: () -> Unit,
+    onClick: () -> Unit,
 ) {
     val player = playerData.player
     val queue = playerData.queue
@@ -152,6 +133,7 @@ fun PlayerCard(
                 color = MaterialTheme.colors.primary,
                 shape = RoundedCornerShape(size = 8.dp)
             )
+            .clickable(enabled = !isSelected) { onClick() }
     ) {
         queue?.currentItem?.track?.imageUrl?.let {
             AsyncImage(
