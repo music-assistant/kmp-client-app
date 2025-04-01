@@ -140,7 +140,6 @@ class ServiceDataSource(
     }
 
     fun selectPlayer(player: Player) {
-        if (player.id == _selectedPlayerData.value?.playerId) return
         _selectedPlayerData.update { SelectedPlayerData(player.id) }
         player.queueId?.let { updatePlayerQueueItems(player) }
     }
