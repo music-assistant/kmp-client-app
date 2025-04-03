@@ -103,11 +103,11 @@ kotlin {
 }
 
 android {
-    namespace = "ua.pp.formatbce.musicassistant"
+    namespace = "io.music_assistant.client"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "ua.pp.formatbce.musicassistant"
+        applicationId = "io.music_assistant.client"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
@@ -135,11 +135,11 @@ dependencies {
 
 compose.desktop {
     application {
-        mainClass = "ua.pp.formatbce.musicassistant.MainKt"
+        mainClass = "io.music_assistant.client.MainKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "ua.pp.formatbce.musicassistant"
+            packageName = "io.music_assistant.client"
             packageVersion = "1.0.0"
         }
     }
