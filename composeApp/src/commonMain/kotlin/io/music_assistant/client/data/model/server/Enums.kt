@@ -36,6 +36,7 @@ enum class PlayerFeature {
     @SerialName("next_previous") NEXT_PREVIOUS,
     @SerialName("play_announcement") PLAY_ANNOUNCEMENT,
     @SerialName("enqueue") ENQUEUE,
+    @SerialName("gapless_playback") GAPLESS_PLAYBACK,
     @SerialName("select_source") SELECT_SOURCE
 }
 
