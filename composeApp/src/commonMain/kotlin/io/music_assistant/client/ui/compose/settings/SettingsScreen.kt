@@ -38,14 +38,14 @@ import cafe.adriel.voyager.navigator.internal.BackHandler
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.ArrowLeft
-import org.koin.compose.viewmodel.koinViewModel
-import org.koin.core.annotation.KoinExperimentalAPI
 import io.music_assistant.client.ui.compose.common.ActionIcon
 import io.music_assistant.client.ui.theme.ThemeSetting
 import io.music_assistant.client.ui.theme.ThemeViewModel
 import io.music_assistant.client.utils.SessionState
 import io.music_assistant.client.utils.isIpAddress
 import io.music_assistant.client.utils.isIpPort
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.annotation.KoinExperimentalAPI
 
 class SettingsScreen : Screen {
     @OptIn(KoinExperimentalAPI::class, InternalVoyagerApi::class)
@@ -61,8 +61,10 @@ class SettingsScreen : Screen {
         )
         val serverInfo = viewModel.serverInfo.collectAsStateWithLifecycle(null)
         var shouldPopOnConnected by remember {
-            mutableStateOf(sessionState !is SessionState.Connected
-                    && sessionState != SessionState.Disconnected.Initial)
+            mutableStateOf(
+                sessionState !is SessionState.Connected
+                        && sessionState != SessionState.Disconnected.Initial
+            )
         }
         if (sessionState is SessionState.Connected && shouldPopOnConnected) {
             navigator.pop()

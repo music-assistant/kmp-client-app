@@ -1,11 +1,49 @@
 package io.music_assistant.client.data
 
+import io.music_assistant.client.api.ServiceClient
+import io.music_assistant.client.api.playerQueueClearRequest
+import io.music_assistant.client.api.playerQueueItemsRequest
+import io.music_assistant.client.api.playerQueueMoveItemRequest
+import io.music_assistant.client.api.playerQueuePlayIndexRequest
+import io.music_assistant.client.api.playerQueueRemoveItemRequest
+import io.music_assistant.client.api.playerQueueSeekRequest
+import io.music_assistant.client.api.playerQueueSetRepeatModeRequest
+import io.music_assistant.client.api.playerQueueSetShuffleRequest
+import io.music_assistant.client.api.registerBuiltInPlayerRequest
+import io.music_assistant.client.api.simplePlayerRequest
+import io.music_assistant.client.api.unregisterBuiltInPlayerRequest
+import io.music_assistant.client.api.updateBuiltInPlayerStateRequest
+import io.music_assistant.client.data.model.client.Player
+import io.music_assistant.client.data.model.client.Player.Companion.toPlayer
+import io.music_assistant.client.data.model.client.PlayerData
+import io.music_assistant.client.data.model.client.Queue
+import io.music_assistant.client.data.model.client.Queue.Companion.toQueue
+import io.music_assistant.client.data.model.client.QueueTrack.Companion.toQueueTrack
+import io.music_assistant.client.data.model.client.SelectedPlayerData
+import io.music_assistant.client.data.model.server.BuiltinPlayerEventType
+import io.music_assistant.client.data.model.server.RepeatMode
+import io.music_assistant.client.data.model.server.ServerPlayer
+import io.music_assistant.client.data.model.server.ServerQueue
+import io.music_assistant.client.data.model.server.ServerQueueItem
+import io.music_assistant.client.data.model.server.events.BuiltinPlayerEvent
+import io.music_assistant.client.data.model.server.events.BuiltinPlayerState
+import io.music_assistant.client.data.model.server.events.PlayerUpdatedEvent
+import io.music_assistant.client.data.model.server.events.QueueItemsUpdatedEvent
+import io.music_assistant.client.data.model.server.events.QueueTimeUpdatedEvent
+import io.music_assistant.client.data.model.server.events.QueueUpdatedEvent
+import io.music_assistant.client.player.MediaPlayerController
+import io.music_assistant.client.player.MediaPlayerListener
+import io.music_assistant.client.settings.SettingsRepository
+import io.music_assistant.client.ui.compose.main.PlayerAction
+import io.music_assistant.client.ui.compose.main.QueueAction
+import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,73 +54,40 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import io.music_assistant.client.api.ServiceClient
-import io.music_assistant.client.api.playerQueueClearRequest
-import io.music_assistant.client.api.playerQueueItemsRequest
-import io.music_assistant.client.api.playerQueueMoveItemRequest
-import io.music_assistant.client.api.playerQueuePlayIndexRequest
-import io.music_assistant.client.api.playerQueueRemoveItemRequest
-import io.music_assistant.client.api.playerQueueSeekRequest
-import io.music_assistant.client.api.playerQueueSetRepeatModeRequest
-import io.music_assistant.client.api.playerQueueSetShuffleRequest
-import io.music_assistant.client.api.simplePlayerRequest
-import io.music_assistant.client.data.model.client.Player
-import io.music_assistant.client.data.model.client.Player.Companion.toPlayer
-import io.music_assistant.client.data.model.client.PlayerData
-import io.music_assistant.client.data.model.client.Queue
-import io.music_assistant.client.data.model.client.Queue.Companion.toQueue
-import io.music_assistant.client.data.model.client.QueueTrack.Companion.toQueueTrack
-import io.music_assistant.client.data.model.client.SelectedPlayerData
-import io.music_assistant.client.data.model.server.RepeatMode
-import io.music_assistant.client.data.model.server.ServerPlayer
-import io.music_assistant.client.data.model.server.ServerQueue
-import io.music_assistant.client.data.model.server.ServerQueueItem
-import io.music_assistant.client.data.model.server.events.PlayerUpdatedEvent
-import io.music_assistant.client.data.model.server.events.QueueItemsUpdatedEvent
-import io.music_assistant.client.data.model.server.events.QueueTimeUpdatedEvent
-import io.music_assistant.client.data.model.server.events.QueueUpdatedEvent
-import io.music_assistant.client.settings.SettingsRepository
-import io.music_assistant.client.ui.compose.main.PlayerAction
-import io.music_assistant.client.ui.compose.main.QueueAction
-import io.music_assistant.client.utils.SessionState
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 
 @OptIn(FlowPreview::class)
-class ServiceDataSource(
+class MainDataSource(
     private val settings: SettingsRepository,
-    private val apiClient: ServiceClient
-) : CoroutineScope {
+    private val apiClient: ServiceClient,
+    private val localPlayerController: MediaPlayerController,
+) : CoroutineScope, MediaPlayerListener {
+
+    private val localPlayerId = settings.getLocalPlayerId()
 
     override val coroutineContext: CoroutineContext
         get() = SupervisorJob() + Dispatchers.IO
 
     private val _serverPlayers = MutableStateFlow<List<Player>>(emptyList())
-    private val _serverQueues = MutableStateFlow<List<Queue>>(emptyList())
-    private val _localPlayer = MutableStateFlow(Player.local(isPlaying = false))
-
-    // TODO most probably won't be required, if MA server will hold built-in player queue
-    private val _localQueue = MutableStateFlow(
-        Queue.local(
-            shuffleEnabled = false,
-            elapsedTime = null,
-            currentItem = null
-        )
-    )
+    private val _queues = MutableStateFlow<List<Queue>>(emptyList())
 
     private val _players =
-        combine(_serverPlayers, _localPlayer, settings.playersSorting) { server, local, sortedIds ->
-            // TODO revise when local player is implemented
-            /*listOf(local) +*/ sortedIds?.let {
-            server.sortedBy { player ->
-                sortedIds.indexOf(player.id).takeIf { it >= 0 } ?: Int.MAX_VALUE
+        combine(_serverPlayers, settings.playersSorting) { players, sortedIds ->
+            val filtered = players.filter { !it.isBuiltin || it.id == localPlayerId }
+            sortedIds?.let {
+                filtered.sortedBy { player ->
+                    sortedIds.indexOf(player.id).takeIf { it >= 0 }
+                        ?: Int.MAX_VALUE
+                }
+            } ?: filtered.sortedBy { player ->
+                if (player.isBuiltin)
+                    "A" // putting it first
+                else player.name
             }
-        } ?: server.sortedBy { it.name }
         }
-    private val _queues = combine(_serverQueues, _localQueue) { server, local ->
-        // TODO revise when local player is implemented
-        /*listOf(local) +*/ server
-    }
 
     val playersData = combine(
         _players.debounce(500L),
@@ -106,6 +111,7 @@ class ServiceDataSource(
     val selectedPlayerData = _selectedPlayerData.asStateFlow()
 
     private var watchJob: Job? = null
+    private var updateJob: Job? = null
 
     init {
         launch {
@@ -114,18 +120,23 @@ class ServiceDataSource(
                     is SessionState.Connected -> {
                         watchJob = watchApiEvents()
                         sendInitCommands()
+                        updateJob = setupBuiltinPlayer()
                     }
 
                     is SessionState.Connecting -> {
                         watchJob?.cancel()
                         watchJob = null
+                        updateJob?.cancel()
+                        updateJob = null
                     }
 
                     is SessionState.Disconnected -> {
                         _serverPlayers.update { emptyList() }
-                        _serverQueues.update { emptyList() }
+                        _queues.update { emptyList() }
                         watchJob?.cancel()
                         watchJob = null
+                        updateJob?.cancel()
+                        updateJob = null
                     }
                 }
             }
@@ -138,6 +149,26 @@ class ServiceDataSource(
             }
         }
     }
+
+    private fun setupBuiltinPlayer() =
+        launch {
+            apiClient.sendRequest(
+                unregisterBuiltInPlayerRequest(
+                    localPlayerId
+                )
+            )
+            delay(1000L)
+            apiClient.sendRequest(
+                registerBuiltInPlayerRequest(
+                    Player.LOCAL_PLAYER_NAME,
+                    localPlayerId
+                )
+            )
+            while (isActive) {
+                delay(10000L)
+                updateLocalPlayerState()
+            }
+        }
 
     fun selectPlayer(player: Player) {
         _selectedPlayerData.update { SelectedPlayerData(player.id) }
@@ -290,8 +321,8 @@ class ServiceDataSource(
 
                         is QueueUpdatedEvent -> {
                             val data = event.queue()
-                            _serverQueues.update {
-                                _serverQueues.value.map {
+                            _queues.update { value ->
+                                value.map {
                                     if (it.id == data.id) data else it
                                 }
                             }
@@ -304,17 +335,53 @@ class ServiceDataSource(
                             }
                                 ?.takeIf { it.id == _selectedPlayerData.value?.playerId }
                                 ?.let { updatePlayerQueueItems(it) }
-                            _serverQueues.update {
-                                _serverQueues.value.map {
+                            _queues.update { value ->
+                                value.map {
                                     if (it.id == data.id) data else it
                                 }
                             }
                         }
 
                         is QueueTimeUpdatedEvent -> {
-                            _serverQueues.update {
-                                _serverQueues.value.map {
+                            _queues.update { value ->
+                                value.map {
                                     if (it.id == event.objectId) it.copy(elapsedTime = event.data) else it
+                                }
+                            }
+                        }
+
+                        is BuiltinPlayerEvent -> {
+                            if (event.objectId != localPlayerId) {
+                                println("Received event for other player: ${event.objectId}")
+                                return@collect
+                            }
+                            settings.connectionInfo.value?.webUrl?.let { url ->
+                                when (event.data.type) {
+                                    BuiltinPlayerEventType.PLAY_MEDIA -> {
+                                        event.data.mediaUrl?.let { media ->
+                                            withContext(Dispatchers.Main) {
+                                                localPlayerController.prepare(
+                                                    "$url/${media}",
+                                                    this@MainDataSource
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    BuiltinPlayerEventType.PLAY,
+                                    BuiltinPlayerEventType.RESUME -> withContext(Dispatchers.Main) { localPlayerController.start() }
+
+                                    BuiltinPlayerEventType.PAUSE -> withContext(Dispatchers.Main) { localPlayerController.pause() }
+                                    BuiltinPlayerEventType.STOP -> withContext(Dispatchers.Main) { localPlayerController.stop() }
+                                    BuiltinPlayerEventType.TIMEOUT -> updateLocalPlayerState()
+
+                                    BuiltinPlayerEventType.MUTE,
+                                    BuiltinPlayerEventType.UNMUTE,
+                                    BuiltinPlayerEventType.SET_VOLUME,
+                                    BuiltinPlayerEventType.POWER_OFF,
+                                    BuiltinPlayerEventType.POWER_ON -> {
+                                        println("Builtin player event unhandled")
+                                    }
                                 }
                             }
                         }
@@ -327,14 +394,15 @@ class ServiceDataSource(
     private fun sendInitCommands() {
         launch {
             apiClient.sendCommand("players/all")
-                ?.resultAs<List<ServerPlayer>>()?.map { it.toPlayer() }?.let { list ->
+                ?.resultAs<List<ServerPlayer>>()?.map { it.toPlayer() }
+                ?.let { list ->
                     _serverPlayers.update {
                         list.filter { it.shouldBeShown }
                     }
                 }
             apiClient.sendCommand("player_queues/all")
                 ?.resultAs<List<ServerQueue>>()?.map { it.toQueue() }?.let { list ->
-                    _serverQueues.update { list.filter { it.available } }
+                    _queues.update { list }
                 }
         }
     }
@@ -354,6 +422,38 @@ class ServiceDataSource(
                 }
 
         }
+    }
+
+    private suspend fun updateLocalPlayerState(stopped: Boolean? = null) {
+        apiClient.sendRequest(
+            withContext(Dispatchers.Main) {
+                updateBuiltInPlayerStateRequest(
+                    localPlayerId,
+                    BuiltinPlayerState(
+                        powered = true,
+                        playing = stopped ?: localPlayerController.isPlaying(),
+                        paused = !localPlayerController.isPlaying(),
+                        position = (localPlayerController.getCurrentPosition()
+                            ?: 0).toDouble() / 1000,
+                        volume = 100.0,
+                        muted = false
+                    )
+                )
+            }
+        )
+    }
+
+    override fun onReady() {
+        localPlayerController.start()
+        launch { updateLocalPlayerState() }
+    }
+
+    override fun onAudioCompleted() {
+        launch { updateLocalPlayerState(true) }
+    }
+
+    override fun onError(error: Throwable?) {
+        println("Media player error $error")
     }
 
 }

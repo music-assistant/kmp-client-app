@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import io.music_assistant.client.api.ConnectionInfo
 import io.music_assistant.client.ui.theme.ThemeSetting
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 class SettingsRepository(
     private val settings: Settings
@@ -50,4 +52,10 @@ class SettingsRepository(
         settings.putString("players_sort", newValue.joinToString(","))
         _playersSorting.update { newValue }
     }
+
+    @OptIn(ExperimentalUuidApi::class)
+    fun getLocalPlayerId(): String =
+        settings.getStringOrNull("local_player_id") ?: Uuid.random().toString().also {
+            settings.putString("local_player_id", it)
+        }
 }

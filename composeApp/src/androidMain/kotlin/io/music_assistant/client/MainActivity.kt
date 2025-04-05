@@ -11,12 +11,12 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
-import io.music_assistant.client.data.ServiceDataSource
+import io.music_assistant.client.data.MainDataSource
 import io.music_assistant.client.ui.compose.App
 
 class MainActivity : ComponentActivity() {
 
-    private val dataSource: ServiceDataSource by inject()
+    private val dataSource: MainDataSource by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

@@ -10,12 +10,12 @@ import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.data.model.client.Player
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.client.SelectedPlayerData
-import io.music_assistant.client.data.ServiceDataSource
+import io.music_assistant.client.data.MainDataSource
 import io.music_assistant.client.utils.SessionState
 
 class MainViewModel(
     private val apiClient: ServiceClient,
-    private val dataSource: ServiceDataSource,
+    private val dataSource: MainDataSource,
 ) : StateScreenModel<MainViewModel.State>(State.Loading) {
 
     private val jobs = mutableListOf<Job>()
