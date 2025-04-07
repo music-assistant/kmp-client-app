@@ -11,14 +11,14 @@ import androidx.media3.common.Player.STATE_READY
 import androidx.media3.exoplayer.ExoPlayer
 
 actual class MediaPlayerController actual constructor(platformContext: PlatformContext) {
-    val player = ExoPlayer.Builder(platformContext.applicationContext).build()
+    private val player = ExoPlayer.Builder(platformContext.applicationContext).build()
 
     actual fun prepare(pathSource: String, listener: MediaPlayerListener) {
         val mediaItem = MediaItem.fromUri(pathSource)
         player.addListener(object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
                 super.onPlayerError(error)
-                listener.onError()
+                listener.onError(error)
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
@@ -33,7 +33,7 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
 
             override fun onPlayerErrorChanged(error: PlaybackException?) {
                 super.onPlayerErrorChanged(error)
-                listener.onError()
+                listener.onError(error)
             }
         })
         player.setMediaItem(mediaItem)

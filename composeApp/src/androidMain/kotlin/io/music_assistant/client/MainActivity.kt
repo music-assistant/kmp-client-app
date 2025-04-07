@@ -8,21 +8,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.lifecycleScope
+import io.music_assistant.client.data.MainDataSource
+import io.music_assistant.client.ui.compose.App
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
-import io.music_assistant.client.data.ServiceDataSource
-import io.music_assistant.client.ui.compose.App
 
 class MainActivity : ComponentActivity() {
 
-    private val dataSource: ServiceDataSource by inject()
+    private val dataSource: MainDataSource by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         dataSource.isAnythingPlaying.asLiveData()
             .observe(this) {
-                println("TEST isAnythingPlaying: $it")
                 if (it) {
                         val serviceIntent = Intent(this, MediaPlaybackService::class.java)
                         serviceIntent.action = "ACTION_PLAY"

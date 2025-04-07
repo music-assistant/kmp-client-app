@@ -13,19 +13,6 @@ data class Queue(
     val currentItem: QueueTrack?
 ) {
     companion object {
-        fun local(
-            shuffleEnabled: Boolean,
-            elapsedTime: Double?,
-            currentItem: QueueTrack?,
-        ) = Queue(
-            id = Player.LOCAL_QUEUE_ID,
-            available = true,
-            shuffleEnabled = shuffleEnabled,
-            repeatMode = null,
-            elapsedTime = elapsedTime,
-            currentItem = currentItem
-        )
-
         fun ServerQueue.toQueue() = Queue(
             id = queueId,
             available = available,

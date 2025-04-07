@@ -72,7 +72,7 @@ class ServiceClient(private val settings: SettingsRepository) {
     private val _serverInfoFlow = MutableStateFlow<ServerInfo?>(null)
     val serverInfo: Flow<ServerInfo> = _serverInfoFlow.filterNotNull()
 
-    private val pendingResponses = mutableMapOf<String, (io.music_assistant.client.api.Answer) -> Unit>()
+    private val pendingResponses = mutableMapOf<String, (Answer) -> Unit>()
 
     fun connect(connection: ConnectionInfo) {
         when (_sessionState.value) {
@@ -126,7 +126,7 @@ class ServiceClient(private val settings: SettingsRepository) {
                 val message = state.session.receiveDeserialized<JsonObject>()
                 when {
                     message.containsKey("message_id") -> {
-                        val commandAnswer = io.music_assistant.client.api.Answer(message)
+                        val commandAnswer = Answer(message)
                         pendingResponses.remove(commandAnswer.messageId)?.invoke(commandAnswer)
                     }
 
@@ -152,9 +152,9 @@ class ServiceClient(private val settings: SettingsRepository) {
         }
     }
 
-    suspend fun sendCommand(command: String): io.music_assistant.client.api.Answer? = sendRequest(Request(command = command))
+    suspend fun sendCommand(command: String): Answer? = sendRequest(Request(command = command))
 
-    suspend fun sendRequest(request: Request): io.music_assistant.client.api.Answer? = suspendCoroutine { continuation ->
+    suspend fun sendRequest(request: Request): Answer? = suspendCoroutine { continuation ->
         pendingResponses[request.messageId] = { response ->
             continuation.resume(response)
         }

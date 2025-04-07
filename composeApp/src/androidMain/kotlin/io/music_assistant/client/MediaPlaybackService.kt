@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import io.music_assistant.client.data.model.client.PlayerData
-import io.music_assistant.client.data.ServiceDataSource
+import io.music_assistant.client.data.MainDataSource
 import io.music_assistant.client.ui.compose.main.PlayerAction
 import kotlin.math.max
 
@@ -42,7 +42,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     private lateinit var mediaSessionHelper: MediaSessionHelper
     private lateinit var mediaNotificationManager: MediaNotificationManager
 
-    private val dataSource: ServiceDataSource by inject()
+    private val dataSource: MainDataSource by inject()
     private val players = dataSource.playersData
         .map { list -> list.filter { it.queue?.currentItem != null } }
         .stateIn(scope, SharingStarted.Eagerly, emptyList())

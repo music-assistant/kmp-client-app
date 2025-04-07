@@ -29,6 +29,7 @@ import androidx.compose.material.LinearProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,12 +66,22 @@ fun PlayersRow(
     onItemClick: (Player) -> Unit,
 ) {
     var internalItems by remember(players) { mutableStateOf(players) }
+    var previousSelectedId by remember { mutableStateOf<String?>(null) }
     val scrollState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val reorderableLazyListState = rememberReorderableLazyListState(scrollState) { from, to ->
         internalItems = internalItems.toMutableList().apply {
             add(to.index, removeAt(from.index))
         }
+    }
+    LaunchedEffect(selectedPlayerId) {
+        if (previousSelectedId == null && selectedPlayerId != null) {
+            val index = internalItems.indexOfFirst { it.player.id == selectedPlayerId }
+            if (index >= 0) {
+                scrollState.animateScrollToItem(index)
+            }
+        }
+        previousSelectedId = selectedPlayerId
     }
     LazyRow(
         modifier = modifier.draggable(
