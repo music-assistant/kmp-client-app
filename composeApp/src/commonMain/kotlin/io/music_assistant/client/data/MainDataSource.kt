@@ -11,7 +11,6 @@ import io.music_assistant.client.api.playerQueueSetRepeatModeRequest
 import io.music_assistant.client.api.playerQueueSetShuffleRequest
 import io.music_assistant.client.api.registerBuiltInPlayerRequest
 import io.music_assistant.client.api.simplePlayerRequest
-import io.music_assistant.client.api.unregisterBuiltInPlayerRequest
 import io.music_assistant.client.api.updateBuiltInPlayerStateRequest
 import io.music_assistant.client.data.model.client.Player
 import io.music_assistant.client.data.model.client.Player.Companion.toPlayer
@@ -119,31 +118,38 @@ class MainDataSource(
                 when (it) {
                     is SessionState.Connected -> {
                         watchJob = watchApiEvents()
-                        sendInitCommands()
                         updateJob = setupBuiltinPlayer()
+                        updatePlayersAndQueues()
                     }
 
                     is SessionState.Connecting -> {
-                        watchJob?.cancel()
-                        watchJob = null
                         updateJob?.cancel()
                         updateJob = null
+                        watchJob?.cancel()
+                        watchJob = null
                     }
 
                     is SessionState.Disconnected -> {
                         _serverPlayers.update { emptyList() }
                         _queues.update { emptyList() }
-                        watchJob?.cancel()
-                        watchJob = null
                         updateJob?.cancel()
                         updateJob = null
+                        watchJob?.cancel()
+                        watchJob = null
                     }
                 }
             }
         }
         launch {
+            playersData.collect {
+                if (it.isNotEmpty() && it.first().player.id != localPlayerId) {
+                    updatePlayersAndQueues()
+                }
+            }
+        }
+        launch {
             playersData.filter { it.isNotEmpty() }.first {
-                _selectedPlayerData.value == null
+                it.first().player.id == localPlayerId && _selectedPlayerData.value == null
             }.let {
                 selectPlayer(it.first().player)
             }
@@ -152,12 +158,7 @@ class MainDataSource(
 
     private fun setupBuiltinPlayer() =
         launch {
-            apiClient.sendRequest(
-                unregisterBuiltInPlayerRequest(
-                    localPlayerId
-                )
-            )
-            delay(1000L)
+            println("Registering builtin player")
             apiClient.sendRequest(
                 registerBuiltInPlayerRequest(
                     Player.LOCAL_PLAYER_NAME,
@@ -165,8 +166,8 @@ class MainDataSource(
                 )
             )
             while (isActive) {
-                delay(10000L)
                 updateLocalPlayerState()
+                delay(10000L)
             }
         }
 
@@ -351,10 +352,8 @@ class MainDataSource(
                         }
 
                         is BuiltinPlayerEvent -> {
-                            if (event.objectId != localPlayerId) {
-                                println("Received event for other player: ${event.objectId}")
-                                return@collect
-                            }
+                            if (event.objectId != localPlayerId) return@collect
+                            println("Builtin player: $event")
                             settings.connectionInfo.value?.webUrl?.let { url ->
                                 when (event.data.type) {
                                     BuiltinPlayerEventType.PLAY_MEDIA -> {
@@ -391,7 +390,8 @@ class MainDataSource(
                 }
         }
 
-    private fun sendInitCommands() {
+    private fun updatePlayersAndQueues() {
+        println("Updating players")
         launch {
             apiClient.sendCommand("players/all")
                 ?.resultAs<List<ServerPlayer>>()?.map { it.toPlayer() }
@@ -425,6 +425,7 @@ class MainDataSource(
     }
 
     private suspend fun updateLocalPlayerState(stopped: Boolean? = null) {
+        println("Updating local player state")
         apiClient.sendRequest(
             withContext(Dispatchers.Main) {
                 updateBuiltInPlayerStateRequest(
