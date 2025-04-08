@@ -3,7 +3,7 @@ package io.music_assistant.client.api
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.server.RepeatMode
 import io.music_assistant.client.data.model.server.events.BuiltinPlayerState
-import kotlinx.serialization.json.Json
+import io.music_assistant.client.utils.myJson
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -203,19 +203,19 @@ fun registerBuiltInPlayerRequest(playerName: String, playerId: String) = Request
     }
 )
 
-fun unregisterBuiltInPlayerRequest(playerId: String) = Request(
-    command = "builtin_player/unregister",
-    args = buildJsonObject {
-        put("player_id", JsonPrimitive(playerId))
-
-    }
-)
+//fun unregisterBuiltInPlayerRequest(playerId: String) = Request(
+//    command = "builtin_player/unregister",
+//    args = buildJsonObject {
+//        put("player_id", JsonPrimitive(playerId))
+//
+//    }
+//)
 
 fun updateBuiltInPlayerStateRequest(playerId: String, state: BuiltinPlayerState) = Request(
     command = "builtin_player/update_state",
     args = buildJsonObject {
         put("player_id", JsonPrimitive(playerId))
-        put("state", Json.encodeToJsonElement(state))
+        put("state", myJson.encodeToJsonElement(state))
 
     }
 )
