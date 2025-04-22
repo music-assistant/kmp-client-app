@@ -160,7 +160,7 @@ class SettingsScreen : Screen {
                     label = {
                         Text("IP address")
                     },
-                    maxLines = 1,
+                    singleLine = true,
                     colors = TextFieldDefaults.textFieldColors(
                         textColor = MaterialTheme.colors.onBackground,
                     )
@@ -173,7 +173,7 @@ class SettingsScreen : Screen {
                     label = {
                         Text("Port (8095 by default)")
                     },
-                    maxLines = 1,
+                    singleLine = true,
                     colors = TextFieldDefaults.textFieldColors(
                         textColor = MaterialTheme.colors.onBackground,
                     )

@@ -1,4 +1,4 @@
-package io.music_assistant.client
+package io.music_assistant.client.services
 
 import android.app.Notification
 import android.app.NotificationManager
@@ -8,8 +8,9 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import io.music_assistant.client.MainActivity
 import io.music_assistant.client.R
-import io.music_assistant.client.MediaPlaybackService.Companion.ACTION_NOTIFICATION_DISMISSED
+import io.music_assistant.client.services.MainMediaPlaybackService.Companion.ACTION_NOTIFICATION_DISMISSED
 
 class MediaNotificationManager(
     private val context: Context,
@@ -27,7 +28,7 @@ class MediaNotificationManager(
         )
 
         val dismissIntent = Intent(ACTION_NOTIFICATION_DISMISSED).apply {
-            setPackage("io.music_assistant.client") // Ensures only your app receives it
+            setPackage("io.music_assistant.client")
         }
         val dismissPendingIntent = PendingIntent.getBroadcast(
             context, 0, dismissIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE

@@ -9,6 +9,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.lifecycleScope
 import io.music_assistant.client.data.MainDataSource
+import io.music_assistant.client.services.MainMediaPlaybackService
 import io.music_assistant.client.ui.compose.App
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -23,7 +24,7 @@ class MainActivity : ComponentActivity() {
         dataSource.isAnythingPlaying.asLiveData()
             .observe(this) {
                 if (it) {
-                        val serviceIntent = Intent(this, MediaPlaybackService::class.java)
+                        val serviceIntent = Intent(this, MainMediaPlaybackService::class.java)
                         serviceIntent.action = "ACTION_PLAY"
                     lifecycleScope.launch {
                         // This allows app to start before showing notification -

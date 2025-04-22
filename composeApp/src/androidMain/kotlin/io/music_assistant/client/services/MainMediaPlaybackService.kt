@@ -1,4 +1,4 @@
-package io.music_assistant.client
+package io.music_assistant.client.services
 
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
@@ -8,7 +8,6 @@ import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.Bundle
-import android.os.IBinder
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.widget.Toast
@@ -17,26 +16,27 @@ import coil3.BitmapImage
 import coil3.ImageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
+import io.music_assistant.client.data.MainDataSource
+import io.music_assistant.client.ui.compose.main.PlayerAction
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
-import io.music_assistant.client.data.model.client.PlayerData
-import io.music_assistant.client.data.MainDataSource
-import io.music_assistant.client.ui.compose.main.PlayerAction
 import kotlin.math.max
 
 @OptIn(FlowPreview::class)
-class MediaPlaybackService : MediaBrowserServiceCompat() {
+class MainMediaPlaybackService : MediaBrowserServiceCompat() {
     private val scope = CoroutineScope(Dispatchers.IO)
 
     private lateinit var mediaSessionHelper: MediaSessionHelper
@@ -56,13 +56,19 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             }
             players.getOrNull(index) ?: players.getOrNull(0)
         }.stateIn(scope, SharingStarted.Eagerly, null)
+    private val mediaNotificationData = combine(
+        currentPlayerData.filterNotNull(),
+        players.map { it.size > 1 }
+    ) { player, moreThanOnePlayer -> MediaNotificationData.from(player, moreThanOnePlayer) }
+        .distinctUntilChanged { old, new -> MediaNotificationData.areTooSimilarToUpdate(old, new) }
+        .stateIn(scope, SharingStarted.WhileSubscribed(), null)
+        .filterNotNull()
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate() {
         super.onCreate()
-        println("TEST onCreate")
         mediaSessionHelper =
-            MediaSessionHelper(this, createCallback())
+            MediaSessionHelper("MainMediaSession", this, createCallback())
         mediaNotificationManager = MediaNotificationManager(this, mediaSessionHelper)
         startForeground(
             MediaNotificationManager.NOTIFICATION_ID,
@@ -70,12 +76,9 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         )
         sessionToken = mediaSessionHelper.getSessionToken()
         scope.launch {
-            combine(
-                currentPlayerData.filterNotNull(),
-                players.map { it.size > 1 }
-            ) { player, moreThanOnePlayer -> Pair(player, moreThanOnePlayer) }
+            mediaNotificationData
                 .debounce(200)
-                .collect { updatePlaybackState(it.first, it.second) }
+                .collect { updatePlaybackState(it) }
         }
         scope.launch {
             dataSource.doesAnythingHavePlayableItem.collect {
@@ -96,7 +99,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 ?.let { playingPosition ->
                     activePlayerIndex.update { playingPosition }
                     Toast.makeText(
-                        this@MediaPlaybackService,
+                        this@MainMediaPlaybackService,
                         "You have playing players",
                         Toast.LENGTH_SHORT
                     ).show()
@@ -175,12 +178,9 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         return START_STICKY
     }
 
-    override fun onBind(intent: Intent?): IBinder? {
-        return super.onBind(intent)
-    }
-
     override fun onDestroy() {
         unregisterReceiver(notificationDismissReceiver)
+        scope.cancel()
         super.onDestroy()
     }
 
@@ -189,8 +189,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     override fun onLoadChildren(
         parentId: String,
         result: Result<MutableList<MediaBrowserCompat.MediaItem>>
-    ) {
-    }
+    ) = Unit
 
     private fun switchPlayer() {
         activePlayerIndex.update {
@@ -200,28 +199,26 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         }
     }
 
-    private fun updatePlaybackState(player: PlayerData, showPlayersSwitch: Boolean) {
-        scope.launch {
-            val bitmap =
-                player.queue?.currentItem?.track?.imageUrl
-                    ?.let {
-                        ((ImageLoader(this@MediaPlaybackService)
-                            .execute(
-                                ImageRequest.Builder(this@MediaPlaybackService).data(it).build()
-                            ) as? SuccessResult)?.image as? BitmapImage)?.bitmap
-                    }
-            mediaSessionHelper.updatePlaybackState(player, bitmap, showPlayersSwitch)
-            val notification =
-                mediaNotificationManager.createNotification(bitmap)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(
-                    MediaNotificationManager.NOTIFICATION_ID,
-                    notification,
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-                )
-            } else {
-                startForeground(MediaNotificationManager.NOTIFICATION_ID, notification)
+    private suspend fun updatePlaybackState(data: MediaNotificationData) {
+        println("updatePlaybackState")
+        val bitmap =
+            data.imageUrl?.let {
+                ((ImageLoader(this@MainMediaPlaybackService)
+                    .execute(
+                        ImageRequest.Builder(this@MainMediaPlaybackService).data(it).build()
+                    ) as? SuccessResult)?.image as? BitmapImage)?.bitmap
             }
+        mediaSessionHelper.updatePlaybackState(data, bitmap)
+        val notification =
+            mediaNotificationManager.createNotification(bitmap)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                MediaNotificationManager.NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+            )
+        } else {
+            startForeground(MediaNotificationManager.NOTIFICATION_ID, notification)
         }
     }
 

@@ -158,7 +158,6 @@ class MainDataSource(
     private fun initBuiltinPlayer() {
         updateJob?.cancel()
         updateJob = launch {
-            println("Registering builtin player")
             apiClient.sendRequest(
                 registerBuiltInPlayerRequest(
                     Player.LOCAL_PLAYER_NAME,
