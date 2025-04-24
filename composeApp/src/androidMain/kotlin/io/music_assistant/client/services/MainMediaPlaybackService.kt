@@ -14,6 +14,7 @@ import android.widget.Toast
 import androidx.media.MediaBrowserServiceCompat
 import coil3.BitmapImage
 import coil3.ImageLoader
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import io.music_assistant.client.data.MainDataSource
@@ -41,6 +42,7 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
 
     private lateinit var mediaSessionHelper: MediaSessionHelper
     private lateinit var mediaNotificationManager: MediaNotificationManager
+    private lateinit var imageLoader: ImageLoader
 
     private val dataSource: MainDataSource by inject()
     private val players = dataSource.playersData
@@ -64,21 +66,22 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
         .stateIn(scope, SharingStarted.WhileSubscribed(), null)
         .filterNotNull()
 
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        return START_STICKY
+    }
+
     override fun onCreate() {
         super.onCreate()
-        mediaSessionHelper =
-            MediaSessionHelper("MainMediaSession", this, createCallback())
+        mediaSessionHelper = MediaSessionHelper("MainMediaSession", this, createCallback())
         mediaNotificationManager = MediaNotificationManager(this, mediaSessionHelper)
         startForeground(
             MediaNotificationManager.NOTIFICATION_ID,
             mediaNotificationManager.createNotification(null)
         )
         sessionToken = mediaSessionHelper.getSessionToken()
+        imageLoader = ImageLoader(this)
         scope.launch {
-            mediaNotificationData
-                .debounce(200)
-                .collect { updatePlaybackState(it) }
+            mediaNotificationData.debounce(200).collect { updatePlaybackState(it) }
         }
         scope.launch {
             dataSource.doesAnythingHavePlayableItem.collect {
@@ -174,16 +177,6 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
             }
         }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        return START_STICKY
-    }
-
-    override fun onDestroy() {
-        unregisterReceiver(notificationDismissReceiver)
-        scope.cancel()
-        super.onDestroy()
-    }
-
     override fun onGetRoot(p0: String, p1: Int, p2: Bundle?): BrowserRoot? = null
 
     override fun onLoadChildren(
@@ -199,15 +192,22 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
         }
     }
 
+    override fun onDestroy() {
+        unregisterReceiver(notificationDismissReceiver)
+        scope.cancel()
+        super.onDestroy()
+    }
+
     private suspend fun updatePlaybackState(data: MediaNotificationData) {
-        println("updatePlaybackState")
-        val bitmap =
-            data.imageUrl?.let {
-                ((ImageLoader(this@MainMediaPlaybackService)
-                    .execute(
-                        ImageRequest.Builder(this@MainMediaPlaybackService).data(it).build()
-                    ) as? SuccessResult)?.image as? BitmapImage)?.bitmap
-            }
+        val bitmap = data.imageUrl?.let {
+            ((imageLoader.execute(
+                ImageRequest.Builder(this@MainMediaPlaybackService)
+                    .data(it)
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .memoryCacheKey(it)
+                    .build()
+            ) as? SuccessResult)?.image as? BitmapImage)?.bitmap
+        }
         mediaSessionHelper.updatePlaybackState(data, bitmap)
         val notification =
             mediaNotificationManager.createNotification(bitmap)

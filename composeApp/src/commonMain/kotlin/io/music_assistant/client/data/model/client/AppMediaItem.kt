@@ -4,12 +4,12 @@ import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.Metadata
 import io.music_assistant.client.data.model.server.ServerMediaItem
 
-abstract class MediaItem(
+abstract class AppMediaItem(
     val itemId: String,
     val provider: String,
     val name: String,
     //val providerMappings: List<ProviderMapping>?,
-    //val metadata: Metadata?,
+    metadata: Metadata?,
     //val favorite: Boolean?,
     val mediaType: MediaType,
     //val sortName: String?,
@@ -20,7 +20,7 @@ abstract class MediaItem(
 ) {
 
     override fun equals(other: Any?): Boolean {
-        return other is MediaItem
+        return other is AppMediaItem
                 && itemId == other.itemId
                 && name == other.name
                 && mediaType == other.mediaType
@@ -34,12 +34,14 @@ abstract class MediaItem(
                 37 * name.hashCode()
     }
 
+    val imageUrl: String? = metadata?.images?.getOrNull(0)?.path
+
     class Artist(
         itemId: String,
         provider: String,
         name: String,
 //        providerMappings: List<ProviderMapping>?,
-//        metadata: Metadata?,
+        metadata: Metadata?,
 //        favorite: Boolean?,
 //        mediaType: MediaType,
         //sortName: String?,
@@ -48,12 +50,12 @@ abstract class MediaItem(
 //        timestampAdded: Long?,
 //        timestampModified: Long?,
 //        val musicbrainzId: String?,
-    ) : MediaItem(
+    ) : AppMediaItem(
         itemId,
         provider,
         name,
         //providerMappings,
-        //metadata,
+        metadata,
         //favorite,
         MediaType.ARTIST,
         //sortName,
@@ -68,7 +70,7 @@ abstract class MediaItem(
         provider: String,
         name: String,
 //        providerMappings: List<ProviderMapping>?,
-//        metadata: Metadata?,
+        metadata: Metadata?,
 //        favorite: Boolean?,
 //        mediaType: MediaType,
 //        sortName: String?,
@@ -81,12 +83,12 @@ abstract class MediaItem(
 //        val year: Int?,
 //        val artists: List<Artist>?,
 //        val albumType: AlbumType?,
-    ) : MediaItem(
+    ) : AppMediaItem(
         itemId,
         provider,
         name,
         //providerMappings,
-        //metadata,
+        metadata,
         //favorite,
         MediaType.ALBUM,
         //sortName,
@@ -120,12 +122,12 @@ abstract class MediaItem(
 //        val trackNumber: Int?,
 // playlist track only
 //        val position: Int?,
-    ) : MediaItem(
+    ) : AppMediaItem(
         itemId,
         provider,
         name,
         //providerMappings,
-        //metadata,
+        metadata,
         //favorite,
         MediaType.TRACK,
         //sortName,
@@ -136,7 +138,6 @@ abstract class MediaItem(
     ) {
         val description: String =
             "${artists?.joinToString(separator = ", ") { it.name } ?: "Unknown"} - $name"
-        val imageUrl: String? = metadata?.images?.getOrNull(0)?.path
     }
 
     class Playlist(
@@ -144,7 +145,7 @@ abstract class MediaItem(
         provider: String,
         name: String,
         //providerMappings: List<ProviderMapping>?,
-        //metadata: Metadata?,
+        metadata: Metadata?,
         //favorite: Boolean?,
         //mediaType: MediaType,
         //sortName: String?,
@@ -154,12 +155,12 @@ abstract class MediaItem(
         //timestampModified: Long?,
         //val owner: String?,
         //val isEditable: Boolean?,
-    ) : MediaItem(
+    ) : AppMediaItem(
         itemId,
         provider,
         name,
         //providerMappings,
-        //metadata,
+        metadata,
         //favorite,
         MediaType.PLAYLIST,
         //sortName,
@@ -170,14 +171,14 @@ abstract class MediaItem(
     )
 
     companion object {
-        fun ServerMediaItem.toMediaItem(): MediaItem? =
+        fun ServerMediaItem.toAppMediaItem(): AppMediaItem? =
             when (mediaType) {
                 MediaType.ARTIST -> Artist(
                     itemId = itemId,
                     provider = provider,
                     name = name,
 //                    providerMappings = providerMappings,
-//                    metadata = metadata,
+                    metadata = metadata,
 //                    favorite = favorite,
 //                    mediaType = mediaType,
 //                    sortName = sortName,
@@ -193,7 +194,7 @@ abstract class MediaItem(
                     provider = provider,
                     name = name,
 //                    providerMappings = providerMappings,
-//                    metadata = metadata,
+                    metadata = metadata,
 //                    favorite = favorite,
 //                    mediaType = mediaType,
 //                    sortName = sortName,
@@ -225,7 +226,7 @@ abstract class MediaItem(
                     //version = version,
                     duration = duration,
 //                    isrc = isrc,
-                    artists = artists?.mapNotNull { it.toMediaItem() as? Artist },
+                    artists = artists?.mapNotNull { it.toAppMediaItem() as? Artist },
 //                    album = album?.let { from(it) as? Album },
 //                    discNumber = discNumber,
 //                    trackNumber = trackNumber,
@@ -237,7 +238,7 @@ abstract class MediaItem(
                     provider = provider,
                     name = name,
                     //providerMappings = providerMappings,
-//                    metadata = metadata,
+                    metadata = metadata,
                     //favorite = favorite,
 //                    mediaType = mediaType,
 //                    sortName = sortName,
@@ -259,8 +260,8 @@ abstract class MediaItem(
                 MediaType.UNKNOWN -> null
             }
 
-        fun List<ServerMediaItem>.toMediaItemList() =
-            mapNotNull { it.toMediaItem() }
+        fun List<ServerMediaItem>.toAppMediaItemList() =
+            mapNotNull { it.toAppMediaItem() }
     }
 
 // TODO Radio, audiobooks, podcasts

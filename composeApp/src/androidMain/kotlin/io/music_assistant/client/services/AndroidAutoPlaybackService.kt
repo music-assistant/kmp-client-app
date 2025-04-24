@@ -1,15 +1,18 @@
 package io.music_assistant.client.services
 
-import android.annotation.SuppressLint
+import android.net.Uri
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
-import android.support.v4.media.MediaDescriptionCompat
 import android.support.v4.media.session.MediaSessionCompat
 import androidx.media.MediaBrowserServiceCompat
+import androidx.media.utils.MediaConstants
 import coil3.BitmapImage
 import coil3.ImageLoader
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
+import io.music_assistant.client.auto.AutoLibrary
+import io.music_assistant.client.auto.MediaIds
 import io.music_assistant.client.data.MainDataSource
 import io.music_assistant.client.ui.compose.main.PlayerAction
 import kotlinx.coroutines.CoroutineScope
@@ -30,8 +33,10 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
     private val scope = CoroutineScope(Dispatchers.IO)
 
     private lateinit var mediaSessionHelper: MediaSessionHelper
+    private lateinit var imageLoader: ImageLoader
 
     private val dataSource: MainDataSource by inject()
+    private val library: AutoLibrary = AutoLibrary()
     private val currentPlayerData =
         dataSource.playersData.map { it.firstOrNull { playerData -> playerData.player.isBuiltin } }
             .stateIn(scope, SharingStarted.Eagerly, null)
@@ -41,13 +46,11 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
         .stateIn(scope, SharingStarted.WhileSubscribed(), null)
         .filterNotNull()
 
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate() {
         super.onCreate()
-        println("AUTO: onCreate")
-        mediaSessionHelper =
-            MediaSessionHelper("AutoMediaSession", this, createCallback())
+        mediaSessionHelper = MediaSessionHelper("AutoMediaSession", this, createCallback())
         sessionToken = mediaSessionHelper.getSessionToken()
+        imageLoader = ImageLoader(this)
         scope.launch {
             mediaNotificationData.debounce(200).collect { updatePlaybackState(it) }
         }
@@ -59,6 +62,14 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
                 currentPlayerData.value?.let {
                     dataSource.playerAction(it, PlayerAction.TogglePlayPause)
                 }
+            }
+
+            override fun onPlayFromMediaId(mediaId: String?, extras: Bundle?) {
+                // TODO
+            }
+
+            override fun onPlayFromUri(uri: Uri?, extras: Bundle?) {
+                // TODO
             }
 
             override fun onPause() {
@@ -106,30 +117,23 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
             }
         }
 
-    override fun onGetRoot(p0: String, p1: Int, p2: Bundle?): BrowserRoot {
-        return BrowserRoot("root", null) // TODO replace
+    override fun onGetRoot(packageName: String, uID: Int, hints: Bundle?): BrowserRoot {
+        val extras = Bundle()
+        extras.putBoolean(MediaConstants.BROWSER_SERVICE_EXTRAS_KEY_SEARCH_SUPPORTED, true)
+        return BrowserRoot(MediaIds.ROOT, extras)
     }
 
     override fun onLoadChildren(
         parentId: String,
-        result: Result<MutableList<MediaBrowserCompat.MediaItem>>
-    ) {
-        // TODO replace
-        if (parentId == "root") {
-            val rootItem = MediaBrowserCompat.MediaItem(
-                MediaDescriptionCompat.Builder()
-                    .setMediaId("root_children")
-                    .setTitle("My Music")
-                    .setSubtitle("Subtitle")
-                    .build(),
-                MediaBrowserCompat.MediaItem.FLAG_BROWSABLE
-            )
-            println("AUTO: returning root item")
-            result.sendResult(mutableListOf(rootItem))
-        } else {
-            result.sendResult(mutableListOf())
-        }
-    }
+        result: Result<List<MediaBrowserCompat.MediaItem>>
+    ) = library.getItems(parentId, result)
+
+
+    override fun onSearch(
+        query: String,
+        extras: Bundle?,
+        result: Result<List<MediaBrowserCompat.MediaItem>>
+    ) = library.search(query, result)
 
     override fun onDestroy() {
         scope.cancel()
@@ -139,11 +143,13 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
     private suspend fun updatePlaybackState(data: MediaNotificationData) {
         val bitmap =
             data.imageUrl?.let {
-                ((ImageLoader(this@AndroidAutoPlaybackService)
-                    .execute(
-                        ImageRequest.Builder(this@AndroidAutoPlaybackService).data(it)
-                            .build()
-                    ) as? SuccessResult)?.image as? BitmapImage)?.bitmap
+                ((imageLoader.execute(
+                    ImageRequest.Builder(this@AndroidAutoPlaybackService)
+                        .data(it)
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .memoryCacheKey(it)
+                        .build()
+                ) as? SuccessResult)?.image as? BitmapImage)?.bitmap
             }
         mediaSessionHelper.updatePlaybackState(data, bitmap)
     }

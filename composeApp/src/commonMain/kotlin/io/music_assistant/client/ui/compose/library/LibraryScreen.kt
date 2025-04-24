@@ -77,7 +77,7 @@ import compose.icons.tablericons.Replace
 import compose.icons.tablericons.Square
 import compose.icons.tablericons.SquareCheck
 import kotlinx.coroutines.launch
-import io.music_assistant.client.data.model.client.MediaItem
+import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.client.PlayerData
@@ -129,8 +129,8 @@ data class LibraryScreen(val playerData: PlayerData) : Screen {
         selectedList: LibraryViewModel.LibraryList?,
         navigator: Navigator,
         onListSelected: (LibraryViewModel.LibraryTab) -> Unit,
-        onItemClicked: (LibraryViewModel.LibraryTab, MediaItem) -> Unit,
-        onCheckChanged: (MediaItem) -> Unit,
+        onItemClicked: (LibraryViewModel.LibraryTab, AppMediaItem) -> Unit,
+        onCheckChanged: (AppMediaItem) -> Unit,
         onCheckedItemsClear: () -> Unit,
         onUpClick: (LibraryViewModel.LibraryTab) -> Unit,
         onShowAlbumsChange: (Boolean) -> Unit,
@@ -203,11 +203,11 @@ data class LibraryScreen(val playerData: PlayerData) : Screen {
                             style = MaterialTheme.typography.h6
                         )
                     } else {
-                        val artists = state.checkedItems.filterIsInstance<MediaItem.Artist>().size
-                        val albums = state.checkedItems.filterIsInstance<MediaItem.Album>().size
-                        val tracks = state.checkedItems.filterIsInstance<MediaItem.Track>().size
+                        val artists = state.checkedItems.filterIsInstance<AppMediaItem.Artist>().size
+                        val albums = state.checkedItems.filterIsInstance<AppMediaItem.Album>().size
+                        val tracks = state.checkedItems.filterIsInstance<AppMediaItem.Track>().size
                         val playlists =
-                            state.checkedItems.filterIsInstance<MediaItem.Playlist>().size
+                            state.checkedItems.filterIsInstance<AppMediaItem.Playlist>().size
                         val chosenItemsDescription = listOf(
                             Pair("artist", artists),
                             Pair("album", albums),
@@ -275,10 +275,10 @@ data class LibraryScreen(val playerData: PlayerData) : Screen {
     private fun ItemsListArea(
         modifier: Modifier = Modifier,
         list: LibraryViewModel.LibraryList,
-        checkedItems: Set<MediaItem>,
+        checkedItems: Set<AppMediaItem>,
         nestedScrollConnection: NestedScrollConnection,
-        onItemClick: (LibraryViewModel.LibraryTab, MediaItem) -> Unit,
-        onCheckChanged: (MediaItem) -> Unit,
+        onItemClick: (LibraryViewModel.LibraryTab, AppMediaItem) -> Unit,
+        onCheckChanged: (AppMediaItem) -> Unit,
         onUpClick: (LibraryViewModel.LibraryTab) -> Unit,
     ) {
         val parentItem = list.parentItems.lastOrNull()
@@ -348,12 +348,12 @@ data class LibraryScreen(val playerData: PlayerData) : Screen {
     @Composable
     private fun ItemsList(
         modifier: Modifier = Modifier,
-        parentItem: MediaItem?,
-        items: List<MediaItem>,
-        checkedItems: Set<MediaItem>,
+        parentItem: AppMediaItem?,
+        items: List<AppMediaItem>,
+        checkedItems: Set<AppMediaItem>,
         nestedScrollConnection: NestedScrollConnection,
-        onClick: (MediaItem) -> Unit,
-        onCheckChanged: (MediaItem) -> Unit,
+        onClick: (AppMediaItem) -> Unit,
+        onCheckChanged: (AppMediaItem) -> Unit,
         onUpClick: () -> Unit,
     ) {
         val listState = rememberLazyListState()
@@ -398,10 +398,10 @@ data class LibraryScreen(val playerData: PlayerData) : Screen {
                     Icon(
                         modifier = Modifier.padding(end = 16.dp).size(18.dp),
                         imageVector = when (item) {
-                            is MediaItem.Track -> TablerIcons.FileMusic
-                            is MediaItem.Album -> TablerIcons.Folder
-                            is MediaItem.Artist -> TablerIcons.Man
-                            is MediaItem.Playlist -> TablerIcons.List
+                            is AppMediaItem.Track -> TablerIcons.FileMusic
+                            is AppMediaItem.Album -> TablerIcons.Folder
+                            is AppMediaItem.Artist -> TablerIcons.Man
+                            is AppMediaItem.Playlist -> TablerIcons.List
                             else -> TablerIcons.QuestionMark
                         },
                         contentDescription = "Item icon",

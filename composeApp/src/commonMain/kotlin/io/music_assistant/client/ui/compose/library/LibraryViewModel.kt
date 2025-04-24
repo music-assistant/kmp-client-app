@@ -13,8 +13,8 @@ import io.music_assistant.client.api.getArtistsRequest
 import io.music_assistant.client.api.getPlaylistTracksRequest
 import io.music_assistant.client.api.getPlaylistsRequest
 import io.music_assistant.client.api.playMediaRequest
-import io.music_assistant.client.data.model.client.MediaItem
-import io.music_assistant.client.data.model.client.MediaItem.Companion.toMediaItemList
+import io.music_assistant.client.data.model.client.AppMediaItem
+import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItemList
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.server.ServerMediaItem
@@ -65,7 +65,7 @@ class LibraryViewModel(
         }
     }
 
-    fun onItemCheckChanged(mediaItem: MediaItem) {
+    fun onItemCheckChanged(mediaItem: AppMediaItem) {
         mutableState.update { s ->
             s.copy(
                 checkedItems = if (s.checkedItems.contains(mediaItem))
@@ -78,8 +78,8 @@ class LibraryViewModel(
 
     fun clearCheckedItems() = mutableState.update { s -> s.copy(checkedItems = emptySet()) }
 
-    fun onItemClicked(tab: LibraryTab, mediaItem: MediaItem) {
-        if (mediaItem is MediaItem.Track) {
+    fun onItemClicked(tab: LibraryTab, mediaItem: AppMediaItem) {
+        if (mediaItem is AppMediaItem.Track) {
             onItemCheckChanged(mediaItem)
             return
         }
@@ -138,14 +138,14 @@ class LibraryViewModel(
     private fun refreshListForTab(tab: LibraryTab) {
         screenModelScope.launch {
             when (currentParentForTab(tab)) {
-                is MediaItem.Artist -> if (state.value.showAlbums) {
+                is AppMediaItem.Artist -> if (state.value.showAlbums) {
                     loadAlbums(tab)
                 } else {
                     loadTracks(tab)
                 }
 
-                is MediaItem.Album,
-                is MediaItem.Playlist -> loadTracks(tab)
+                is AppMediaItem.Album,
+                is AppMediaItem.Playlist -> loadTracks(tab)
 
                 null -> when (tab) {
                     LibraryTab.Artists -> loadArtists()
@@ -156,17 +156,17 @@ class LibraryViewModel(
     }
 
     private suspend fun loadArtists() {
-        refreshList(LibraryTab.Artists, getArtistsRequest()) { it is MediaItem.Artist }
+        refreshList(LibraryTab.Artists, getArtistsRequest()) { it is AppMediaItem.Artist }
     }
 
     private suspend fun loadPlaylists() {
-        refreshList(LibraryTab.Playlists, getPlaylistsRequest()) { it is MediaItem.Playlist }
+        refreshList(LibraryTab.Playlists, getPlaylistsRequest()) { it is AppMediaItem.Playlist }
     }
 
     private suspend fun loadAlbums(tab: LibraryTab) {
         currentParentForTab(tab)?.let { item ->
             refreshList(tab, getArtistAlbumsRequest(item.itemId, item.provider)) {
-                it is MediaItem.Album
+                it is AppMediaItem.Album
             }
         }
     }
@@ -176,20 +176,20 @@ class LibraryViewModel(
             refreshList(
                 tab,
                 when (item) {
-                    is MediaItem.Artist -> getArtistTracksRequest(item.itemId, item.provider)
-                    is MediaItem.Album -> getAlbumTracksRequest(item.itemId, item.provider)
-                    is MediaItem.Playlist -> getPlaylistTracksRequest(item.itemId, item.provider)
+                    is AppMediaItem.Artist -> getArtistTracksRequest(item.itemId, item.provider)
+                    is AppMediaItem.Album -> getAlbumTracksRequest(item.itemId, item.provider)
+                    is AppMediaItem.Playlist -> getPlaylistTracksRequest(item.itemId, item.provider)
 
                     else -> return
                 }
-            ) { it is MediaItem.Track }
+            ) { it is AppMediaItem.Track }
         }
     }
 
     private suspend fun refreshList(
         tab: LibraryTab,
         request: Request,
-        predicate: (MediaItem) -> Boolean,
+        predicate: (AppMediaItem) -> Boolean,
     ) {
         mutableState.update { s ->
             s.copy(
@@ -202,7 +202,7 @@ class LibraryViewModel(
                 })
         }
         apiClient.sendRequest(request)?.resultAs<List<ServerMediaItem>>()
-            ?.toMediaItemList()
+            ?.toAppMediaItemList()
             ?.filter { predicate(it) }
             ?.let { list ->
                 mutableState.update { s ->
@@ -235,7 +235,7 @@ class LibraryViewModel(
 
     data class LibraryList(
         val tab: LibraryTab,
-        val parentItems: List<MediaItem>,
+        val parentItems: List<AppMediaItem>,
         val listState: ListState,
         val isSelected: Boolean,
     )
@@ -244,13 +244,13 @@ class LibraryViewModel(
         data object NoData : ListState()
         data object Loading : ListState()
         data object Error : ListState()
-        data class Data(val items: List<MediaItem>) : ListState()
+        data class Data(val items: List<AppMediaItem>) : ListState()
     }
 
     data class State(
         val connectionState: SessionState,
         val libraryLists: List<LibraryList>,
-        val checkedItems: Set<MediaItem>,
+        val checkedItems: Set<AppMediaItem>,
         val showAlbums: Boolean
     )
 
