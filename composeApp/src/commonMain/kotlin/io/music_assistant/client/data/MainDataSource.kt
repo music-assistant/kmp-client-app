@@ -17,6 +17,7 @@ import io.music_assistant.client.data.model.client.Player.Companion.toPlayer
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.client.Queue
 import io.music_assistant.client.data.model.client.Queue.Companion.toQueue
+import io.music_assistant.client.data.model.client.QueueTrack
 import io.music_assistant.client.data.model.client.QueueTrack.Companion.toQueueTrack
 import io.music_assistant.client.data.model.client.SelectedPlayerData
 import io.music_assistant.client.data.model.server.BuiltinPlayerEventType
@@ -109,6 +110,8 @@ class MainDataSource(
 
     private val _selectedPlayerData = MutableStateFlow<SelectedPlayerData?>(null)
     val selectedPlayerData = _selectedPlayerData.asStateFlow()
+
+    val builtinPlayerQueue = MutableStateFlow<List<QueueTrack>>(emptyList())
 
     private var watchJob: Job? = null
     private var updateJob: Job? = null
@@ -336,7 +339,7 @@ class MainDataSource(
                             _serverPlayers.value.firstOrNull {
                                 it.queueId == event.data.queueId
                             }
-                                ?.takeIf { it.id == _selectedPlayerData.value?.playerId }
+                                ?.takeIf { it.id == _selectedPlayerData.value?.playerId || it.isBuiltin }
                                 ?.let { updatePlayerQueueItems(it) }
                             _queues.update { value ->
                                 value.map {
@@ -437,6 +440,9 @@ class MainDataSource(
                         ?.let { list ->
                             _selectedPlayerData.update {
                                 SelectedPlayerData(player.id, list)
+                            }
+                            if (player.isBuiltin) {
+                                builtinPlayerQueue.update { list }
                             }
                         }
                 }

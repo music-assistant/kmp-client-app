@@ -19,6 +19,9 @@ abstract class AppMediaItem(
     //val timestampModified: Long?,
 ) {
 
+    open val subtitle: String? = null
+    val longId = itemId.hashCode().toLong()
+
     override fun equals(other: Any?): Boolean {
         return other is AppMediaItem
                 && itemId == other.itemId
@@ -81,7 +84,7 @@ abstract class AppMediaItem(
 //        val musicbrainzId: String?,
         //val version: String?,
 //        val year: Int?,
-//        val artists: List<Artist>?,
+        val artists: List<Artist>?,
 //        val albumType: AlbumType?,
     ) : AppMediaItem(
         itemId,
@@ -96,7 +99,9 @@ abstract class AppMediaItem(
         //isPlayable,
         //timestampAdded,
         //timestampModified,
-    )
+    ) {
+        override val subtitle = "Album - ${artists?.joinToString(separator = ", ") { it.name }}"
+    }
 
     class Track(
         itemId: String,
@@ -136,7 +141,8 @@ abstract class AppMediaItem(
         //timestampAdded,
         //timestampModified,
     ) {
-        val description: String =
+        override val subtitle = artists?.joinToString(separator = ", ") { it.name }
+        val description =
             "${artists?.joinToString(separator = ", ") { it.name } ?: "Unknown"} - $name"
     }
 
@@ -168,7 +174,9 @@ abstract class AppMediaItem(
         //isPlayable,
         //timestampAdded,
         //timestampModified,
-    )
+    ) {
+        override val subtitle = "Playlist"
+    }
 
     companion object {
         fun ServerMediaItem.toAppMediaItem(): AppMediaItem? =
@@ -205,7 +213,7 @@ abstract class AppMediaItem(
 //                    musicbrainzId = musicbrainzId,
                     //version = version,
 //                    year = year,
-//                    artists = artists?.mapNotNull { from(it) as? Artist },
+                    artists = artists?.mapNotNull { it.toAppMediaItem() as? Artist },
 //                    albumType = albumType,
                 )
 

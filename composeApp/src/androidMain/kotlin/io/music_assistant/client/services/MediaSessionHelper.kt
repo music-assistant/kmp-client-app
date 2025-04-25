@@ -43,7 +43,9 @@ class MediaSessionHelper(tag: String, context: Context, callback: MediaSessionCo
                 data.elapsedTime ?: PlaybackState.PLAYBACK_POSITION_UNKNOWN,
                 1f
             )
-            .setActiveQueueItemId(MediaSessionCompat.QueueItem.UNKNOWN_ID.toLong())
+            .setActiveQueueItemId(
+                data.longItemId ?: MediaSessionCompat.QueueItem.UNKNOWN_ID.toLong()
+            )
             .also { builder ->
                 data.shuffleEnabled?.let { shuffle ->
                     builder.addCustomAction(
@@ -95,6 +97,11 @@ class MediaSessionHelper(tag: String, context: Context, callback: MediaSessionCo
             .build()
 
         mediaSession.setMetadata(metadata)
+    }
+
+    fun updateQueue(queue: List<MediaSessionCompat.QueueItem>) {
+        mediaSession.setQueue(queue)
+        mediaSession.setQueueTitle("Now playing")
     }
 
     private fun getRepeatModeIcon(repeatMode: RepeatMode): Int = when (repeatMode) {

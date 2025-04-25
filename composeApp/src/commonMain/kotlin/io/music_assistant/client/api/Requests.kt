@@ -1,5 +1,6 @@
 package io.music_assistant.client.api
 
+import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.server.RepeatMode
 import io.music_assistant.client.data.model.server.events.BuiltinPlayerState
@@ -187,7 +188,7 @@ fun playMediaRequest(
 ) = Request(
     command = "player_queues/play_media",
     args = buildJsonObject {
-        put("media", JsonArray(media.map { item -> JsonPrimitive(item) }))
+        put("media", JsonArray(media.map { JsonPrimitive(it) }))
         option?.let { put("option", JsonPrimitive(it.name.lowercase())) }
         radioMode?.let { put("radio_mode", JsonPrimitive(it)) }
         put("queue_id", JsonPrimitive(queueOrPlayerId))
@@ -203,20 +204,24 @@ fun registerBuiltInPlayerRequest(playerName: String, playerId: String) = Request
     }
 )
 
-//fun unregisterBuiltInPlayerRequest(playerId: String) = Request(
-//    command = "builtin_player/unregister",
-//    args = buildJsonObject {
-//        put("player_id", JsonPrimitive(playerId))
-//
-//    }
-//)
-
 fun updateBuiltInPlayerStateRequest(playerId: String, state: BuiltinPlayerState) = Request(
     command = "builtin_player/update_state",
     args = buildJsonObject {
         put("player_id", JsonPrimitive(playerId))
         put("state", myJson.encodeToJsonElement(state))
 
+    }
+)
+
+fun searchRequest(query: String, mediaTypes: List<MediaType>) = Request(
+    command = "music/search",
+    args = buildJsonObject {
+        put("search_query", JsonPrimitive(query))
+        put(
+            "media_types",
+            myJson.decodeFromString<JsonArray>(myJson.encodeToString(mediaTypes))
+        )
+        put("limit", JsonPrimitive(20))
     }
 )
 
