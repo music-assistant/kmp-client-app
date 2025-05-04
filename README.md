@@ -9,3 +9,12 @@ By leveraging the capabilities of KMP and Compose Multiplatform, Music Assistant
 ## The project is on early stage of development. Any help (especially from designers and iOS developers) is appreciated.
 
 https://youtu.be/BhwEn_68rGg
+
+## Current set of features:
+
+- All platforms:
+  - managing MA players queues and playback;
+  - local playback on device from MA library.
+- Android-specific:
+  - media service (background playback) and media notification in system area for quick access to players controls;
+  - Android Auto support for built-in player.
