@@ -6,6 +6,6 @@ This client interfaces with the [Music Assistant Server](https://github.com/musi
 
 By leveraging the capabilities of KMP and Compose Multiplatform, Music Assistant Kmp Client offers a consistent and efficient user experience across different platforms, simplifying the development process and ensuring feature parity.
 
-##The project is on early stage of development. Any help (especially from designers and iOS developers) is appreciated.
+## The project is on early stage of development. Any help (especially from designers and iOS developers) is appreciated.
 
 https://youtu.be/BhwEn_68rGg
