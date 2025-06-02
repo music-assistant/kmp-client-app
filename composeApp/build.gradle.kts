@@ -87,6 +87,11 @@ kotlin {
             implementation(libs.voyager.koin)
             implementation(libs.voyager.lifecycle.kmp)
         }
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
+
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutines.swing)
