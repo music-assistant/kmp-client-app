@@ -11,14 +11,16 @@ fun Duration?.toMinSec() =
                     .padStart(2, '0')
     } ?: "--:--"
 
-fun String.isIpAddress(): Boolean {
+fun String.isValidHost(): Boolean {
     val ipv4Pattern = Regex(
         """^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.
            (25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.
            (25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.
            (25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])$""".replace(Regex("\\s"), "")
     )
-    return this.matches(ipv4Pattern)
+    val hostnamePattern = Regex("""^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63})*
+        (?<!\.)$""".replace(Regex("\\s"), ""))
+    return this.matches(ipv4Pattern) || this.matches(hostnamePattern)
 }
 
 fun String.isIpPort() : Boolean {
