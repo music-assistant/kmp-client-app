@@ -9,22 +9,30 @@ import kotlin.time.Duration.Companion.seconds
 
 class ExtTest {
     @Test
-    fun testValidIpAddresses() {
-        val validIps = listOf(
+    fun testValidHosts() {
+        val validHosts = listOf(
+            // Valid IPv4 addresses
             "192.168.1.1",
             "0.0.0.0",
             "255.255.255.255",
             "127.0.0.1",
-            "10.0.0.1"
+            "10.0.0.1",
+            // Valid hostnames
+            "localhost",
+            "example.com",
+            "sub.domain.co.uk",
+            "my-server",
+            "a123-b456"
         )
-        for (ip in validIps) {
-            assertTrue(ip.isIpAddress(), "Expected $ip to be recognised as a valid IP address")
+        for (host in validHosts) {
+            assertTrue(host.isValidHost(), "Expected $host to be recognised as a valid host")
         }
     }
 
     @Test
-    fun testInvalidIpAddresses() {
-        val invalidIps = listOf(
+    fun testInvalidHosts() {
+        val invalidHosts = listOf(
+            // Invalid IPv4 addresses
             "256.256.256.256",
             "192.168.1",
             "192.168.1.1.1",
@@ -34,10 +42,18 @@ class ExtTest {
             "192.168.1.256",
             "",
             "...",
-            "1.1.1.01"
+            "1.1.1.01",
+            // Invalid hostnames
+            "-invalidhostname",
+            "invalid-.hostname",
+            ".startingdot",
+            "endingdot.",
+            "toolonglabeltoolonglabeltoolonglabeltoolonglabeltoolonglabeltoolonglabeltoolonglabeltoolonglabel.com",
+            "has space.com",
+            "invalid_underscore.com"
         )
-        for (ip in invalidIps) {
-            assertFalse(ip.isIpAddress(), "Expected $ip to be recognised as an invalid IP address")
+        for (host in invalidHosts) {
+            assertFalse(host.isValidHost(), "Expected $host to be recognised as an invalid host")
         }
     }
 
