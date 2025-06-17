@@ -42,7 +42,7 @@ import io.music_assistant.client.ui.compose.common.ActionIcon
 import io.music_assistant.client.ui.theme.ThemeSetting
 import io.music_assistant.client.ui.theme.ThemeViewModel
 import io.music_assistant.client.utils.SessionState
-import io.music_assistant.client.utils.isIpAddress
+import io.music_assistant.client.utils.isValidHost
 import io.music_assistant.client.utils.isIpPort
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
@@ -190,7 +190,7 @@ class SettingsScreen : Screen {
                     Text(modifier = Modifier.align(Alignment.CenterVertically), text = "Use TLS")
                 }
                 Button(
-                    enabled = ipAddress.isIpAddress() && port.isIpPort() && sessionState !is SessionState.Connecting,
+                    enabled = ipAddress.isValidHost() && port.isIpPort() && sessionState !is SessionState.Connecting,
                     onClick = {
                         if (sessionState is SessionState.Connected)
                             viewModel.disconnect()
