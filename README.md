@@ -18,3 +18,25 @@ https://youtu.be/BhwEn_68rGg
 - Android-specific:
   - media service (background playback) and media notification in system area for quick access to players controls;
   - Android Auto support for built-in player.
+
+## Want to try it?
+
+It's a bit advanced, but not too hard.
+
+1. Download and install [Android Studio](https://developer.android.com/studio).
+2. Clone this project and open it in Androiud Studio.
+3. Open Terminal in Android Studio and run `./gradlew assembleDebug`.
+4. After successful run, the APK file will be placed in subfolder `kmp-client-app/composeApp/build/outputs/apk/debug`.
+5. Install this APK to the device.
+
+### To use the app with Android Auto you will need additional steps
+
+1. Enable debug mode in your Android Auto:
+   - in Android Auto menu on your phone, click repeatedly on `Version and permission info` text, until dialog appears, that will allow you turning dev mode on;
+   - after turning it on, in overflow menu (three dots on top) choose `Developer settings`;
+   - in dev settings, find and enable `Unknown sources`;
+   - after this, customize your launcher to show Music Assistant.
+     
+2. Set up VPN.
+   Since Music Assistant API isn't exposed, you will need to have active VPN connection on your phone, so the app can reach the server.
+   Make sure you have Android Auto in exclusions in your VPN app, because Android Auto won't work with VPN connection.
