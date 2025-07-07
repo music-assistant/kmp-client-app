@@ -47,23 +47,16 @@ jobs:
           git tag "$TAG"
           git push origin "$TAG"
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release and Upload APK
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: Debug APK Release (${{ steps.vars.outputs.sha }})
           body: |
-            This is an automated debug APK release generated from main branch.
-            ⚠️ This is a debug build — not for production use.
+            This is an automated debug APK release from the main branch.
+            ⚠️ **This is a debug build — not for production use.**
+          files: composeApp/build/outputs/apk/debug/composeApp-debug.apk
           draft: false
           prerelease: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload APK to Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          files: composeApp/build/outputs/apk/debug/composeApp-debug.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
