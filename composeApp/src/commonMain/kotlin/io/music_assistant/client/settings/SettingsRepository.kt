@@ -1,11 +1,11 @@
 package io.music_assistant.client.settings
 
 import com.russhwolf.settings.Settings
+import io.music_assistant.client.api.ConnectionInfo
+import io.music_assistant.client.ui.theme.ThemeSetting
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import io.music_assistant.client.api.ConnectionInfo
-import io.music_assistant.client.ui.theme.ThemeSetting
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 

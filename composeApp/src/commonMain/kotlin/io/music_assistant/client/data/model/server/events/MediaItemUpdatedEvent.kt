@@ -1,11 +1,5 @@
 package io.music_assistant.client.data.model.server.events
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import io.music_assistant.client.data.model.server.EventType
-import io.music_assistant.client.data.model.server.ServerMediaItem
-import io.music_assistant.client.data.model.server.Metadata
-
 //@Serializable
 //data class MediaItemUpdatedEvent(
 //    @SerialName("event") override val event: EventType,

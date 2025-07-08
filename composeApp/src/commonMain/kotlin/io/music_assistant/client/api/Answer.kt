@@ -1,10 +1,10 @@
 package io.music_assistant.client.api
 
+import io.music_assistant.client.utils.myJson
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonPrimitive
-import io.music_assistant.client.utils.myJson
 
 data class Answer(
     val json: JsonObject

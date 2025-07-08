@@ -48,8 +48,7 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
     private val players = dataSource.playersData
         .map { list -> list.filter { it.queue?.currentItem != null } }
         .stateIn(scope, SharingStarted.Eagerly, emptyList())
-    private val activePlayerIndex =
-        MutableStateFlow(-1)
+    private val activePlayerIndex = MutableStateFlow(-1)
     private val currentPlayerData =
         combine(players, activePlayerIndex) { players, index ->
             // if some player is playing and we still have no valid index, show playing player

@@ -1,7 +1,5 @@
 package io.music_assistant.client.api
 
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.decodeFromJsonElement
 import io.music_assistant.client.data.model.server.EventType
 import io.music_assistant.client.data.model.server.events.BuiltinPlayerEvent
 import io.music_assistant.client.data.model.server.events.Event
@@ -11,6 +9,8 @@ import io.music_assistant.client.data.model.server.events.QueueItemsUpdatedEvent
 import io.music_assistant.client.data.model.server.events.QueueTimeUpdatedEvent
 import io.music_assistant.client.data.model.server.events.QueueUpdatedEvent
 import io.music_assistant.client.utils.myJson
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
 
 data class Event(
     val json: JsonObject

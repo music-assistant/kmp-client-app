@@ -10,6 +10,11 @@ import io.ktor.client.plugins.websocket.wss
 import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import io.ktor.websocket.close
+import io.music_assistant.client.data.model.server.ServerInfo
+import io.music_assistant.client.data.model.server.events.Event
+import io.music_assistant.client.settings.SettingsRepository
+import io.music_assistant.client.utils.SessionState
+import io.music_assistant.client.utils.myJson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -24,11 +29,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
-import io.music_assistant.client.data.model.server.ServerInfo
-import io.music_assistant.client.data.model.server.events.Event
-import io.music_assistant.client.settings.SettingsRepository
-import io.music_assistant.client.utils.SessionState
-import io.music_assistant.client.utils.myJson
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 

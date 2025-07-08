@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -76,13 +77,13 @@ import compose.icons.tablericons.QuestionMark
 import compose.icons.tablericons.Replace
 import compose.icons.tablericons.Square
 import compose.icons.tablericons.SquareCheck
-import kotlinx.coroutines.launch
 import io.music_assistant.client.data.model.client.AppMediaItem
+import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
-import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.ui.compose.common.ActionIcon
 import io.music_assistant.client.ui.compose.common.VerticalHidingContainer
+import kotlinx.coroutines.launch
 
 data class LibraryScreen(val playerData: PlayerData) : Screen {
 
@@ -153,6 +154,7 @@ data class LibraryScreen(val playerData: PlayerData) : Screen {
             }
         }
         Scaffold(
+            backgroundColor = MaterialTheme.colors.background,
             floatingActionButton = {
                 if (
                     selectedList?.tab == LibraryViewModel.LibraryTab.Artists
@@ -163,7 +165,7 @@ data class LibraryScreen(val playerData: PlayerData) : Screen {
                         isVisible = isFabVisible.value,
                     ) {
                         ExtendedFloatingActionButton(
-                            modifier = modifier,
+                            modifier = modifier.navigationBarsPadding(),
                             onClick = { onShowAlbumsChange(!state.showAlbums) },
                             text = {
                                 Text(

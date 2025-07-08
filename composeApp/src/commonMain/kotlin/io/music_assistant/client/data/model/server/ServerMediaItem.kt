@@ -1,8 +1,8 @@
 package io.music_assistant.client.data.model.server
 
+import io.music_assistant.client.data.model.server.events.MediaItemImage
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import io.music_assistant.client.data.model.server.events.MediaItemImage
 
 @Serializable
 data class ServerMediaItem(
