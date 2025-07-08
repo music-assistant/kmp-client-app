@@ -1,6 +1,5 @@
 package io.music_assistant.client.ui.compose.main
 
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -48,17 +46,16 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import compose.icons.TablerIcons
 import compose.icons.tablericons.GripVertical
+import io.music_assistant.client.data.model.client.Player
+import io.music_assistant.client.data.model.client.PlayerData
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableCollectionItemScope
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
-import io.music_assistant.client.data.model.client.Player
-import io.music_assistant.client.data.model.client.PlayerData
 
 @Composable
 fun PlayersRow(
     modifier: Modifier = Modifier,
-    collapsed: Boolean,
     players: List<PlayerData> = emptyList(),
     selectedPlayerId: String?,
     playerAction: (PlayerData, PlayerAction) -> Unit,
@@ -103,7 +100,6 @@ fun PlayersRow(
                 key = player.id,
             ) {
                 PlayerCard(
-                    collapsed = collapsed,
                     playerData = playerData,
                     isSelected = selectedPlayerId == player.id,
                     playerAction = playerAction,
@@ -121,7 +117,6 @@ fun PlayersRow(
 @Composable
 fun PlayerCard(
     modifier: Modifier = Modifier,
-    collapsed: Boolean,
     playerData: PlayerData,
     isSelected: Boolean,
     playerAction: (PlayerData, PlayerAction) -> Unit,
@@ -163,13 +158,6 @@ fun PlayerCard(
                 .padding(vertical = 8.dp, horizontal = 8.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            val minHeight = 0.dp
-            val maxHeight = 100.dp
-            val collapsableHeight = if (collapsed) minHeight else maxHeight
-            val animatedHeight by animateDpAsState(
-                targetValue = collapsableHeight,
-                label = "PlayerElementsHeight"
-            )
             Text(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -198,15 +186,12 @@ fun PlayerCard(
             )
             LinearProgressIndicator(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = minHeight, max = animatedHeight),
+                    .fillMaxWidth(),
                 progress = currentProgress ?: 0f,
                 color = MaterialTheme.colors.onPrimary,
                 strokeCap = StrokeCap.Round
             )
             PlayerControls(
-                modifier = Modifier
-                    .heightIn(min = minHeight, max = animatedHeight),
                 playerData = playerData,
                 playerAction = playerAction,
                 enabled = !player.isAnnouncing

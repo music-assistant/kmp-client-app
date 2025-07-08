@@ -1,8 +1,8 @@
 package io.music_assistant.client.data.model.server.events
 
+import io.music_assistant.client.data.model.server.EventType
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import io.music_assistant.client.data.model.server.EventType
 
 @Serializable
 data class QueueTimeUpdatedEvent(

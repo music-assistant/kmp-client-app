@@ -5,9 +5,9 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import io.music_assistant.client.di.androidModule
-import org.koin.android.ext.koin.androidContext
 import io.music_assistant.client.di.initKoin
 import io.music_assistant.client.services.MediaNotificationManager
+import org.koin.android.ext.koin.androidContext
 
 class MyApplication : Application() {
     override fun onCreate() {

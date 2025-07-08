@@ -2,16 +2,16 @@ package io.music_assistant.client.ui.compose.main
 
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
+import io.music_assistant.client.api.ServiceClient
+import io.music_assistant.client.data.MainDataSource
+import io.music_assistant.client.data.model.client.Player
+import io.music_assistant.client.data.model.client.PlayerData
+import io.music_assistant.client.data.model.client.SelectedPlayerData
+import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import io.music_assistant.client.api.ServiceClient
-import io.music_assistant.client.data.model.client.Player
-import io.music_assistant.client.data.model.client.PlayerData
-import io.music_assistant.client.data.model.client.SelectedPlayerData
-import io.music_assistant.client.data.MainDataSource
-import io.music_assistant.client.utils.SessionState
 
 class MainViewModel(
     private val apiClient: ServiceClient,

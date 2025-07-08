@@ -2,8 +2,6 @@ package io.music_assistant.client.ui.compose.library
 
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.api.getAlbumTracksRequest
@@ -19,6 +17,8 @@ import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.server.ServerMediaItem
 import io.music_assistant.client.utils.SessionState
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class LibraryViewModel(
     private val apiClient: ServiceClient,

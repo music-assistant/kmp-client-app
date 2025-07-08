@@ -76,6 +76,7 @@ class SettingsScreen : Screen {
             }
         }
         Scaffold(
+            backgroundColor = MaterialTheme.colors.background,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
         ) { scaffoldPadding ->
             Column(

@@ -1,10 +1,10 @@
 package io.music_assistant.client.data.model.server.events
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 import io.music_assistant.client.data.model.client.Player.Companion.toPlayer
 import io.music_assistant.client.data.model.server.EventType
 import io.music_assistant.client.data.model.server.ServerPlayer
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 @Serializable
 data class PlayerUpdatedEvent(

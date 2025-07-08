@@ -1,6 +1,5 @@
 package io.music_assistant.client.ui.compose.main
 
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -10,8 +9,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -56,7 +54,6 @@ class MainScreen : Screen {
         val viewModel = koinScreenModel<MainViewModel>()
         val state by viewModel.state.collectAsStateWithLifecycle(MainViewModel.State.Loading)
         var isFabVisible by rememberSaveable { mutableStateOf(true) }
-        var isPlayersRowCollapsed by remember { mutableStateOf(false) }
         val nestedScrollConnection = remember {
             object : NestedScrollConnection {
                 override fun onPreScroll(
@@ -65,23 +62,23 @@ class MainScreen : Screen {
                 ): Offset {
                     if (available.y < -1) {
                         isFabVisible = false
-                        isPlayersRowCollapsed = true
                     } else if (available.y > 1) {
                         isFabVisible = true
-                        isPlayersRowCollapsed = false
                     }
                     return Offset.Zero
                 }
             }
         }
         Scaffold(
+            backgroundColor = MaterialTheme.colors.background,
             floatingActionButton = {
                 VerticalHidingContainer(
                     isVisible = isFabVisible,
                 ) {
                     Box(modifier = Modifier.fillMaxWidth()) {
                         FloatingActionButton(
-                            modifier = Modifier.padding(start = 30.dp).align(Alignment.BottomStart),
+                            modifier = Modifier.navigationBarsPadding().padding(start = 30.dp)
+                                .align(Alignment.BottomStart),
                             onClick = { navigator.push(SettingsScreen()) },
                         ) {
                             Icon(
@@ -93,7 +90,8 @@ class MainScreen : Screen {
 
                         if (state is MainViewModel.State.Data) {
                             ExtendedFloatingActionButton(
-                                modifier = Modifier.align(Alignment.BottomEnd),
+                                modifier = Modifier.navigationBarsPadding()
+                                    .align(Alignment.BottomEnd),
                                 onClick = {
                                     val data = state as? MainViewModel.State.Data
                                     data?.playerData?.firstOrNull { it.player.id == data.selectedPlayerData?.playerId }
@@ -134,11 +132,10 @@ class MainScreen : Screen {
             ) {
                 lastDataState?.let {
                     DataLayout(
-                        isPlayersRowCollapsed,
                         state = it,
                         nestedScrollConnection = nestedScrollConnection,
                         viewModel = viewModel,
-                    ) { isPlayersRowCollapsed = false }
+                    )
                 }
                 when (state) {
                     MainViewModel.State.Disconnected,
@@ -183,11 +180,9 @@ class MainScreen : Screen {
 
     @Composable
     private fun DataLayout(
-        collapsed: Boolean,
         state: MainViewModel.State.Data,
         nestedScrollConnection: NestedScrollConnection,
         viewModel: MainViewModel,
-        onPlayerClick: () -> Unit
     ) {
         Column(
             Modifier.fillMaxSize(),
@@ -197,22 +192,13 @@ class MainScreen : Screen {
             val playersData = state.playerData
             val selectedPlayerData = state.selectedPlayerData
 
-            val minPlayersRowHeight = 80.dp
-            val maxPlayersRowHeight = 200.dp
-            val playersRowHeight = if (collapsed) minPlayersRowHeight else maxPlayersRowHeight
-            val animatedHeight by animateDpAsState(
-                targetValue = playersRowHeight,
-                label = "TopSectionHeight"
-            )
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentHeight()
-                    .heightIn(min = minPlayersRowHeight, max = animatedHeight)
                     .padding(top = 8.dp)
             ) {
                 PlayersRow(
-                    collapsed = collapsed,
                     players = playersData,
                     selectedPlayerId = selectedPlayerData?.playerId,
                     playerAction = { playerData, action ->
@@ -220,7 +206,6 @@ class MainScreen : Screen {
                     },
                     onListReordered = viewModel::onPlayersSortChanged,
                 ) {
-                    onPlayerClick()
                     viewModel.selectPlayer(it)
                 }
             }
