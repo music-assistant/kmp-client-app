@@ -9,6 +9,8 @@ import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import compose.icons.FontAwesomeIcons
@@ -46,6 +49,7 @@ import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.Play
 import compose.icons.tablericons.ClipboardX
 import compose.icons.tablericons.GripVertical
+import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.client.Queue
 import io.music_assistant.client.data.model.client.QueueTrack
 import io.music_assistant.client.utils.conditional
@@ -55,9 +59,51 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.time.Duration.Companion.seconds
 
+@Composable
+fun Queue(
+    modifier: Modifier = Modifier,
+    nestedScrollConnection: NestedScrollConnection,
+    playerData: PlayerData,
+    queueItems: List<QueueTrack>?,
+    chosenItemsIds: Set<String>?,
+    queueAction: (QueueAction) -> Unit,
+    onItemChosenChanged: (String) -> Unit,
+    onChosenItemsClear: () -> Unit
+) {
+    Column(
+        modifier = modifier.fillMaxSize(),
+    ) {
+        queueItems?.takeIf { it.isNotEmpty() }?.let { items ->
+            QueueUI(
+                nestedScrollConnection = nestedScrollConnection,
+                queue = playerData.queue,
+                items = items,
+                chosenItemsIds = chosenItemsIds,
+                enabled = !playerData.player.isAnnouncing,
+                queueAction = queueAction,
+                onItemChosenChanged = onItemChosenChanged,
+                onChosenItemsClear = onChosenItemsClear,
+            )
+        } ?: run {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Nothing here...",
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colors.onSurface,
+                    style = MaterialTheme.typography.body2,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun QueueUI(
+private fun QueueUI(
     nestedScrollConnection: NestedScrollConnection,
     queue: Queue?,
     items: List<QueueTrack>,
@@ -96,9 +142,9 @@ fun QueueUI(
         modifier = Modifier
             .fillMaxWidth()
             .height(44.dp)
-            .padding(4.dp)
+            .padding(horizontal = 20.dp)
             .alpha(if (enabled) 1f else 0.5f),
-        horizontalArrangement = Arrangement.Center,
+        horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (chosenItemsIds?.isNotEmpty() == true) {
@@ -112,7 +158,7 @@ fun QueueUI(
             )
         } else {
             Text(
-                text = "Queue ($queueInfo)",
+                text = queueInfo,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colors.onSurface,
