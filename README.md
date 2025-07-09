@@ -21,13 +21,9 @@ https://youtu.be/BhwEn_68rGg
 
 ## Want to try it?
 
-It's a bit advanced, but not too hard.
+Download and install debug APK from latest release on [releases page](https://github.com/music-assistant/kmp-client-app/releases).
 
-1. Download and install [Android Studio](https://developer.android.com/studio).
-2. Clone this project and open it in Androiud Studio.
-3. Open Terminal in Android Studio and run `./gradlew assembleDebug`.
-4. After successful run, the APK file will be placed in subfolder `kmp-client-app/composeApp/build/outputs/apk/debug`.
-5. Install this APK to the device.
+*Disclamer: this is debug version of application, and isn't recommended for usage beyond testing purposes!*
 
 ### To use the app with Android Auto you will need additional steps
 
