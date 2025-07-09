@@ -30,6 +30,8 @@ fun HorizontalPlayersPager(
     players: List<PlayerData> = emptyList(),
     selectedPlayerId: String?,
     playerAction: (PlayerData, PlayerAction) -> Unit,
+    settingsAction: (String) -> Unit,
+    dspSettingsAction: (String) -> Unit,
     onListReordered: (List<String>) -> Unit,
     onSelected: (Player) -> Unit,
 ) {
@@ -67,7 +69,9 @@ fun HorizontalPlayersPager(
                 modifier = Modifier.padding(all = 8.dp).fillMaxWidth().height(240.dp),
                 playerData = playerData,
                 isSelected = selectedPlayerId == player.id,
-                playerAction = playerAction
+                playerAction = playerAction,
+                settingsAction = settingsAction,
+                dspSettingsAction = dspSettingsAction,
             )
         }
         HorizontalPagerIndicator(
@@ -84,6 +88,8 @@ fun VerticalPlayersPager(
     players: List<PlayerData> = emptyList(),
     selectedPlayerId: String?,
     playerAction: (PlayerData, PlayerAction) -> Unit,
+    settingsAction: (String) -> Unit,
+    dspSettingsAction: (String) -> Unit,
     onListReordered: (List<String>) -> Unit,
     onSelected: (Player) -> Unit,
 ) {
@@ -121,7 +127,9 @@ fun VerticalPlayersPager(
                 modifier = Modifier.padding(all = 8.dp).fillMaxSize(),
                 playerData = playerData,
                 isSelected = selectedPlayerId == player.id,
-                playerAction = playerAction
+                playerAction = playerAction,
+                settingsAction = settingsAction,
+                dspSettingsAction = dspSettingsAction,
             )
         }
         VerticalPagerIndicator(
@@ -176,6 +184,8 @@ fun HorizontalPlayersPagerPreview() {
         ),
         selectedPlayerId = "2",
         playerAction = { _, _ -> },
+        settingsAction = {},
+        dspSettingsAction = {},
         onListReordered = {},
         onSelected = {}
     )
@@ -226,6 +236,8 @@ fun VerticalPlayersPagerPreview() {
             ),
             selectedPlayerId = "2",
             playerAction = { _, _ -> },
+            settingsAction = {},
+            dspSettingsAction = {},
             onListReordered = {},
             onSelected = {}
         )

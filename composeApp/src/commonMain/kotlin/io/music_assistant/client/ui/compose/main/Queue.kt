@@ -60,7 +60,7 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
-fun Queue(
+fun QueueSection(
     modifier: Modifier = Modifier,
     nestedScrollConnection: NestedScrollConnection,
     playerData: PlayerData,

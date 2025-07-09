@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cafe.adriel.voyager.core.screen.Screen
@@ -49,12 +50,18 @@ import compose.icons.fontawesomeicons.solid.Cog
 import io.music_assistant.client.ui.compose.common.VerticalHidingContainer
 import io.music_assistant.client.ui.compose.library.LibraryScreen
 import io.music_assistant.client.ui.compose.settings.SettingsScreen
+import kotlinx.coroutines.flow.collectLatest
 
 class MainScreen : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val viewModel = koinScreenModel<MainViewModel>()
+        val uriHandler = LocalUriHandler.current
+
+        LaunchedEffect(Unit) {
+            viewModel.links.collectLatest { url -> uriHandler.openUri(url) }
+        }
         val state by viewModel.state.collectAsStateWithLifecycle(MainViewModel.State.Loading)
         var isFabVisible by rememberSaveable { mutableStateOf(true) }
         val nestedScrollConnection = remember {
@@ -211,13 +218,19 @@ class MainScreen : Screen {
                 playerAction = { playerData, action ->
                     viewModel.playerAction(playerData, action)
                 },
+                settingsAction = { playerId ->
+                    viewModel.openPlayerSettings(playerId)
+                },
+                dspSettingsAction = { playerId ->
+                    viewModel.openPlayerDspSettings(playerId)
+                },
                 onListReordered = viewModel::onPlayersSortChanged,
             ) {
                 viewModel.selectPlayer(it)
             }
 
             state.selectedPlayer?.let { playerData ->
-                Queue(
+                QueueSection(
                     modifier = Modifier.fillMaxSize(),
                     nestedScrollConnection = nestedScrollConnection,
                     playerData = playerData,
@@ -257,13 +270,19 @@ class MainScreen : Screen {
                 playerAction = { playerData, action ->
                     viewModel.playerAction(playerData, action)
                 },
+                settingsAction = { playerId ->
+                    viewModel.openPlayerSettings(playerId)
+                },
+                dspSettingsAction = { playerId ->
+                    viewModel.openPlayerDspSettings(playerId)
+                },
                 onListReordered = viewModel::onPlayersSortChanged,
             ) {
                 viewModel.selectPlayer(it)
             }
 
             state.selectedPlayer?.let { playerData ->
-                Queue(
+                QueueSection(
                     modifier = Modifier.fillMaxSize(),
                     nestedScrollConnection = nestedScrollConnection,
                     playerData = playerData,
