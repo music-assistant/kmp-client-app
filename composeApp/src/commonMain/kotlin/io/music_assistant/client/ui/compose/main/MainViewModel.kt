@@ -7,8 +7,11 @@ import io.music_assistant.client.data.MainDataSource
 import io.music_assistant.client.data.model.client.Player
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.client.SelectedPlayerData
+import io.music_assistant.client.settings.SettingsRepository
 import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -16,9 +19,13 @@ import kotlinx.coroutines.launch
 class MainViewModel(
     private val apiClient: ServiceClient,
     private val dataSource: MainDataSource,
+    private val settings: SettingsRepository,
 ) : StateScreenModel<MainViewModel.State>(State.Loading) {
 
     private val jobs = mutableListOf<Job>()
+
+    private val _links = MutableSharedFlow<String>()
+    val links = _links.asSharedFlow()
 
     init {
         screenModelScope.launch {
@@ -87,6 +94,13 @@ class MainViewModel(
     fun onItemChosenChanged(id: String) = dataSource.onItemChosenChanged(id)
     fun onChosenItemsClear() = dataSource.onChosenItemsClear()
     fun onPlayersSortChanged(newSort: List<String>) = dataSource.onPlayersSortChanged(newSort)
+    fun openPlayerSettings(id: String) = settings.connectionInfo.value?.webUrl?.let { url ->
+        onOpenExternalLink("$url/#/settings/editplayer/$id")
+    }
+    fun openPlayerDspSettings(id: String) = settings.connectionInfo.value?.webUrl?.let { url ->
+        onOpenExternalLink("$url/#/settings/editplayer/$id/dsp")
+    }
+    private fun onOpenExternalLink(url: String) = screenModelScope.launch { _links.emit(url) }
 
     sealed class State {
         data object Loading : State()

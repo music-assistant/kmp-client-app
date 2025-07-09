@@ -13,6 +13,7 @@ import androidx.compose.material.LinearProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -23,7 +24,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import io.music_assistant.client.data.model.client.Player
 import io.music_assistant.client.data.model.client.PlayerData
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun PlayerCard(
@@ -31,6 +34,8 @@ fun PlayerCard(
     playerData: PlayerData,
     isSelected: Boolean,
     playerAction: (PlayerData, PlayerAction) -> Unit,
+    settingsAction: (String) -> Unit,
+    dspSettingsAction: (String) -> Unit,
 ) {
     val player = playerData.player
     val queue = playerData.queue
@@ -46,6 +51,19 @@ fun PlayerCard(
                 shape = RoundedCornerShape(size = 8.dp)
             )
     ) {
+        OverflowMenu(
+            modifier = Modifier.align(Alignment.TopEnd),
+            options = listOf(
+                OverflowMenuOption(
+                    title = "Settings",
+                    onClick = { settingsAction(player.id) }
+                ),
+                OverflowMenuOption(
+                    title = "DSP settings",
+                    onClick = { dspSettingsAction(player.id) }
+                ),
+            )
+        )
         queue?.currentItem?.track?.imageUrl?.let {
             AsyncImage(
                 modifier = Modifier
@@ -104,4 +122,30 @@ fun PlayerCard(
         }
     }
 
+}
+
+@Preview
+@Composable
+fun PlayerCardPreview() {
+    MaterialTheme {
+        PlayerCard(
+            modifier = Modifier.fillMaxWidth(),
+            playerData = PlayerData(
+                player = Player(
+                    id = "1",
+                    name = "Test Player",
+                    isPlaying = true,
+                    isAnnouncing = false,
+                    canSetVolume = true,
+                    isBuiltin = false,
+                    shouldBeShown = true,
+                    queueId = null
+                )
+            ),
+            isSelected = true,
+            playerAction = { _, _ -> },
+            settingsAction = {},
+            dspSettingsAction = {}
+        )
+    }
 }
