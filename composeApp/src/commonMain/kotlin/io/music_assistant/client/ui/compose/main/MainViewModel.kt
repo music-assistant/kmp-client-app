@@ -95,7 +95,10 @@ class MainViewModel(
         data class Data(
             val playerData: List<PlayerData>,
             val selectedPlayerData: SelectedPlayerData? = null
-        ) :
-            State()
+        ) : State() {
+            val selectedPlayer: PlayerData?
+                get() = selectedPlayerData?.playerId
+                    ?.let { selected -> playerData.firstOrNull { it.player.id == selected } }
+        }
     }
 }

@@ -24,7 +24,7 @@ fun ActionIcon(
 
     Icon(
         modifier = Modifier
-            .padding(horizontal = 4.dp)
+            .padding(horizontal = 8.dp)
             .clickable(enabled = enabled) { onClick() }
             .alpha(if (enabled) 1F else 0.5f)
             .size(size)

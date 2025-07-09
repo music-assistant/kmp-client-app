@@ -47,7 +47,7 @@ fun PlayerControls(
             ActionIcon(
                 icon = FontAwesomeIcons.Solid.VolumeDown,
                 tint = MaterialTheme.colors.onPrimary,
-                size = 22.dp,
+                size = 26.dp,
                 enabled = enabled,
             ) { playerAction(playerData, PlayerAction.VolumeDown) }
         }
@@ -59,7 +59,7 @@ fun PlayerControls(
                 else
                     TablerIcons.ArrowsRight,
                 tint = MaterialTheme.colors.onPrimary,
-                size = 22.dp,
+                size = 26.dp,
                 enabled = enabled && buttonsEnabled,
             ) { playerAction(playerData, PlayerAction.ToggleShuffle(current = it.shuffleEnabled)) }
         }
@@ -67,7 +67,7 @@ fun PlayerControls(
         ActionIcon(
             icon = FontAwesomeIcons.Solid.FastBackward,
             tint = MaterialTheme.colors.onPrimary,
-            size = 22.dp,
+            size = 26.dp,
             enabled = enabled && buttonsEnabled,
         ) { playerAction(playerData, PlayerAction.Previous) }
 
@@ -77,14 +77,14 @@ fun PlayerControls(
                 false -> FontAwesomeIcons.Solid.Play
             },
             tint = MaterialTheme.colors.onPrimary,
-            size = 26.dp,
+            size = 32.dp,
             enabled = enabled && buttonsEnabled,
         ) { playerAction(playerData, PlayerAction.TogglePlayPause) }
 
         ActionIcon(
             icon = FontAwesomeIcons.Solid.FastForward,
             tint = MaterialTheme.colors.onPrimary,
-            size = 22.dp,
+            size = 26.dp,
             enabled = enabled && buttonsEnabled,
         ) { playerAction(playerData, PlayerAction.Next) }
 
@@ -102,7 +102,7 @@ fun PlayerControls(
                     RepeatMode.ALL,
                     RepeatMode.ONE -> MaterialTheme.colors.onPrimary
                 },
-                size = 22.dp,
+                size = 26.dp,
                 enabled = enabled && buttonsEnabled && repeatMode != null,
             ) {
                 repeatMode?.let {
@@ -115,7 +115,7 @@ fun PlayerControls(
             ActionIcon(
                 icon = FontAwesomeIcons.Solid.VolumeUp,
                 tint = MaterialTheme.colors.onPrimary,
-                size = 22.dp,
+                size = 26.dp,
                 enabled = enabled,
             ) { playerAction(playerData, PlayerAction.VolumeUp) }
         }

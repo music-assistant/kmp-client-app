@@ -4,16 +4,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.ExtendedFloatingActionButton
 import androidx.compose.material.FabPosition
@@ -75,26 +78,15 @@ class MainScreen : Screen {
                 VerticalHidingContainer(
                     isVisible = isFabVisible,
                 ) {
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        FloatingActionButton(
-                            modifier = Modifier.navigationBarsPadding().padding(start = 30.dp)
-                                .align(Alignment.BottomStart),
-                            onClick = { navigator.push(SettingsScreen()) },
-                        ) {
-                            Icon(
-                                modifier = Modifier.size(24.dp),
-                                imageVector = FontAwesomeIcons.Solid.Cog,
-                                contentDescription = null,
-                            )
-                        }
-
+                    Row(
+                        modifier = Modifier.navigationBarsPadding().wrapContentSize(),
+                        verticalAlignment = Alignment.Bottom
+                    ) {
                         if (state is MainViewModel.State.Data) {
                             ExtendedFloatingActionButton(
-                                modifier = Modifier.navigationBarsPadding()
-                                    .align(Alignment.BottomEnd),
+                                modifier = Modifier.height(48.dp).padding(end = 8.dp),
                                 onClick = {
-                                    val data = state as? MainViewModel.State.Data
-                                    data?.playerData?.firstOrNull { it.player.id == data.selectedPlayerData?.playerId }
+                                    (state as? MainViewModel.State.Data)?.selectedPlayer
                                         ?.let { selected ->
                                             navigator.push(LibraryScreen(selected))
                                         }
@@ -105,6 +97,16 @@ class MainScreen : Screen {
                                         style = MaterialTheme.typography.button
                                     )
                                 }
+                            )
+                        }
+                        FloatingActionButton(
+                            modifier = Modifier.size(48.dp),
+                            onClick = { navigator.push(SettingsScreen()) },
+                        ) {
+                            Icon(
+                                modifier = Modifier.size(24.dp),
+                                imageVector = FontAwesomeIcons.Solid.Cog,
+                                contentDescription = null,
                             )
                         }
                     }
@@ -131,11 +133,22 @@ class MainScreen : Screen {
                     .background(color = MaterialTheme.colors.background)
             ) {
                 lastDataState?.let {
-                    DataLayout(
-                        state = it,
-                        nestedScrollConnection = nestedScrollConnection,
-                        viewModel = viewModel,
-                    )
+                    BoxWithConstraints {
+                        val isLandscape = maxWidth > maxHeight
+                        if (isLandscape) {
+                            HorizontalDataLayout(
+                                state = it,
+                                nestedScrollConnection = nestedScrollConnection,
+                                viewModel = viewModel,
+                            )
+                        } else {
+                            VerticalDataLayout(
+                                state = it,
+                                nestedScrollConnection = nestedScrollConnection,
+                                viewModel = viewModel,
+                            )
+                        }
+                    }
                 }
                 when (state) {
                     MainViewModel.State.Disconnected,
@@ -179,7 +192,7 @@ class MainScreen : Screen {
 
 
     @Composable
-    private fun DataLayout(
+    private fun VerticalDataLayout(
         state: MainViewModel.State.Data,
         nestedScrollConnection: NestedScrollConnection,
         viewModel: MainViewModel,
@@ -192,44 +205,81 @@ class MainScreen : Screen {
             val playersData = state.playerData
             val selectedPlayerData = state.selectedPlayerData
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .wrapContentHeight()
-                    .padding(top = 8.dp)
+            HorizontalPlayersPager(
+                players = playersData,
+                selectedPlayerId = selectedPlayerData?.playerId,
+                playerAction = { playerData, action ->
+                    viewModel.playerAction(playerData, action)
+                },
+                onListReordered = viewModel::onPlayersSortChanged,
             ) {
-                PlayersRow(
-                    players = playersData,
-                    selectedPlayerId = selectedPlayerData?.playerId,
-                    playerAction = { playerData, action ->
-                        viewModel.playerAction(playerData, action)
-                    },
-                    onListReordered = viewModel::onPlayersSortChanged,
-                ) {
-                    viewModel.selectPlayer(it)
-                }
+                viewModel.selectPlayer(it)
             }
 
-            playersData
-                .firstOrNull { it.player.id == selectedPlayerData?.playerId }
-                ?.let { playerData ->
-                    PlayerDetails(
-                        modifier = Modifier.fillMaxSize(),
-                        nestedScrollConnection = nestedScrollConnection,
-                        playerData = playerData,
-                        queueItems = selectedPlayerData?.queueItems,
-                        chosenItemsIds = selectedPlayerData?.chosenItemsIds,
-                        queueAction = { action ->
-                            viewModel.queueAction(action)
-                        },
-                        onItemChosenChanged = { id ->
-                            viewModel.onItemChosenChanged(
-                                id
-                            )
-                        },
-                        onChosenItemsClear = { viewModel.onChosenItemsClear() }
-                    )
-                }
+            state.selectedPlayer?.let { playerData ->
+                Queue(
+                    modifier = Modifier.fillMaxSize(),
+                    nestedScrollConnection = nestedScrollConnection,
+                    playerData = playerData,
+                    queueItems = selectedPlayerData?.queueItems,
+                    chosenItemsIds = selectedPlayerData?.chosenItemsIds,
+                    queueAction = { action ->
+                        viewModel.queueAction(action)
+                    },
+                    onItemChosenChanged = { id ->
+                        viewModel.onItemChosenChanged(
+                            id
+                        )
+                    },
+                    onChosenItemsClear = { viewModel.onChosenItemsClear() }
+                )
+            }
+        }
+    }
+
+    @Composable
+    private fun HorizontalDataLayout(
+        state: MainViewModel.State.Data,
+        nestedScrollConnection: NestedScrollConnection,
+        viewModel: MainViewModel,
+    ) {
+        Row(
+            Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val playersData = state.playerData
+            val selectedPlayerData = state.selectedPlayerData
+
+            VerticalPlayersPager(
+                players = playersData,
+                selectedPlayerId = selectedPlayerData?.playerId,
+                playerAction = { playerData, action ->
+                    viewModel.playerAction(playerData, action)
+                },
+                onListReordered = viewModel::onPlayersSortChanged,
+            ) {
+                viewModel.selectPlayer(it)
+            }
+
+            state.selectedPlayer?.let { playerData ->
+                Queue(
+                    modifier = Modifier.fillMaxSize(),
+                    nestedScrollConnection = nestedScrollConnection,
+                    playerData = playerData,
+                    queueItems = selectedPlayerData?.queueItems,
+                    chosenItemsIds = selectedPlayerData?.chosenItemsIds,
+                    queueAction = { action ->
+                        viewModel.queueAction(action)
+                    },
+                    onItemChosenChanged = { id ->
+                        viewModel.onItemChosenChanged(
+                            id
+                        )
+                    },
+                    onChosenItemsClear = { viewModel.onChosenItemsClear() }
+                )
+            }
         }
     }
 }
