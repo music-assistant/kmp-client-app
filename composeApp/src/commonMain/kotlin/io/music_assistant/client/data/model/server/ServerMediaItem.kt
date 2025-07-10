@@ -34,7 +34,7 @@ data class ServerMediaItem(
     @SerialName("duration") val duration: Double? = null,
     //@SerialName("isrc") val isrc: String? = null,
     // album track only
-    //@SerialName("album") val album: ServerMediaItem? = null,
+    @SerialName("album") val album: ServerMediaItem? = null,
     //@SerialName("disc_number") val discNumber: Int? = null,
     //@SerialName("track_number") val trackNumber: Int? = null,
 )

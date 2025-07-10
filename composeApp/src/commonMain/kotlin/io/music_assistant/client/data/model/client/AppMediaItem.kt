@@ -122,7 +122,7 @@ abstract class AppMediaItem(
 //        val isrc: String?,
         val artists: List<Artist>?,
 // album track only
-//        val album: Album?,
+        val album: Album?,
 //        val discNumber: Int?,
 //        val trackNumber: Int?,
 // playlist track only
@@ -235,7 +235,7 @@ abstract class AppMediaItem(
                     duration = duration,
 //                    isrc = isrc,
                     artists = artists?.mapNotNull { it.toAppMediaItem() as? Artist },
-//                    album = album?.let { from(it) as? Album },
+                    album = album?.let { it.toAppMediaItem() as? Album },
 //                    discNumber = discNumber,
 //                    trackNumber = trackNumber,
 //                    position = position,
