@@ -82,11 +82,15 @@ class MediaSessionHelper(tag: String, context: Context, callback: MediaSessionCo
         val metadata = MediaMetadataCompat.Builder()
             .putString(
                 MediaMetadataCompat.METADATA_KEY_TITLE,
-                data.description ?: "-"
+                data.name ?: "Unknown Track"
             )
             .putString(
                 MediaMetadataCompat.METADATA_KEY_ARTIST,
-                "Music Assistant - " + data.playerName
+                "${data.artist} (playing on ${data.playerName})"
+            )
+            .putString(
+                MediaMetadataCompat.METADATA_KEY_ALBUM,
+                data.album
             )
             .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, bitmap)
             .also { builder ->

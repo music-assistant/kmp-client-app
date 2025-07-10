@@ -6,7 +6,9 @@ import io.music_assistant.client.data.model.server.RepeatMode
 data class MediaNotificationData(
     val multiplePlayers: Boolean,
     val longItemId: Long?,
-    val description: String?,
+    val name: String?,
+    val artist: String?,
+    val album: String?,
     val repeatMode: RepeatMode?,
     val shuffleEnabled: Boolean?,
     val isPlaying: Boolean,
@@ -21,7 +23,9 @@ data class MediaNotificationData(
             MediaNotificationData(
                 multiplePlayers = multiplePlayers,
                 longItemId = playerData.queue?.currentItem?.track?.longId,
-                description = playerData.queue?.currentItem?.track?.description,
+                name = playerData.queue?.currentItem?.track?.name,
+                artist = playerData.queue?.currentItem?.track?.subtitle,
+                album = playerData.queue?.currentItem?.track?.album?.name,
                 repeatMode = playerData.queue?.repeatMode,
                 shuffleEnabled = playerData.queue?.shuffleEnabled,
                 isPlaying = playerData.player.isPlaying,
