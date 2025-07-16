@@ -42,8 +42,8 @@ import io.music_assistant.client.ui.compose.common.ActionIcon
 import io.music_assistant.client.ui.theme.ThemeSetting
 import io.music_assistant.client.ui.theme.ThemeViewModel
 import io.music_assistant.client.utils.SessionState
-import io.music_assistant.client.utils.isValidHost
 import io.music_assistant.client.utils.isIpPort
+import io.music_assistant.client.utils.isValidHost
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
 
@@ -68,7 +68,6 @@ class SettingsScreen : Screen {
         }
         if (sessionState is SessionState.Connected && shouldPopOnConnected) {
             navigator.pop()
-            shouldPopOnConnected = false
         }
         BackHandler(enabled = true) {
             if (sessionState is SessionState.Connected) {

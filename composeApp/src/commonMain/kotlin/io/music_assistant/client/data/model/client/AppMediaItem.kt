@@ -1,5 +1,8 @@
 package io.music_assistant.client.data.model.client
 
+import io.ktor.http.URLBuilder
+import io.ktor.http.appendPathSegments
+import io.ktor.http.encodeURLQueryComponent
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.Metadata
 import io.music_assistant.client.data.model.server.ServerMediaItem
@@ -37,7 +40,34 @@ abstract class AppMediaItem(
                 37 * name.hashCode()
     }
 
-    val imageUrl: String? = metadata?.images?.getOrNull(0)?.path
+    val imageInfo: ImageInfo? = metadata?.images?.getOrNull(0)
+        ?.let { image ->
+            ImageInfo(
+                image.path,
+                image.remotelyAccessible,
+                image.provider
+            )
+        }
+
+    data class ImageInfo(
+        val path: String,
+        val isRemotelyAccessible: Boolean,
+        val provider: String,
+    ) {
+        fun url(serverUrl: String?): String? =
+            path.takeIf { isRemotelyAccessible }
+                ?: serverUrl?.let { server ->
+                    return URLBuilder(server).apply {
+                        // Append the static path segment
+                        appendPathSegments("imageproxy")
+                        parameters.apply {
+                            append("path", path.encodeURLQueryComponent()) // TODO check if needed twice
+                            append("provider", provider)
+                            append("checksum", "")
+                        }
+                    }.buildString()
+                }
+    }
 
     class Artist(
         itemId: String,
@@ -274,4 +304,3 @@ abstract class AppMediaItem(
 
 // TODO Radio, audiobooks, podcasts
 }
-

@@ -60,7 +60,13 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
     private val mediaNotificationData = combine(
         currentPlayerData.filterNotNull(),
         players.map { it.size > 1 }
-    ) { player, moreThanOnePlayer -> MediaNotificationData.from(player, moreThanOnePlayer) }
+    ) { player, moreThanOnePlayer ->
+        MediaNotificationData.from(
+            dataSource.apiClient.serverInfo.value?.baseUrl,
+            player,
+            moreThanOnePlayer
+        )
+    }
         .distinctUntilChanged { old, new -> MediaNotificationData.areTooSimilarToUpdate(old, new) }
         .stateIn(scope, SharingStarted.WhileSubscribed(), null)
         .filterNotNull()

@@ -1,6 +1,5 @@
 package io.music_assistant.client.data.model.server
 
-import io.music_assistant.client.data.model.server.events.MediaItemImage
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -59,6 +58,14 @@ data class Metadata(
     //@SerialName("languages") val languages: List<String>? = null,
     //@SerialName("chapters") val chapters: List<String>? = null,
     @SerialName("last_refresh") val lastRefresh: Long?
+)
+
+@Serializable
+data class MediaItemImage(
+    //@SerialName("type") val type: String,
+    @SerialName("path") val path: String,
+    @SerialName("provider") val provider: String,
+    @SerialName("remotely_accessible") val remotelyAccessible: Boolean
 )
 
 //@Serializable

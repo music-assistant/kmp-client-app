@@ -22,7 +22,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -70,7 +72,7 @@ class ServiceClient(private val settings: SettingsRepository) {
     private val _eventsFlow = MutableSharedFlow<Event<out Any>>(extraBufferCapacity = 10)
     val events: Flow<Event<out Any>> = _eventsFlow.asSharedFlow()
     private val _serverInfoFlow = MutableStateFlow<ServerInfo?>(null)
-    val serverInfo: Flow<ServerInfo> = _serverInfoFlow.filterNotNull()
+    val serverInfo = _serverInfoFlow.asStateFlow()
 
     private val pendingResponses = mutableMapOf<String, (Answer) -> Unit>()
 

@@ -19,7 +19,7 @@ data class MediaNotificationData(
 ) {
 
     companion object {
-        fun from(playerData: PlayerData, multiplePlayers: Boolean) =
+        fun from(serverUrl: String?, playerData: PlayerData, multiplePlayers: Boolean) =
             MediaNotificationData(
                 multiplePlayers = multiplePlayers,
                 longItemId = playerData.queue?.currentItem?.track?.longId,
@@ -29,7 +29,7 @@ data class MediaNotificationData(
                 repeatMode = playerData.queue?.repeatMode,
                 shuffleEnabled = playerData.queue?.shuffleEnabled,
                 isPlaying = playerData.player.isPlaying,
-                imageUrl = playerData.queue?.currentItem?.track?.imageUrl,
+                imageUrl = playerData.queue?.currentItem?.track?.imageInfo?.url(serverUrl),
                 elapsedTime = playerData.queue?.elapsedTime?.toLong()?.let { it * 1000 },
                 playerName = playerData.player.name,
                 duration = playerData.queue?.currentItem?.track?.duration?.toLong()
