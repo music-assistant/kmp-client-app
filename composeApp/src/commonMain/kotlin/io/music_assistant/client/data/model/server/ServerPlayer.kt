@@ -11,7 +11,7 @@ data class ServerPlayer(
     //@SerialName("name") val name: String,
     @SerialName("available") val available: Boolean,
     //@SerialName("device_info") val deviceInfo: DeviceInfo,
-    @SerialName("supported_features") val supportedFeatures: List<PlayerFeature>,
+    @SerialName("supported_features") val supportedFeatures: List<String>,
     //@SerialName("can_group_with") val canGroupWith: List<String>,
     @SerialName("enabled") val enabled: Boolean,
     //@SerialName("elapsed_time") val elapsedTime: Double? = null,
