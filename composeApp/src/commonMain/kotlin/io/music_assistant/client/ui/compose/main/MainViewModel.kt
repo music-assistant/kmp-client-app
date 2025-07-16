@@ -13,6 +13,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -26,6 +27,8 @@ class MainViewModel(
 
     private val _links = MutableSharedFlow<String>()
     val links = _links.asSharedFlow()
+
+    val serverUrl = apiClient.serverInfo.filterNotNull().map { it.baseUrl }
 
     init {
         screenModelScope.launch {

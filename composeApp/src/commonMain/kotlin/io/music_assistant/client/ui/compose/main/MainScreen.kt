@@ -63,6 +63,7 @@ class MainScreen : Screen {
             viewModel.links.collectLatest { url -> uriHandler.openUri(url) }
         }
         val state by viewModel.state.collectAsStateWithLifecycle(MainViewModel.State.Loading)
+        val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
         var isFabVisible by rememberSaveable { mutableStateOf(true) }
         val nestedScrollConnection = remember {
             object : NestedScrollConnection {
@@ -144,12 +145,14 @@ class MainScreen : Screen {
                         val isLandscape = maxWidth > maxHeight
                         if (isLandscape) {
                             HorizontalDataLayout(
+                                serverUrl = serverUrl,
                                 state = it,
                                 nestedScrollConnection = nestedScrollConnection,
                                 viewModel = viewModel,
                             )
                         } else {
                             VerticalDataLayout(
+                                serverUrl = serverUrl,
                                 state = it,
                                 nestedScrollConnection = nestedScrollConnection,
                                 viewModel = viewModel,
@@ -200,6 +203,7 @@ class MainScreen : Screen {
 
     @Composable
     private fun VerticalDataLayout(
+        serverUrl: String?,
         state: MainViewModel.State.Data,
         nestedScrollConnection: NestedScrollConnection,
         viewModel: MainViewModel,
@@ -213,6 +217,7 @@ class MainScreen : Screen {
             val selectedPlayerData = state.selectedPlayerData
 
             HorizontalPlayersPager(
+                serverUrl = serverUrl,
                 players = playersData,
                 selectedPlayerId = selectedPlayerData?.playerId,
                 playerAction = { playerData, action ->
@@ -252,6 +257,7 @@ class MainScreen : Screen {
 
     @Composable
     private fun HorizontalDataLayout(
+        serverUrl: String?,
         state: MainViewModel.State.Data,
         nestedScrollConnection: NestedScrollConnection,
         viewModel: MainViewModel,
@@ -265,6 +271,7 @@ class MainScreen : Screen {
             val selectedPlayerData = state.selectedPlayerData
 
             VerticalPlayersPager(
+                serverUrl = serverUrl,
                 players = playersData,
                 selectedPlayerId = selectedPlayerData?.playerId,
                 playerAction = { playerData, action ->

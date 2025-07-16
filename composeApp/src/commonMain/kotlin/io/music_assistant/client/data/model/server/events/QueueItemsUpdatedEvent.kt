@@ -46,12 +46,4 @@ data class QueueItemsUpdatedEvent(
 //    @SerialName("output_format") val outputFormat: AudioFormat? = null
 //)
 
-@Serializable
-data class MediaItemImage(
-    //@SerialName("type") val type: String,
-    @SerialName("path") val path: String,
-    //@SerialName("provider") val provider: String,
-    //@SerialName("remotely_accessible") val remotelyAccessible: Boolean
-)
-
 

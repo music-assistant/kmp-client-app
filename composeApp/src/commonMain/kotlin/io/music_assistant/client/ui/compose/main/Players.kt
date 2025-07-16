@@ -27,6 +27,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 @Composable
 fun HorizontalPlayersPager(
     modifier: Modifier = Modifier,
+    serverUrl: String?,
     players: List<PlayerData> = emptyList(),
     selectedPlayerId: String?,
     playerAction: (PlayerData, PlayerAction) -> Unit,
@@ -67,6 +68,7 @@ fun HorizontalPlayersPager(
             val player = playerData.player
             PlayerCard(
                 modifier = Modifier.padding(all = 8.dp).fillMaxWidth().height(240.dp),
+                serverUrl = serverUrl,
                 playerData = playerData,
                 isSelected = selectedPlayerId == player.id,
                 playerAction = playerAction,
@@ -85,6 +87,7 @@ fun HorizontalPlayersPager(
 @Composable
 fun VerticalPlayersPager(
     modifier: Modifier = Modifier,
+    serverUrl: String?,
     players: List<PlayerData> = emptyList(),
     selectedPlayerId: String?,
     playerAction: (PlayerData, PlayerAction) -> Unit,
@@ -125,6 +128,7 @@ fun VerticalPlayersPager(
             val player = playerData.player
             PlayerCard(
                 modifier = Modifier.padding(all = 8.dp).fillMaxSize(),
+                serverUrl = serverUrl,
                 playerData = playerData,
                 isSelected = selectedPlayerId == player.id,
                 playerAction = playerAction,
@@ -144,6 +148,7 @@ fun VerticalPlayersPager(
 @Composable
 fun HorizontalPlayersPagerPreview() {
     HorizontalPlayersPager(
+        serverUrl = null,
         players = listOf(
             PlayerData(
                 Player(
@@ -196,6 +201,7 @@ fun HorizontalPlayersPagerPreview() {
 fun VerticalPlayersPagerPreview() {
     Box(modifier = Modifier.size(1920.dp)) {
         VerticalPlayersPager(
+            serverUrl = null,
             players = listOf(
                 PlayerData(
                     Player(

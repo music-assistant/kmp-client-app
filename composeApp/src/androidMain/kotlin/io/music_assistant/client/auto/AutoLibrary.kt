@@ -64,7 +64,12 @@ class AutoLibrary(
                         )
                     )
                     answer?.resultAs<SearchResult>()?.let {
-                        result.sendResult(it.toAutoMediaItems(defaultIconUri))
+                        result.sendResult(
+                            it.toAutoMediaItems(
+                                apiClient.serverInfo.value?.baseUrl,
+                                defaultIconUri
+                            )
+                        )
                     } ?: result.sendResult(null)
                 }
         }
@@ -88,18 +93,34 @@ class AutoLibrary(
             MediaIds.TAB_ARTISTS -> {
                 result.detach()
                 scope.launch {
-                    result.sendResult(apiClient.sendRequest(getArtistsRequest())
-                        ?.resultAs<List<ServerMediaItem>>()
-                        ?.toAppMediaItemList()?.map { it.toAutoMediaItem(true, defaultIconUri) })
+                    result.sendResult(
+                        apiClient.sendRequest(getArtistsRequest())
+                            ?.resultAs<List<ServerMediaItem>>()
+                            ?.toAppMediaItemList()
+                            ?.map {
+                                it.toAutoMediaItem(
+                                    apiClient.serverInfo.value?.baseUrl,
+                                    true,
+                                    defaultIconUri
+                                )
+                            })
                 }
             }
 
             MediaIds.TAB_PLAYLISTS -> {
                 result.detach()
                 scope.launch {
-                    result.sendResult(apiClient.sendRequest(getPlaylistsRequest())
-                        ?.resultAs<List<ServerMediaItem>>()
-                        ?.toAppMediaItemList()?.map { it.toAutoMediaItem(true, defaultIconUri) })
+                    result.sendResult(
+                        apiClient.sendRequest(getPlaylistsRequest())
+                            ?.resultAs<List<ServerMediaItem>>()
+                            ?.toAppMediaItemList()
+                            ?.map {
+                                it.toAutoMediaItem(
+                                    apiClient.serverInfo.value?.baseUrl,
+                                    true,
+                                    defaultIconUri
+                                )
+                            })
                 }
             }
 
@@ -122,7 +143,13 @@ class AutoLibrary(
                 scope.launch {
                     val list = apiClient.sendRequest(requestAndCategory)
                         ?.resultAs<List<ServerMediaItem>>()
-                        ?.toAppMediaItemList()?.map { it.toAutoMediaItem(true, defaultIconUri) }
+                        ?.toAppMediaItemList()?.map {
+                            it.toAutoMediaItem(
+                                apiClient.serverInfo.value?.baseUrl,
+                                true,
+                                defaultIconUri
+                            )
+                        }
                     result.sendResult(list?.let { actionsForItem(id) + it })
                 }
             }
@@ -210,27 +237,36 @@ internal object MediaIds {
     const val QUEUE_OPTION_KEY = "auto_queue_option"
 }
 
-private fun SearchResult.toAutoMediaItems(defaultIconUri: Uri): List<MediaItem> = buildList {
-    addAll(tracks.mapNotNull { it.toAutoMediaItem(false, defaultIconUri, "Tracks") })
-    addAll(albums.mapNotNull { it.toAutoMediaItem(false, defaultIconUri, "Albums") })
-    addAll(artists.mapNotNull { it.toAutoMediaItem(false, defaultIconUri, "Artists") })
-    addAll(playlists.mapNotNull { it.toAutoMediaItem(false, defaultIconUri, "Playlists") })
+private fun SearchResult.toAutoMediaItems(
+    serverUrl: String?,
+    defaultIconUri: Uri
+): List<MediaItem> = buildList {
+    mapOf(
+        tracks to "Tracks",
+        albums to "Albums",
+        artists to "Artists",
+        playlists to "Playlists"
+    ).forEach { (items, category) ->
+        addAll(items.mapNotNull { it.toAutoMediaItem(serverUrl, true, defaultIconUri, category) })
+    }
 }
 
 private fun ServerMediaItem.toAutoMediaItem(
+    serverUrl: String?,
     allowBrowse: Boolean,
     defaultIconUri: Uri,
     category: String? = null
 ): MediaItem? =
-    toAppMediaItem()?.toAutoMediaItem(allowBrowse, defaultIconUri, category)
+    toAppMediaItem()?.toAutoMediaItem(serverUrl, allowBrowse, defaultIconUri, category)
 
 private fun AppMediaItem.toAutoMediaItem(
+    serverUrl: String?,
     allowBrowse: Boolean,
     defaultIconUri: Uri,
     category: String? = null
 ): MediaItem {
     return MediaItem(
-        toMediaDescription(defaultIconUri, category),
+        toMediaDescription(serverUrl, defaultIconUri, category),
         if (allowBrowse && mediaType.isBrowsableInAuto())
             MediaItem.FLAG_BROWSABLE
         else
@@ -250,18 +286,21 @@ fun @receiver:DrawableRes Int.toUri(context: Context): Uri = Uri.parse(
 )
 
 fun AppMediaItem.toMediaDescription(
+    serverUrl: String?,
     defaultIconUri: Uri,
     category: String? = null
-) = MediaDescriptionCompat.Builder()
-    .setMediaId("${itemId}__${uri}__${mediaType}__${provider}")
-    .setTitle(name)
-    .setSubtitle(subtitle)
-    .setMediaUri(Uri.parse(uri))
-    .setIconUri(imageUrl?.let { Uri.parse(it) } ?: defaultIconUri)
-    .setExtras(Bundle().apply {
-        putString(
-            MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_GROUP_TITLE,
-            category
-        )
-    })
-    .build()
+): MediaDescriptionCompat {
+    return MediaDescriptionCompat.Builder()
+        .setMediaId("${itemId}__${uri}__${mediaType}__${provider}")
+        .setTitle(name)
+        .setSubtitle(subtitle)
+        .setMediaUri(Uri.parse(uri))
+        .setIconUri(imageInfo?.url(serverUrl)?.let { Uri.parse(it) } ?: defaultIconUri)
+        .setExtras(Bundle().apply {
+            putString(
+                MediaConstants.DESCRIPTION_EXTRAS_KEY_CONTENT_STYLE_GROUP_TITLE,
+                category
+            )
+        })
+        .build()
+}

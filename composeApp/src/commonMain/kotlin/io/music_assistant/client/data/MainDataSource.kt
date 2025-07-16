@@ -62,7 +62,7 @@ import kotlin.coroutines.CoroutineContext
 @OptIn(FlowPreview::class)
 class MainDataSource(
     private val settings: SettingsRepository,
-    private val apiClient: ServiceClient,
+    val apiClient: ServiceClient,
     private val localPlayerController: MediaPlayerController,
 ) : CoroutineScope, MediaPlayerListener {
 

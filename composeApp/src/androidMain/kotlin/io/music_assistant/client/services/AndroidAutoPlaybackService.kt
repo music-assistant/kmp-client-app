@@ -47,7 +47,13 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
         dataSource.playersData.map { it.firstOrNull { playerData -> playerData.player.isBuiltin } }
             .stateIn(scope, SharingStarted.Eagerly, null)
     private val mediaNotificationData = currentPlayerData.filterNotNull()
-        .map { MediaNotificationData.from(it, false) }
+        .map {
+            MediaNotificationData.from(
+                dataSource.apiClient.serverInfo.value?.baseUrl,
+                it,
+                false
+            )
+        }
         .distinctUntilChanged { old, new -> MediaNotificationData.areTooSimilarToUpdate(old, new) }
         .stateIn(scope, SharingStarted.WhileSubscribed(), null)
         .filterNotNull()
@@ -64,7 +70,12 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
         scope.launch {
             dataSource.builtinPlayerQueue.collect { list ->
                 mediaSessionHelper.updateQueue(list.map {
-                    QueueItem(it.track.toMediaDescription(defaultIconUri), it.track.longId)
+                    QueueItem(
+                        it.track.toMediaDescription(
+                            dataSource.apiClient.serverInfo.value?.baseUrl,
+                            defaultIconUri
+                        ), it.track.longId
+                    )
                 })
             }
         }

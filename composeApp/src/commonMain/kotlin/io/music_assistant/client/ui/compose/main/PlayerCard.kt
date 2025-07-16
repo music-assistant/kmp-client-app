@@ -31,6 +31,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 @Composable
 fun PlayerCard(
     modifier: Modifier = Modifier,
+    serverUrl: String?,
     playerData: PlayerData,
     isSelected: Boolean,
     playerAction: (PlayerData, PlayerAction) -> Unit,
@@ -64,13 +65,13 @@ fun PlayerCard(
                 ),
             )
         )
-        queue?.currentItem?.track?.imageUrl?.let {
+        queue?.currentItem?.track?.imageInfo?.let {
             AsyncImage(
                 modifier = Modifier
                     .fillMaxWidth()
                     .alpha(0.3f)
                     .clip(RoundedCornerShape(size = 16.dp)),
-                model = it,
+                model = it.url(serverUrl),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
             )
@@ -130,6 +131,7 @@ fun PlayerCardPreview() {
     MaterialTheme {
         PlayerCard(
             modifier = Modifier.fillMaxWidth(),
+            serverUrl = null,
             playerData = PlayerData(
                 player = Player(
                     id = "1",
