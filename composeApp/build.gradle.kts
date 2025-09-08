@@ -79,13 +79,6 @@ kotlin {
             implementation(libs.settings.multiplatform)
             implementation(libs.reorderable)
 
-            implementation(libs.voyager.navigator)
-            implementation(libs.voyager.screenmodel)
-            implementation(libs.voyager.bottomsheet.navigator)
-            implementation(libs.voyager.tab.navigator)
-            implementation(libs.voyager.transitions)
-            implementation(libs.voyager.koin)
-            implementation(libs.voyager.lifecycle.kmp)
         }
 
         commonTest.dependencies {
@@ -113,7 +106,7 @@ android {
 
     defaultConfig {
         applicationId = "io.music_assistant.client"
-        minSdk = libs.versions.android.minSdk.get().toInt()
+        minSdk { version = release(libs.versions.android.minSdk.get().toInt()) }
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"
@@ -132,6 +125,8 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
+    buildToolsVersion = "36.0.0"
 }
 
 dependencies {

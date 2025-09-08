@@ -1,7 +1,7 @@
 package io.music_assistant.client.ui.compose.library
 
-import cafe.adriel.voyager.core.model.StateScreenModel
-import cafe.adriel.voyager.core.model.screenModelScope
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.api.getAlbumTracksRequest
@@ -13,42 +13,46 @@ import io.music_assistant.client.api.getPlaylistsRequest
 import io.music_assistant.client.api.playMediaRequest
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItemList
-import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.server.ServerMediaItem
 import io.music_assistant.client.utils.SessionState
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class LibraryViewModel(
     private val apiClient: ServiceClient,
-) : StateScreenModel<LibraryViewModel.State>(
-    State(
-        connectionState = SessionState.Disconnected.Initial,
-        libraryLists = LibraryTab.entries.map {
-            LibraryList(
-                tab = it,
-                parentItems = emptyList(),
-                listState = ListState.NoData,
-                isSelected = it == LibraryTab.Artists,
-            )
-        },
-        checkedItems = emptySet(),
-        showAlbums = true
-    )
-) {
+) : ViewModel() {
 
     private val connectionState = apiClient.sessionState
+    
+    private val _state = MutableStateFlow(
+        State(
+            connectionState = SessionState.Disconnected.Initial,
+            libraryLists = LibraryTab.entries.map {
+                LibraryList(
+                    tab = it,
+                    parentItems = emptyList(),
+                    listState = ListState.NoData,
+                    isSelected = it == LibraryTab.Artists,
+                )
+            },
+            checkedItems = emptySet(),
+            showAlbums = true
+        )
+    )
+    val state = _state.asStateFlow()
 
 
     init {
-        screenModelScope.launch {
+        viewModelScope.launch {
             connectionState.collect { connection ->
-                mutableState.update { state -> state.copy(connectionState = connection) }
+                _state.update { state -> state.copy(connectionState = connection) }
                 if (connection is SessionState.Connected
-                    && state.value.libraryLists.any { it.listState is ListState.NoData }
+                    && _state.value.libraryLists.any { it.listState is ListState.NoData }
                 ) {
-                    screenModelScope.launch {
+                    viewModelScope.launch {
                         loadArtists()
                         loadPlaylists()
                     }
@@ -58,15 +62,15 @@ class LibraryViewModel(
     }
 
     fun onTabSelected(tab: LibraryTab) {
-        screenModelScope.launch {
-            mutableState.update { s ->
+        viewModelScope.launch {
+            _state.update { s ->
                 s.copy(libraryLists = s.libraryLists.map { it.copy(isSelected = it.tab == tab) })
             }
         }
     }
 
     fun onItemCheckChanged(mediaItem: AppMediaItem) {
-        mutableState.update { s ->
+        _state.update { s ->
             s.copy(
                 checkedItems = if (s.checkedItems.contains(mediaItem))
                     s.checkedItems.minus(mediaItem)
@@ -76,14 +80,14 @@ class LibraryViewModel(
         }
     }
 
-    fun clearCheckedItems() = mutableState.update { s -> s.copy(checkedItems = emptySet()) }
+    fun clearCheckedItems() = _state.update { s -> s.copy(checkedItems = emptySet()) }
 
     fun onItemClicked(tab: LibraryTab, mediaItem: AppMediaItem) {
         if (mediaItem is AppMediaItem.Track) {
             onItemCheckChanged(mediaItem)
             return
         }
-        mutableState.update { s ->
+        _state.update { s ->
             s.copy(
                 libraryLists = s.libraryLists.map {
                     if (it.tab == tab) {
@@ -97,7 +101,7 @@ class LibraryViewModel(
     }
 
     fun onUpClick(tab: LibraryTab) {
-        mutableState.update { s ->
+        _state.update { s ->
             s.copy(
                 libraryLists = s.libraryLists.map {
                     if (it.tab == tab) {
@@ -115,16 +119,16 @@ class LibraryViewModel(
     }
 
     fun onShowAlbumsChange(show: Boolean) {
-        mutableState.update { s -> s.copy(showAlbums = show) }
+        _state.update { s -> s.copy(showAlbums = show) }
         refreshListForTab(LibraryTab.Artists)
     }
 
-    fun playSelectedItems(playerData: PlayerData, option: QueueOption) {
-        screenModelScope.launch {
+    fun playSelectedItems(queueOrPlayerId: String, option: QueueOption) {
+        viewModelScope.launch {
             apiClient.sendRequest(
                 playMediaRequest(
-                    media = state.value.checkedItems.mapNotNull { it.uri },
-                    queueOrPlayerId = playerData.queue?.id ?: playerData.player.id,
+                    media = _state.value.checkedItems.mapNotNull { it.uri },
+                    queueOrPlayerId = queueOrPlayerId,
                     option = option,
                     radioMode = false
                 )
@@ -133,12 +137,12 @@ class LibraryViewModel(
     }
 
     private fun currentParentForTab(tab: LibraryTab) =
-        state.value.libraryLists.firstOrNull { it.tab == tab }?.parentItems?.lastOrNull()
+        _state.value.libraryLists.firstOrNull { it.tab == tab }?.parentItems?.lastOrNull()
 
     private fun refreshListForTab(tab: LibraryTab) {
-        screenModelScope.launch {
+        viewModelScope.launch {
             when (currentParentForTab(tab)) {
-                is AppMediaItem.Artist -> if (state.value.showAlbums) {
+                is AppMediaItem.Artist -> if (_state.value.showAlbums) {
                     loadAlbums(tab)
                 } else {
                     loadTracks(tab)
@@ -191,7 +195,7 @@ class LibraryViewModel(
         request: Request,
         predicate: (AppMediaItem) -> Boolean,
     ) {
-        mutableState.update { s ->
+        _state.update { s ->
             s.copy(
                 libraryLists = s.libraryLists.map {
                     if (it.tab == tab) {
@@ -205,7 +209,7 @@ class LibraryViewModel(
             ?.toAppMediaItemList()
             ?.filter { predicate(it) }
             ?.let { list ->
-                mutableState.update { s ->
+                _state.update { s ->
                     s.copy(
                         libraryLists = s.libraryLists.map {
                             if (it.tab == tab) {
@@ -216,7 +220,7 @@ class LibraryViewModel(
                         })
                 }
             } ?: run {
-            mutableState.update { s ->
+            _state.update { s ->
                 s.copy(
                     libraryLists = s.libraryLists.map {
                         if (it.tab == tab) {

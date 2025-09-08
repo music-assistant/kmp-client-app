@@ -1,6 +1,6 @@
 package io.music_assistant.client.ui.compose.settings
 
-import cafe.adriel.voyager.core.model.ScreenModel
+import androidx.lifecycle.ViewModel
 import io.music_assistant.client.api.ConnectionInfo
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.settings.SettingsRepository
@@ -8,7 +8,7 @@ import io.music_assistant.client.settings.SettingsRepository
 class SettingsViewModel(
     private val apiClient: ServiceClient,
     settings: SettingsRepository
-) : ScreenModel {
+) : ViewModel() {
 
     val connectionInfo = settings.connectionInfo
     val connectionState = apiClient.sessionState

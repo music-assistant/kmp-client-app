@@ -1,7 +1,7 @@
 package io.music_assistant.client.ui.compose.main
 
-import cafe.adriel.voyager.core.model.StateScreenModel
-import cafe.adriel.voyager.core.model.screenModelScope
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.data.MainDataSource
 import io.music_assistant.client.data.model.client.Player
@@ -11,7 +11,9 @@ import io.music_assistant.client.settings.SettingsRepository
 import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -21,7 +23,10 @@ class MainViewModel(
     private val apiClient: ServiceClient,
     private val dataSource: MainDataSource,
     private val settings: SettingsRepository,
-) : StateScreenModel<MainViewModel.State>(State.Loading) {
+) : ViewModel() {
+
+    private val _state = MutableStateFlow<State>(State.Loading)
+    val state = _state.asStateFlow()
 
     private val jobs = mutableListOf<Job>()
 
@@ -31,7 +36,7 @@ class MainViewModel(
     val serverUrl = apiClient.serverInfo.filterNotNull().map { it.baseUrl }
 
     init {
-        screenModelScope.launch {
+        viewModelScope.launch {
             apiClient.sessionState.collect {
                 when (it) {
                     is SessionState.Connected -> {
@@ -40,7 +45,7 @@ class MainViewModel(
                     }
 
                     is SessionState.Connecting -> {
-                        mutableState.update { State.Loading }
+                        _state.update { State.Loading }
                         stopJobs()
                     }
 
@@ -49,12 +54,12 @@ class MainViewModel(
                             is SessionState.Disconnected.Error,
                             SessionState.Disconnected.Initial,
                             SessionState.Disconnected.ByUser -> {
-                                mutableState.update { State.Disconnected }
+                                _state.update { State.Disconnected }
                                 stopJobs()
                             }
 
                             SessionState.Disconnected.NoServerData -> {
-                                mutableState.update { State.NoServer }
+                                _state.update { State.NoServer }
                                 stopJobs()
                             }
                         }
@@ -70,10 +75,10 @@ class MainViewModel(
         jobs.clear()
     }
 
-    private fun watchPlayersData(): Job = screenModelScope.launch {
+    private fun watchPlayersData(): Job = viewModelScope.launch {
         dataSource.playersData.collect { playerData ->
-            if (playerData.isNotEmpty() || mutableState.value is State.Data)
-                mutableState.update {
+            if (playerData.isNotEmpty() || _state.value is State.Data)
+                _state.update {
                     State.Data(
                         playerData,
                         dataSource.selectedPlayerData.value
@@ -82,11 +87,11 @@ class MainViewModel(
         }
     }
 
-    private fun watchSelectedPlayerData(): Job = screenModelScope.launch {
+    private fun watchSelectedPlayerData(): Job = viewModelScope.launch {
         dataSource.selectedPlayerData.filterNotNull().collect { selectedPlayer ->
-            val dataState = mutableState.value as? State.Data
+            val dataState = _state.value as? State.Data
             dataState?.let { state ->
-                mutableState.update { state.copy(selectedPlayerData = selectedPlayer) }
+                _state.update { state.copy(selectedPlayerData = selectedPlayer) }
             }
         }
     }
@@ -100,10 +105,12 @@ class MainViewModel(
     fun openPlayerSettings(id: String) = settings.connectionInfo.value?.webUrl?.let { url ->
         onOpenExternalLink("$url/#/settings/editplayer/$id")
     }
+
     fun openPlayerDspSettings(id: String) = settings.connectionInfo.value?.webUrl?.let { url ->
         onOpenExternalLink("$url/#/settings/editplayer/$id/dsp")
     }
-    private fun onOpenExternalLink(url: String) = screenModelScope.launch { _links.emit(url) }
+
+    private fun onOpenExternalLink(url: String) = viewModelScope.launch { _links.emit(url) }
 
     sealed class State {
         data object Loading : State()
