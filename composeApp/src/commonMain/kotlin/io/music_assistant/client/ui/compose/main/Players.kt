@@ -67,7 +67,7 @@ fun HorizontalPlayersPager(
             val playerData = players[page]
             val player = playerData.player
             PlayerCard(
-                modifier = Modifier.padding(all = 8.dp).fillMaxWidth().height(240.dp),
+                modifier = Modifier.padding(all = 8.dp).fillMaxWidth().height(180.dp),
                 serverUrl = serverUrl,
                 playerData = playerData,
                 isSelected = selectedPlayerId == player.id,

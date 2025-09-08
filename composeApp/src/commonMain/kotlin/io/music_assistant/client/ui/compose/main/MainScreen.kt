@@ -233,6 +233,7 @@ private fun VerticalDataLayout(
             QueueSection(
                 modifier = Modifier.fillMaxSize(),
                 nestedScrollConnection = nestedScrollConnection,
+                serverUrl = serverUrl,
                 playerData = playerData,
                 queueItems = selectedPlayerData?.queueItems,
                 chosenItemsIds = selectedPlayerData?.chosenItemsIds,
@@ -287,6 +288,7 @@ private fun HorizontalDataLayout(
             QueueSection(
                 modifier = Modifier.fillMaxSize(),
                 nestedScrollConnection = nestedScrollConnection,
+                serverUrl = serverUrl,
                 playerData = playerData,
                 queueItems = selectedPlayerData?.queueItems,
                 chosenItemsIds = selectedPlayerData?.chosenItemsIds,

@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -39,30 +39,33 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import compose.icons.FontAwesomeIcons
 import compose.icons.TablerIcons
 import compose.icons.fontawesomeicons.Solid
+import compose.icons.fontawesomeicons.solid.DotCircle
 import compose.icons.fontawesomeicons.solid.Play
 import compose.icons.tablericons.ClipboardX
 import compose.icons.tablericons.GripVertical
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.client.Queue
 import io.music_assistant.client.data.model.client.QueueTrack
+import io.music_assistant.client.ui.compose.common.MusicNotePainter
 import io.music_assistant.client.utils.conditional
-import io.music_assistant.client.utils.toMinSec
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
-import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun QueueSection(
     modifier: Modifier = Modifier,
     nestedScrollConnection: NestedScrollConnection,
+    serverUrl: String?,
     playerData: PlayerData,
     queueItems: List<QueueTrack>?,
     chosenItemsIds: Set<String>?,
@@ -76,6 +79,7 @@ fun QueueSection(
         queueItems?.takeIf { it.isNotEmpty() }?.let { items ->
             QueueUI(
                 nestedScrollConnection = nestedScrollConnection,
+                serverUrl = serverUrl,
                 queue = playerData.queue,
                 items = items,
                 chosenItemsIds = chosenItemsIds,
@@ -105,6 +109,7 @@ fun QueueSection(
 @Composable
 private fun QueueUI(
     nestedScrollConnection: NestedScrollConnection,
+    serverUrl: String?,
     queue: Queue?,
     items: List<QueueTrack>,
     chosenItemsIds: Set<String>?,
@@ -134,7 +139,7 @@ private fun QueueUI(
     val isInChooseMode = (chosenItemsIds?.size ?: 0) > 0
     LaunchedEffect(queue?.currentItem?.id) {
         if (currentIndex != -1) {
-            val targetIndex = maxOf(0, currentIndex - 2) // Ensure it doesn't go negative
+            val targetIndex = maxOf(0, currentIndex - 1) // Ensure it doesn't go negative
             listState.animateScrollToItem(targetIndex)
         }
     }
@@ -142,7 +147,7 @@ private fun QueueUI(
         modifier = Modifier
             .fillMaxWidth()
             .height(44.dp)
-            .padding(horizontal = 20.dp)
+            .padding(horizontal = 12.dp)
             .alpha(if (enabled) 1f else 0.5f),
         horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically,
@@ -207,8 +212,8 @@ private fun QueueUI(
             ) {
                 Row(
                     modifier = Modifier
+                        .padding(vertical = 1.dp)
                         .alpha(if (isPlayed && !isChosen) 0.5f else 1f)
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
                         .fillMaxWidth()
                         .clip(shape = RoundedCornerShape(16.dp))
                         .background(
@@ -252,47 +257,72 @@ private fun QueueUI(
                                 )
                             }
                         )
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Start
                 ) {
+                    val placeholder = MusicNotePainter(
+                        backgroundColor = MaterialTheme.colors.background,
+                        iconColor = when {
+                            isChosen -> MaterialTheme.colors.onPrimary
+                            else -> MaterialTheme.colors.secondary
+                        }
+                    )
+                    AsyncImage(
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(size = 4.dp)),
+                        placeholder = placeholder,
+                        fallback = placeholder,
+                        model = item.track.imageInfo?.url(serverUrl),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                    )
                     if (isCurrent) {
                         Icon(
-                            modifier = Modifier.padding(end = 38.dp).size(18.dp),
-                            imageVector = FontAwesomeIcons.Solid.Play,
+                            modifier = Modifier.padding(end = 8.dp).size(12.dp),
+                            imageVector = FontAwesomeIcons.Solid.DotCircle,
                             contentDescription = null,
                             tint = when {
                                 isChosen -> MaterialTheme.colors.onPrimary
                                 else -> MaterialTheme.colors.secondary
                             },
                         )
-                    } else {
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f).wrapContentHeight()
+                    ) {
                         Text(
-                            modifier = Modifier.padding(end = 8.dp).width(48.dp),
-                            text = "${index + 1}:",
+                            modifier = Modifier.fillMaxWidth().alpha(0.7f),
+                            text = item.track.artists
+                                ?.takeIf { it.isNotEmpty() }
+                                ?.joinToString(separator = ", ") { it.name }
+                                ?: "Unknown",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             color = when {
                                 isChosen -> MaterialTheme.colors.onPrimary
                                 else -> MaterialTheme.colors.secondary
                             },
                             style = MaterialTheme.typography.body2,
                         )
+                        Text(
+                            modifier = Modifier.fillMaxWidth(),
+                            text = item.track.name,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = when {
+                                isChosen -> MaterialTheme.colors.onPrimary
+                                else -> MaterialTheme.colors.secondary
+                            },
+                            style = MaterialTheme.typography.body1,
+                            fontWeight = when {
+                                isCurrent -> FontWeight.Bold
+                                else -> FontWeight.Normal
+                            }
+                        )
                     }
-                    Text(
-                        modifier = Modifier.weight(1f),
-                        text = "${item.track.description} " +
-                                "(${item.track.duration?.toInt()?.seconds.toMinSec()})",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = when {
-                            isChosen -> MaterialTheme.colors.onPrimary
-                            else -> MaterialTheme.colors.secondary
-                        },
-                        style = MaterialTheme.typography.body2,
-                        fontWeight = when {
-                            isCurrent -> FontWeight.Bold
-                            else -> FontWeight.Normal
-                        }
-                    )
                     if (chosenItemsIds?.isNotEmpty() == false && !isCurrent && !isPlayed) {
                         Icon(
                             modifier = Modifier

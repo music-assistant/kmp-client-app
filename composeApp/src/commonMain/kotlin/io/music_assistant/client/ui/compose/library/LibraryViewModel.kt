@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -36,6 +37,8 @@ class LibraryViewModel(
 ) : ViewModel() {
 
     private val connectionState = apiClient.sessionState
+
+    val serverUrl = apiClient.serverInfo.filterNotNull().map { it.baseUrl }
 
     private val _state = MutableStateFlow(
         State(

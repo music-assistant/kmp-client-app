@@ -2,11 +2,13 @@ package io.music_assistant.client.ui.compose.library
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,12 +19,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ExtendedFloatingActionButton
@@ -44,11 +48,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.capitalize
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.intl.Locale
@@ -56,6 +62,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
 import compose.icons.FontAwesomeIcons
 import compose.icons.TablerIcons
 import compose.icons.fontawesomeicons.Solid
@@ -77,6 +84,7 @@ import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.ui.compose.common.ActionIcon
+import io.music_assistant.client.ui.compose.common.MusicNotePainter
 import io.music_assistant.client.ui.compose.common.VerticalHidingContainer
 import io.music_assistant.client.ui.compose.nav.AppRoutes
 import io.music_assistant.client.ui.compose.nav.BackHandler
@@ -86,6 +94,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun LibraryScreen(navController: NavController, args: AppRoutes.LibraryArgs) {
     val viewModel = koinViewModel<LibraryViewModel>()
+    val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selectedList = state.libraryLists.firstOrNull { it.isSelected }
     BackHandler(enabled = true) {
@@ -101,6 +110,7 @@ fun LibraryScreen(navController: NavController, args: AppRoutes.LibraryArgs) {
         navController.popBackStack()
     }
     Library(
+        serverUrl = serverUrl,
         args = args,
         state = state,
         selectedList = selectedList,
@@ -123,6 +133,7 @@ fun LibraryScreen(navController: NavController, args: AppRoutes.LibraryArgs) {
 @Composable
 private fun Library(
     modifier: Modifier = Modifier,
+    serverUrl: String?,
     args: AppRoutes.LibraryArgs,
     state: LibraryViewModel.State,
     selectedList: LibraryViewModel.LibraryList?,
@@ -269,6 +280,7 @@ private fun Library(
                     )
                 }
                 ItemsListArea(
+                    serverUrl = serverUrl,
                     list = it,
                     checkedItems = state.checkedItems,
                     nestedScrollConnection = nestedScrollConnection,
@@ -284,6 +296,7 @@ private fun Library(
 @Composable
 private fun ItemsListArea(
     modifier: Modifier = Modifier,
+    serverUrl: String?,
     list: LibraryViewModel.LibraryList,
     checkedItems: Set<AppMediaItem>,
     nestedScrollConnection: NestedScrollConnection,
@@ -342,6 +355,7 @@ private fun ItemsListArea(
                 } else {
                     ItemsList(
                         parentItem = parentItem,
+                        serverUrl = serverUrl,
                         items = list.listState.items,
                         checkedItems = checkedItems,
                         nestedScrollConnection = nestedScrollConnection,
@@ -363,35 +377,43 @@ fun SearchArea(
     onTypeChanged: (MediaType, Boolean) -> Unit,
 ) {
     Column(modifier = modifier) {
-        Row {
+        Row(
+            modifier = Modifier.height(32.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             searchState.mediaTypes.forEach { mediaType ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 4.dp)
+                    modifier = Modifier
+                        .clickable {
+                            onTypeChanged(mediaType.type, !mediaType.isSelected)
+                        }
                 ) {
                     androidx.compose.material.Checkbox(
                         checked = mediaType.isSelected,
                         onCheckedChange = { checked ->
                             onTypeChanged(mediaType.type, checked)
-                        }
+                        },
+                        modifier = Modifier.scale(0.8f)
                     )
                     Text(
                         text = mediaType.type.name.lowercase().capitalize(Locale.current),
-                        modifier = Modifier.padding(start = 2.dp, end = 4.dp)
+                        modifier = Modifier.padding(end = 6.dp),
+                        style = MaterialTheme.typography.body2
                     )
                 }
             }
         }
+
         OutlinedTextField(
             value = searchState.query,
             onValueChange = { newText -> onQueryChanged(newText) },
             label = {
                 Text(
-                    text =
-                        if (searchState.query.trim().length < 3)
-                            "Type at least 3 symbols for search"
-                        else
-                            "Search query"
+                    text = if (searchState.query.trim().length < 3)
+                        "Type at least 3 symbols for search"
+                    else
+                        "Search query"
                 )
             },
             modifier = Modifier.fillMaxWidth()
@@ -402,6 +424,7 @@ fun SearchArea(
 @Composable
 private fun ItemsList(
     modifier: Modifier = Modifier,
+    serverUrl: String?,
     parentItem: AppMediaItem?,
     items: List<AppMediaItem>,
     checkedItems: Set<AppMediaItem>,
@@ -431,52 +454,101 @@ private fun ItemsList(
             val isChecked = item != parentItem && item in checkedItems
             Row(
                 modifier = Modifier
-                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                    .padding(vertical = 1.dp)
                     .fillMaxWidth()
                     .clip(shape = RoundedCornerShape(16.dp))
-                    .background(if (isChecked) MaterialTheme.colors.onPrimary else Color.Transparent)
+                    .background(if (isChecked) MaterialTheme.colors.primary else Color.Transparent)
                     .clickable(
                         onClick = { if (item == parentItem) onUpClick() else onClick(item) },
                     )
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Start
             ) {
                 if (item == parentItem) {
                     Icon(
-                        modifier = Modifier.padding(end = 24.dp).size(18.dp),
+                        modifier = Modifier
+                            .padding(end = 24.dp, start = 12.dp)
+                            .size(18.dp),
                         imageVector = FontAwesomeIcons.Solid.ArrowUp,
                         contentDescription = "Up"
                     )
                 }
-                Icon(
-                    modifier = Modifier.padding(end = 16.dp).size(18.dp),
-                    imageVector = when (item) {
-                        is AppMediaItem.Track -> TablerIcons.FileMusic
-                        is AppMediaItem.Album -> TablerIcons.Folder
-                        is AppMediaItem.Artist -> TablerIcons.Man
-                        is AppMediaItem.Playlist -> TablerIcons.List
-                        else -> TablerIcons.QuestionMark
-                    },
-                    contentDescription = "Item icon",
-                    tint = if (isChecked) MaterialTheme.colors.primary else MaterialTheme.colors.secondary,
-                )
+                Box(
+                    modifier = Modifier
+                        .padding(end = 12.dp)
+                        .size(48.dp)
+                ) {
+                    val placeholder =
+                        MusicNotePainter(
+                            backgroundColor = MaterialTheme.colors.background,
+                            iconColor = MaterialTheme.colors.secondary
+                        )
+
+                    AsyncImage(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(size = 4.dp)),
+                        placeholder = placeholder,
+                        fallback = placeholder
+                        ,
+                        model = item.imageInfo?.url(serverUrl),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .offset(x = 4.dp, y = 4.dp)
+                            .align(Alignment.BottomEnd)
+                            .background(
+                                color = Color.Black,
+                                shape = CircleShape
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (isChecked) MaterialTheme.colors.onPrimary else MaterialTheme.colors.primary,
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            modifier = Modifier.size(12.dp),
+                            imageVector = when (item) {
+                                is AppMediaItem.Track -> TablerIcons.FileMusic
+                                is AppMediaItem.Album -> TablerIcons.Folder
+                                is AppMediaItem.Artist -> TablerIcons.Man
+                                is AppMediaItem.Playlist -> TablerIcons.List
+                                else -> TablerIcons.QuestionMark
+                            },
+                            contentDescription = "Item type",
+                            tint = Color.White
+                        )
+                    }
+                }
+
                 Text(
                     modifier = Modifier.weight(1f),
                     text = item.name,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = if (isChecked) MaterialTheme.colors.primary else MaterialTheme.colors.secondary,
+                    color = if (isChecked) MaterialTheme.colors.onPrimary else MaterialTheme.colors.secondary,
                     style = MaterialTheme.typography.body1,
                     fontWeight = if (item == parentItem || isChecked) FontWeight.Bold else FontWeight.Normal
                 )
+
                 if (item != parentItem) {
                     Icon(
-                        modifier = Modifier.padding(start = 16.dp).size(18.dp)
-                            .clickable { onCheckChanged(item) },
+                        modifier = Modifier
+                            .padding(start = 16.dp)
+                            .size(18.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { onCheckChanged(item) },
                         imageVector = if (isChecked) TablerIcons.SquareCheck else TablerIcons.Square,
-                        contentDescription = "Check",
-                        tint = if (isChecked) MaterialTheme.colors.primary else MaterialTheme.colors.secondary,
+                        contentDescription = "Select item",
+                        tint = if (isChecked) MaterialTheme.colors.onPrimary else MaterialTheme.colors.secondary,
                     )
                 }
             }
