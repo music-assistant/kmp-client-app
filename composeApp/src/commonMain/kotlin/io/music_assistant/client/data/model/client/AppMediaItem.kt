@@ -5,6 +5,7 @@ import io.ktor.http.appendPathSegments
 import io.ktor.http.encodeURLQueryComponent
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.Metadata
+import io.music_assistant.client.data.model.server.SearchResult
 import io.music_assistant.client.data.model.server.ServerMediaItem
 
 abstract class AppMediaItem(
@@ -300,6 +301,12 @@ abstract class AppMediaItem(
 
         fun List<ServerMediaItem>.toAppMediaItemList() =
             mapNotNull { it.toAppMediaItem() }
+
+        fun SearchResult.toAppMediaItemList() =
+            artists.toAppMediaItemList() +
+            albums.toAppMediaItemList() +
+            tracks.toAppMediaItemList() +
+            playlists.toAppMediaItemList()
     }
 
 // TODO Radio, audiobooks, podcasts

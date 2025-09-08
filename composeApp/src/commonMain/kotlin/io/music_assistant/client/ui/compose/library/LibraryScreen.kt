@@ -29,11 +29,13 @@ import androidx.compose.material.ExtendedFloatingActionButton
 import androidx.compose.material.FabPosition
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -84,14 +86,14 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun LibraryScreen(navController: NavController, args: AppRoutes.LibraryArgs) {
     val viewModel = koinViewModel<LibraryViewModel>()
-    val state = viewModel.state.collectAsStateWithLifecycle()
-    val selectedList = state.value.libraryLists.firstOrNull { it.isSelected }
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val selectedList = state.libraryLists.firstOrNull { it.isSelected }
     BackHandler(enabled = true) {
         selectedList?.let {
             if (it.parentItems.isNotEmpty()) {
                 viewModel.onUpClick(it.tab)
                 return@BackHandler
-            } else if (state.value.checkedItems.isNotEmpty()) {
+            } else if (state.checkedItems.isNotEmpty()) {
                 viewModel.clearCheckedItems()
                 return@BackHandler
             }
@@ -100,13 +102,15 @@ fun LibraryScreen(navController: NavController, args: AppRoutes.LibraryArgs) {
     }
     Library(
         args = args,
-        state = state.value,
+        state = state,
         selectedList = selectedList,
         navController = navController,
         onListSelected = viewModel::onTabSelected,
         onItemClicked = viewModel::onItemClicked,
         onCheckChanged = viewModel::onItemCheckChanged,
         onCheckedItemsClear = viewModel::clearCheckedItems,
+        onSearchQueryChanged = viewModel::searchQueryChanged,
+        onSearchTypeChanged = viewModel::searchTypeChanged,
         onUpClick = viewModel::onUpClick,
         onShowAlbumsChange = viewModel::onShowAlbumsChange,
         onPlaySelectedItems = { option ->
@@ -127,6 +131,8 @@ private fun Library(
     onItemClicked: (LibraryViewModel.LibraryTab, AppMediaItem) -> Unit,
     onCheckChanged: (AppMediaItem) -> Unit,
     onCheckedItemsClear: () -> Unit,
+    onSearchQueryChanged: (String) -> Unit,
+    onSearchTypeChanged: (MediaType, Boolean) -> Unit,
     onUpClick: (LibraryViewModel.LibraryTab) -> Unit,
     onShowAlbumsChange: (Boolean) -> Unit,
     onPlaySelectedItems: (QueueOption) -> Unit,
@@ -151,8 +157,7 @@ private fun Library(
         backgroundColor = MaterialTheme.colors.background,
         floatingActionButton = {
             if (
-                selectedList?.tab == LibraryViewModel.LibraryTab.Artists
-                && selectedList.listState is LibraryViewModel.ListState.Data
+                selectedList?.listState is LibraryViewModel.ListState.Data
                 && selectedList.parentItems.lastOrNull()?.mediaType == MediaType.ARTIST
             ) {
                 VerticalHidingContainer(
@@ -255,6 +260,14 @@ private fun Library(
                 }
             }
             selectedList?.let {
+                if (it.tab == LibraryViewModel.LibraryTab.Search) {
+                    SearchArea(
+                        modifier = Modifier.padding(4.dp),
+                        searchState = state.searchState,
+                        onQueryChanged = onSearchQueryChanged,
+                        onTypeChanged = onSearchTypeChanged,
+                    )
+                }
                 ItemsListArea(
                     list = it,
                     checkedItems = state.checkedItems,
@@ -307,7 +320,7 @@ private fun ItemsListArea(
             }
 
             LibraryViewModel.ListState.NoData -> {
-                Text(modifier = Modifier.align(Alignment.Center), text = "No data")
+                Text(modifier = Modifier.align(Alignment.Center), text = "Nothing to show")
             }
 
             is LibraryViewModel.ListState.Data -> {
@@ -339,6 +352,50 @@ private fun ItemsListArea(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun SearchArea(
+    modifier: Modifier,
+    searchState: LibraryViewModel.SearchState,
+    onQueryChanged: (String) -> Unit,
+    onTypeChanged: (MediaType, Boolean) -> Unit,
+) {
+    Column(modifier = modifier) {
+        Row {
+            searchState.mediaTypes.forEach { mediaType ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                ) {
+                    androidx.compose.material.Checkbox(
+                        checked = mediaType.isSelected,
+                        onCheckedChange = { checked ->
+                            onTypeChanged(mediaType.type, checked)
+                        }
+                    )
+                    Text(
+                        text = mediaType.type.name.lowercase().capitalize(Locale.current),
+                        modifier = Modifier.padding(start = 2.dp, end = 4.dp)
+                    )
+                }
+            }
+        }
+        OutlinedTextField(
+            value = searchState.query,
+            onValueChange = { newText -> onQueryChanged(newText) },
+            label = {
+                Text(
+                    text =
+                        if (searchState.query.trim().length < 3)
+                            "Type at least 3 symbols for search"
+                        else
+                            "Search query"
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 

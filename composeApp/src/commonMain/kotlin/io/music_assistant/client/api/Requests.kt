@@ -213,7 +213,7 @@ fun updateBuiltInPlayerStateRequest(playerId: String, state: BuiltinPlayerState)
     }
 )
 
-fun searchRequest(query: String, mediaTypes: List<MediaType>) = Request(
+fun searchRequest(query: String, mediaTypes: List<MediaType>, limit: Int = 20) = Request(
     command = "music/search",
     args = buildJsonObject {
         put("search_query", JsonPrimitive(query))
@@ -221,7 +221,7 @@ fun searchRequest(query: String, mediaTypes: List<MediaType>) = Request(
             "media_types",
             myJson.decodeFromString<JsonArray>(myJson.encodeToString(mediaTypes))
         )
-        put("limit", JsonPrimitive(20))
+        put("limit", JsonPrimitive(limit))
     }
 )
 

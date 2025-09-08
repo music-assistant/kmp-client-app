@@ -2,6 +2,7 @@ package io.music_assistant.client.ui.compose.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.music_assistant.client.api.Answer
 import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.api.getAlbumTracksRequest
@@ -11,22 +12,31 @@ import io.music_assistant.client.api.getArtistsRequest
 import io.music_assistant.client.api.getPlaylistTracksRequest
 import io.music_assistant.client.api.getPlaylistsRequest
 import io.music_assistant.client.api.playMediaRequest
+import io.music_assistant.client.api.searchRequest
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItemList
+import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
+import io.music_assistant.client.data.model.server.SearchResult
 import io.music_assistant.client.data.model.server.ServerMediaItem
 import io.music_assistant.client.utils.SessionState
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+@OptIn(FlowPreview::class)
 class LibraryViewModel(
     private val apiClient: ServiceClient,
 ) : ViewModel() {
 
     private val connectionState = apiClient.sessionState
-    
+
     private val _state = MutableStateFlow(
         State(
             connectionState = SessionState.Disconnected.Initial,
@@ -38,6 +48,11 @@ class LibraryViewModel(
                     isSelected = it == LibraryTab.Artists,
                 )
             },
+            searchState = SearchState(
+                query = "",
+                mediaTypes = SearchState.searchTypes
+                    .map { SearchState.MediaTypeSelect(it, true) }
+            ),
             checkedItems = emptySet(),
             showAlbums = true
         )
@@ -58,6 +73,30 @@ class LibraryViewModel(
                     }
                 }
             }
+        }
+        viewModelScope.launch {
+            _state.map { it.searchState }
+                .distinctUntilChanged()
+                .filter { it.query.trim().length > 2 || it.query.isEmpty() }
+                .debounce { 500 }
+                .collect { state ->
+                    state.takeIf { it.query.isNotEmpty() }?.let {
+                        loadSearch(it)
+                    } ?: run {
+                        _state.update {
+                            it.copy(
+                                libraryLists = it.libraryLists.map { list ->
+                                    if (list.tab == LibraryTab.Search) {
+                                        list.copy(
+                                            parentItems = emptyList(),
+                                            listState = ListState.NoData
+                                        )
+                                    } else list
+                                }
+                            )
+                        }
+                    }
+                }
         }
     }
 
@@ -81,6 +120,22 @@ class LibraryViewModel(
     }
 
     fun clearCheckedItems() = _state.update { s -> s.copy(checkedItems = emptySet()) }
+
+    fun searchQueryChanged(query: String) {
+        _state.update { s -> s.copy(searchState = s.searchState.copy(query = query)) }
+    }
+
+    fun searchTypeChanged(type: MediaType, isSelected: Boolean) {
+        _state.update { s ->
+            s.copy(
+                searchState = s.searchState.copy(
+                    mediaTypes = s.searchState.mediaTypes.map {
+                        if (it.type == type) it.copy(isSelected = isSelected) else it
+                    }
+                )
+            )
+        }
+    }
 
     fun onItemClicked(tab: LibraryTab, mediaItem: AppMediaItem) {
         if (mediaItem is AppMediaItem.Track) {
@@ -120,7 +175,9 @@ class LibraryViewModel(
 
     fun onShowAlbumsChange(show: Boolean) {
         _state.update { s -> s.copy(showAlbums = show) }
-        refreshListForTab(LibraryTab.Artists)
+        _state.value.libraryLists.firstOrNull { it.isSelected }?.let {
+            refreshListForTab(it.tab)
+        }
     }
 
     fun playSelectedItems(queueOrPlayerId: String, option: QueueOption) {
@@ -154,22 +211,26 @@ class LibraryViewModel(
                 null -> when (tab) {
                     LibraryTab.Artists -> loadArtists()
                     LibraryTab.Playlists -> loadPlaylists()
+                    LibraryTab.Search -> loadSearch(_state.value.searchState)
                 }
             }
         }
     }
 
     private suspend fun loadArtists() {
-        refreshList(LibraryTab.Artists, getArtistsRequest()) { it is AppMediaItem.Artist }
+        refreshSimpleList(LibraryTab.Artists, getArtistsRequest()) { it is AppMediaItem.Artist }
     }
 
     private suspend fun loadPlaylists() {
-        refreshList(LibraryTab.Playlists, getPlaylistsRequest()) { it is AppMediaItem.Playlist }
+        refreshSimpleList(
+            LibraryTab.Playlists,
+            getPlaylistsRequest()
+        ) { it is AppMediaItem.Playlist }
     }
 
     private suspend fun loadAlbums(tab: LibraryTab) {
         currentParentForTab(tab)?.let { item ->
-            refreshList(tab, getArtistAlbumsRequest(item.itemId, item.provider)) {
+            refreshSimpleList(tab, getArtistAlbumsRequest(item.itemId, item.provider)) {
                 it is AppMediaItem.Album
             }
         }
@@ -177,7 +238,7 @@ class LibraryViewModel(
 
     private suspend fun loadTracks(tab: LibraryTab) {
         currentParentForTab(tab)?.let { item ->
-            refreshList(
+            refreshSimpleList(
                 tab,
                 when (item) {
                     is AppMediaItem.Artist -> getArtistTracksRequest(item.itemId, item.provider)
@@ -190,10 +251,39 @@ class LibraryViewModel(
         }
     }
 
+    private suspend fun loadSearch(searchState: SearchState) {
+        _state.update {
+            it.copy(
+                libraryLists = it.libraryLists.map { list ->
+                    if (list.tab == LibraryTab.Search && list.parentItems.isNotEmpty()) {
+                        list.copy(parentItems = emptyList())
+                    } else list
+                }
+            )
+        }
+        refreshList(
+            LibraryTab.Search,
+            searchRequest(searchState.query, searchState.selectedMediaTypes, limit = 50),
+            { answer -> answer.resultAs<SearchResult>()?.toAppMediaItemList() },
+        )
+    }
+
+    private suspend fun refreshSimpleList(
+        tab: LibraryTab,
+        request: Request,
+        predicate: (AppMediaItem) -> Boolean = { true },
+    ) = refreshList(
+        tab,
+        request,
+        { answer -> answer.resultAs<List<ServerMediaItem>>()?.toAppMediaItemList() },
+        predicate
+    )
+
     private suspend fun refreshList(
         tab: LibraryTab,
         request: Request,
-        predicate: (AppMediaItem) -> Boolean,
+        resultParser: (Answer) -> List<AppMediaItem>?,
+        predicate: (AppMediaItem) -> Boolean = { true },
     ) {
         _state.update { s ->
             s.copy(
@@ -205,21 +295,22 @@ class LibraryViewModel(
                     }
                 })
         }
-        apiClient.sendRequest(request)?.resultAs<List<ServerMediaItem>>()
-            ?.toAppMediaItemList()
-            ?.filter { predicate(it) }
-            ?.let { list ->
-                _state.update { s ->
-                    s.copy(
-                        libraryLists = s.libraryLists.map {
-                            if (it.tab == tab) {
-                                it.copy(listState = ListState.Data(list))
-                            } else {
-                                it
-                            }
-                        })
+        apiClient.sendRequest(request)?.let { answer ->
+            resultParser(answer)
+                ?.filter { predicate(it) }
+                ?.let { list ->
+                    _state.update { s ->
+                        s.copy(
+                            libraryLists = s.libraryLists.map {
+                                if (it.tab == tab) {
+                                    it.copy(listState = ListState.Data(list))
+                                } else {
+                                    it
+                                }
+                            })
+                    }
                 }
-            } ?: run {
+        } ?: run {
             _state.update { s ->
                 s.copy(
                     libraryLists = s.libraryLists.map {
@@ -234,7 +325,7 @@ class LibraryViewModel(
     }
 
     enum class LibraryTab {
-        Artists, Playlists, // Tracks?
+        Artists, Playlists, Search, // Tracks?
     }
 
     data class LibraryList(
@@ -243,6 +334,21 @@ class LibraryViewModel(
         val listState: ListState,
         val isSelected: Boolean,
     )
+
+    data class SearchState(
+        val query: String,
+        val mediaTypes: List<MediaTypeSelect>,
+    ) {
+        val selectedMediaTypes = mediaTypes.filter { it.isSelected }.map { it.type }
+
+        data class MediaTypeSelect(val type: MediaType, val isSelected: Boolean)
+
+        companion object {
+            val searchTypes = listOf(
+                MediaType.ARTIST, MediaType.ALBUM, MediaType.TRACK
+            )
+        }
+    }
 
     sealed class ListState {
         data object NoData : ListState()
@@ -254,6 +360,7 @@ class LibraryViewModel(
     data class State(
         val connectionState: SessionState,
         val libraryLists: List<LibraryList>,
+        val searchState: SearchState,
         val checkedItems: Set<AppMediaItem>,
         val showAlbums: Boolean
     )
