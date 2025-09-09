@@ -31,17 +31,13 @@ jobs:
       - name: Build debug APK
         run: ./gradlew assembleDebug
 
-      - name: Get version info
+      - name: Get vars
         id: vars
         run: |
-          # Get short SHA
-          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-          
-          # Generate timestamp-based version (YYYY.MM.DD.HHMM format)
+          # Timestamp-based version (YYYY.MM.DD.HHMM format)
           echo "timestamp=$(date -u +'%Y.%m.%d.%H%M')" >> $GITHUB_OUTPUT
-          
-          # Get build number (total commits on main)
-          echo "build_number=$(git rev-list --count HEAD)" >> $GITHUB_OUTPUT
+          # Latest commit message
+          echo "commit_message=$(git log -1 --pretty=format:'%s')" >> $GITHUB_OUTPUT
 
       - name: Create and push Git tag
         id: tag
@@ -60,29 +56,21 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
-          name: "🚀 Debug Build ${{ steps.vars.outputs.timestamp }} (Latest)"
+          name: "🚀 Debug Build ${{ steps.vars.outputs.timestamp }}"
           body: |
             ## Debug APK Release
             
-            **📱 Latest automated debug build from main branch**
+            **Latest automated debug build from main branch**
             
-            ### 🆕 What's New
+            ### What's New
             **${{ steps.vars.outputs.commit_message }}**
             
-            *Committed by ${{ steps.vars.outputs.commit_author }} on ${{ steps.vars.outputs.commit_date }}*
-            
-            ### Build Information
-            - **Build Number:** #${{ steps.vars.outputs.build_number }}
-            - **Commit SHA:** `${{ steps.vars.outputs.sha }}`
-            - **Build Time:** ${{ steps.vars.outputs.timestamp }}
-            - **Branch:** main
-            
-            ### ⚠️ Important Notes
+            ### Important Notes
             - This is a **debug build** — not intended for production use
             - Contains debug symbols and logging
             - Performance may be slower than release builds
             
-            ### 📥 Installation
+            ### Installation
             Download the APK below and install on your Android device.
           files: composeApp/build/outputs/apk/debug/composeApp-debug.apk
           draft: false
