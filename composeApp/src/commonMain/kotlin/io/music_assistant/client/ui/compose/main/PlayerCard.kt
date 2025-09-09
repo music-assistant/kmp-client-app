@@ -52,7 +52,7 @@ fun PlayerCard(
                 shape = RoundedCornerShape(size = 8.dp)
             )
     ) {
-        OverflowMenu(
+        OverflowMenuThreeDots(
             modifier = Modifier.align(Alignment.TopEnd),
             options = listOf(
                 OverflowMenuOption(

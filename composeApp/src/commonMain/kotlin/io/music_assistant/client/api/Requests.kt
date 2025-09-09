@@ -62,6 +62,18 @@ fun playerQueueClearRequest(
         put("queue_id", JsonPrimitive(queueId))
     })
 
+fun playerQueueTransferRequest(
+    sourceId: String,
+    targetId: String,
+    autoplay: Boolean,
+) = Request(
+    command = "player_queues/transfer",
+    args = buildJsonObject {
+        put("source_queue_id", JsonPrimitive(sourceId))
+        put("target_queue_id", JsonPrimitive(targetId))
+        put("auto_play", JsonPrimitive(autoplay))
+    })
+
 fun playerQueuePlayIndexRequest(
     queueId: String,
     queueItemId: String,

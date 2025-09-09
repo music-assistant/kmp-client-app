@@ -1,25 +1,31 @@
 package io.music_assistant.client.ui.compose.main
 
-sealed class QueueAction {
+sealed interface QueueAction {
 
     data class RemoveItems(
         val queueId: String,
         val items: List<String>
-    ) : QueueAction()
+    ) : QueueAction
 
     data class ClearQueue(
         val queueId: String,
-    ) : QueueAction()
+    ) : QueueAction
 
     data class PlayQueueItem(
         val queueId: String,
         val queueItemId: String
-    ) : QueueAction()
+    ) : QueueAction
 
     data class MoveItem(
         val queueId: String,
         val queueItemId: String,
         val from: Int,
         val to: Int,
-    ) : QueueAction()
+    ) : QueueAction
+
+    data class Transfer(
+        val sourceId: String,
+        val targetId: String,
+        val autoplay: Boolean,
+    ): QueueAction
 }

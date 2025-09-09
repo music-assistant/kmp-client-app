@@ -9,6 +9,7 @@ import io.music_assistant.client.api.playerQueueRemoveItemRequest
 import io.music_assistant.client.api.playerQueueSeekRequest
 import io.music_assistant.client.api.playerQueueSetRepeatModeRequest
 import io.music_assistant.client.api.playerQueueSetShuffleRequest
+import io.music_assistant.client.api.playerQueueTransferRequest
 import io.music_assistant.client.api.registerBuiltInPlayerRequest
 import io.music_assistant.client.api.simplePlayerRequest
 import io.music_assistant.client.api.updateBuiltInPlayerStateRequest
@@ -302,6 +303,15 @@ class MainDataSource(
                                 )
                             )
                         }
+                }
+                is QueueAction.Transfer -> {
+                    apiClient.sendRequest(
+                        playerQueueTransferRequest(
+                            sourceId = action.sourceId,
+                            targetId = action.targetId,
+                            autoplay = action.autoplay
+                        )
+                    )
                 }
             }
         }

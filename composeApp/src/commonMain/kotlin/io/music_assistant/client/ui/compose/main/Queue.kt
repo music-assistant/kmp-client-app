@@ -49,7 +49,7 @@ import compose.icons.FontAwesomeIcons
 import compose.icons.TablerIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.DotCircle
-import compose.icons.fontawesomeicons.solid.Play
+import compose.icons.tablericons.ArrowBigRight
 import compose.icons.tablericons.ClipboardX
 import compose.icons.tablericons.GripVertical
 import io.music_assistant.client.data.model.client.PlayerData
@@ -66,6 +66,7 @@ fun QueueSection(
     modifier: Modifier = Modifier,
     nestedScrollConnection: NestedScrollConnection,
     serverUrl: String?,
+    players: List<PlayerData>,
     playerData: PlayerData,
     queueItems: List<QueueTrack>?,
     chosenItemsIds: Set<String>?,
@@ -80,7 +81,9 @@ fun QueueSection(
             QueueUI(
                 nestedScrollConnection = nestedScrollConnection,
                 serverUrl = serverUrl,
+                players = players,
                 queue = playerData.queue,
+                isPlaying = playerData.player.isPlaying,
                 items = items,
                 chosenItemsIds = chosenItemsIds,
                 enabled = !playerData.player.isAnnouncing,
@@ -110,7 +113,9 @@ fun QueueSection(
 private fun QueueUI(
     nestedScrollConnection: NestedScrollConnection,
     serverUrl: String?,
+    players: List<PlayerData>,
     queue: Queue?,
+    isPlaying: Boolean,
     items: List<QueueTrack>,
     chosenItemsIds: Set<String>?,
     enabled: Boolean,
@@ -181,6 +186,36 @@ private fun QueueUI(
                     imageVector = TablerIcons.ClipboardX,
                     contentDescription = null,
                     tint = MaterialTheme.colors.primary,
+                )
+                OverflowMenu(
+                    modifier = Modifier
+                        .padding(start = 14.dp)
+                        .size(24.dp)
+                        .padding(all = 2.dp)
+                        .align(alignment = Alignment.CenterVertically),
+                    icon = TablerIcons.ArrowBigRight,
+                    iconTint = MaterialTheme.colors.primary,
+                    options = players.filter { p -> p.player.id != queue.id }.map { playerData ->
+                        OverflowMenuOption(
+                            title = playerData.player.name,
+                            onClick = {
+                                queueAction(
+                                    QueueAction.Transfer(
+                                        queue.id,
+                                        playerData.player.id,
+                                        isPlaying
+                                    )
+                                )
+                            }
+                        )
+                    }.ifEmpty {
+                        listOf(
+                            OverflowMenuOption(
+                                title = "No other players available",
+                                onClick = { /* No-op */ }
+                            )
+                        )
+                    }
                 )
             }
         }

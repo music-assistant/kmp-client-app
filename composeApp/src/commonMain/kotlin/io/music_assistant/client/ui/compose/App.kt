@@ -5,7 +5,6 @@ import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import io.music_assistant.client.ui.compose.library.LibraryScreen
 import io.music_assistant.client.ui.compose.main.MainScreen
@@ -15,6 +14,7 @@ import io.music_assistant.client.ui.theme.AppTheme
 import io.music_assistant.client.ui.theme.SystemAppearance
 import io.music_assistant.client.ui.theme.ThemeSetting
 import io.music_assistant.client.ui.theme.ThemeViewModel
+import io.music_assistant.client.utils.rememberNavControllerCustom
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
@@ -32,7 +32,7 @@ fun App() {
     }
     SystemAppearance(isDarkTheme = darkTheme)
     AppTheme(darkTheme = darkTheme) {
-        val navController = rememberNavController()
+        val navController = rememberNavControllerCustom()
         NavHost(
             navController = navController,
             startDestination = AppRoutes.Main

@@ -61,6 +61,7 @@ kotlin {
             implementation(libs.ktor.client.cio)
             implementation(libs.ktor.client.websockets)
             implementation(libs.ktor.client.json)
+//            implementation(libs.ktor.client.logging)
             implementation(libs.kotlinx.coroutines.core)
 
             api(libs.koin.core)
@@ -78,6 +79,10 @@ kotlin {
             implementation(libs.icons.tabler)
             implementation(libs.settings.multiplatform)
             implementation(libs.reorderable)
+
+//            implementation(libs.kermit)
+//            implementation(libs.crashlytics)
+//            implementation(libs.kermit.crashlytics)
 
         }
 
@@ -108,8 +113,8 @@ android {
         applicationId = "io.music_assistant.client"
         minSdk { version = release(libs.versions.android.minSdk.get().toInt()) }
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "0.1.0"
     }
     packaging {
         resources {

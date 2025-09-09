@@ -86,7 +86,7 @@ class MediaSessionHelper(tag: String, context: Context, callback: MediaSessionCo
             )
             .putString(
                 MediaMetadataCompat.METADATA_KEY_ARTIST,
-                "${data.artist} (playing on ${data.playerName})"
+                "${data.artist} (on ${data.playerName})"
             )
             .putString(
                 MediaMetadataCompat.METADATA_KEY_ALBUM,
