@@ -80,9 +80,7 @@ kotlin {
             implementation(libs.settings.multiplatform)
             implementation(libs.reorderable)
 
-//            implementation(libs.kermit)
-//            implementation(libs.crashlytics)
-//            implementation(libs.kermit.crashlytics)
+            implementation(libs.kermit)
 
         }
 

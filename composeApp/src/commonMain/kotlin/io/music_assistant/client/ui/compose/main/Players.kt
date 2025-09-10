@@ -35,6 +35,7 @@ fun HorizontalPlayersPager(
     dspSettingsAction: (String) -> Unit,
     onListReordered: (List<String>) -> Unit,
     onSelected: (Player) -> Unit,
+    forceShowFab: () -> Unit,
 ) {
     val pagerState = key(players.map { it.player.id }) {
         rememberPagerState(
@@ -54,6 +55,7 @@ fun HorizontalPlayersPager(
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }.collect { page ->
             onSelected(players[page].player)
+            forceShowFab()
         }
     }
     Column(
@@ -95,6 +97,7 @@ fun VerticalPlayersPager(
     dspSettingsAction: (String) -> Unit,
     onListReordered: (List<String>) -> Unit,
     onSelected: (Player) -> Unit,
+    forceShowFab: () -> Unit,
 ) {
     val pagerState = key(players.map { it.player.id }) {
         rememberPagerState(
@@ -114,6 +117,7 @@ fun VerticalPlayersPager(
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }.collect { page ->
             onSelected(players[page].player)
+            forceShowFab()
         }
     }
     Row(
@@ -192,7 +196,8 @@ fun HorizontalPlayersPagerPreview() {
         settingsAction = {},
         dspSettingsAction = {},
         onListReordered = {},
-        onSelected = {}
+        onSelected = {},
+        forceShowFab = {}
     )
 }
 
@@ -245,7 +250,8 @@ fun VerticalPlayersPagerPreview() {
             settingsAction = {},
             dspSettingsAction = {},
             onListReordered = {},
-            onSelected = {}
+            onSelected = {},
+            forceShowFab = {}
         )
     }
 }

@@ -192,6 +192,33 @@ fun getPlaylistTracksRequest(
     }
 )
 
+fun addMediaItemToLibraryRequest(
+    itemUri: String,
+) = Request(
+    command = "music/library/add_item",
+    args = buildJsonObject {
+        put("item", JsonPrimitive(itemUri))
+    }
+)
+fun favouriteMediaItemRequest(
+    itemUri: String,
+) = Request(
+    command = "music/favorites/add_item",
+    args = buildJsonObject {
+        put("item", JsonPrimitive(itemUri))
+    }
+)
+
+fun unfavouriteMediaItemRequest(
+    itemId: String,
+    mediaType: MediaType,
+) = Request(
+    command = "music/favorites/remove_item",
+    args = buildJsonObject {
+        put("library_item_id", JsonPrimitive(itemId))
+        put("media_type", JsonPrimitive(mediaType.name.lowercase()))
+    })
+
 fun playMediaRequest(
     media: List<String>,
     queueOrPlayerId: String,
@@ -225,15 +252,16 @@ fun updateBuiltInPlayerStateRequest(playerId: String, state: BuiltinPlayerState)
     }
 )
 
-fun searchRequest(query: String, mediaTypes: List<MediaType>, limit: Int = 20) = Request(
+fun searchRequest(query: String, mediaTypes: List<MediaType>, limit: Int = 20, libraryOnly: Boolean) = Request(
     command = "music/search",
     args = buildJsonObject {
-        put("search_query", JsonPrimitive(query))
+        put("search_query", JsonPrimitive(query.replace("-", " ")))
         put(
             "media_types",
             myJson.decodeFromString<JsonArray>(myJson.encodeToString(mediaTypes))
         )
         put("limit", JsonPrimitive(limit))
+        put("library_only", JsonPrimitive(libraryOnly))
     }
 )
 

@@ -63,7 +63,7 @@ jobs:
             **Latest automated debug build from main branch**
             
             ### What's New
-            **${{ steps.vars.outputs.commit_message }}**
+            ${{ steps.vars.outputs.commit_message }}
             
             ### Important Notes
             - This is a **debug build** — not intended for production use

@@ -1,5 +1,6 @@
 package io.music_assistant.client.data
 
+import co.touchlab.kermit.Logger
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.api.playerQueueClearRequest
 import io.music_assistant.client.api.playerQueueItemsRequest
@@ -13,6 +14,8 @@ import io.music_assistant.client.api.playerQueueTransferRequest
 import io.music_assistant.client.api.registerBuiltInPlayerRequest
 import io.music_assistant.client.api.simplePlayerRequest
 import io.music_assistant.client.api.updateBuiltInPlayerStateRequest
+import io.music_assistant.client.data.model.client.AppMediaItem
+import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItem
 import io.music_assistant.client.data.model.client.Player
 import io.music_assistant.client.data.model.client.Player.Companion.toPlayer
 import io.music_assistant.client.data.model.client.PlayerData
@@ -28,6 +31,8 @@ import io.music_assistant.client.data.model.server.ServerQueue
 import io.music_assistant.client.data.model.server.ServerQueueItem
 import io.music_assistant.client.data.model.server.events.BuiltinPlayerEvent
 import io.music_assistant.client.data.model.server.events.BuiltinPlayerState
+import io.music_assistant.client.data.model.server.events.MediaItemAddedEvent
+import io.music_assistant.client.data.model.server.events.MediaItemUpdatedEvent
 import io.music_assistant.client.data.model.server.events.PlayerUpdatedEvent
 import io.music_assistant.client.data.model.server.events.QueueItemsUpdatedEvent
 import io.music_assistant.client.data.model.server.events.QueueTimeUpdatedEvent
@@ -67,6 +72,7 @@ class MainDataSource(
     private val localPlayerController: MediaPlayerController,
 ) : CoroutineScope, MediaPlayerListener {
 
+    private val log = Logger.withTag("MainDataSource")
     private val localPlayerId = settings.getLocalPlayerId()
     private var localPlayerUpdateInterval = 20000L
 
@@ -185,10 +191,10 @@ class MainDataSource(
         _selectedPlayerData.update {
             it?.copy(
                 chosenItemsIds =
-                if (it.chosenItemsIds.contains(id))
-                    it.chosenItemsIds - id
-                else
-                    it.chosenItemsIds + id
+                    if (it.chosenItemsIds.contains(id))
+                        it.chosenItemsIds - id
+                    else
+                        it.chosenItemsIds + id
             )
         }
     }
@@ -304,6 +310,7 @@ class MainDataSource(
                             )
                         }
                 }
+
                 is QueueAction.Transfer -> {
                     apiClient.sendRequest(
                         playerQueueTransferRequest(
@@ -323,14 +330,12 @@ class MainDataSource(
         launch {
             apiClient.events
                 .collect { event ->
-                    val players =
-                        _serverPlayers.value.takeIf { it.isNotEmpty() } ?: return@collect
                     when (event) {
                         is PlayerUpdatedEvent -> {
-                            val data = event.player()
-                            _serverPlayers.update {
-                                players.map {
-                                    if (it.id == data.id) data else it
+                            _serverPlayers.value.takeIf { it.isNotEmpty() }?.let { players ->
+                                val data = event.player()
+                                _serverPlayers.update {
+                                    players.map { if (it.id == data.id) data else it }
                                 }
                             }
                         }
@@ -366,9 +371,45 @@ class MainDataSource(
                             }
                         }
 
+                        is MediaItemUpdatedEvent -> {
+                            (event.data.toAppMediaItem() as? AppMediaItem.Track)
+                                ?.let { newItem ->
+                                    _selectedPlayerData.value?.queueItems?.let { items ->
+                                        items.firstOrNull { it.id == newItem.itemId }
+                                            ?.let { oldItem ->
+                                                _selectedPlayerData.update { current ->
+                                                    current?.copy(
+                                                        queueItems = current.queueItems?.map { qt ->
+                                                            if (qt == oldItem) qt.copy(track = newItem) else qt
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                    }
+                                }
+                        }
+
+                        is MediaItemAddedEvent -> {
+                            (event.data.toAppMediaItem() as? AppMediaItem.Track)
+                                ?.let { newItem ->
+                                    _selectedPlayerData.value?.queueItems?.let { items ->
+                                        items.firstOrNull { it.id == newItem.itemId }
+                                            ?.let { oldItem ->
+                                                _selectedPlayerData.update { current ->
+                                                    current?.copy(
+                                                        queueItems = current.queueItems?.map { qt ->
+                                                            if (qt == oldItem) qt.copy(track = newItem) else qt
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                    }
+                                }
+                        }
+
                         is BuiltinPlayerEvent -> {
                             if (event.objectId != localPlayerId) return@collect
-                            println("Builtin player: $event")
+                            log.i { "Builtin player: $event" }
                             settings.connectionInfo.value?.webUrl?.let { url ->
                                 when (event.data.type) {
                                     BuiltinPlayerEventType.PLAY_MEDIA -> {
@@ -412,19 +453,19 @@ class MainDataSource(
                                     BuiltinPlayerEventType.SET_VOLUME,
                                     BuiltinPlayerEventType.POWER_OFF,
                                     BuiltinPlayerEventType.POWER_ON -> {
-                                        println("Builtin player event unhandled")
+                                        log.i { "Builtin player event unhandled" }
                                     }
                                 }
                             }
                         }
 
-                        else -> println("Unhandled event: $event")
+                        else -> log.i { "Unhandled event: $event" }
                     }
                 }
         }
 
     private fun updatePlayersAndQueues() {
-        println("Updating players")
+        log.i { "Updating players" }
         launch {
             apiClient.sendCommand("players/all")
                 ?.resultAs<List<ServerPlayer>>()?.map { it.toPlayer() }
@@ -461,7 +502,7 @@ class MainDataSource(
     }
 
     private suspend fun updateLocalPlayerState(isPlaying: Boolean? = null) {
-        println("Updating local player state")
+        log.i { "Updating local player state" }
         val isPlayerPlaying = withContext(Dispatchers.Main) { localPlayerController.isPlaying() }
         val position = withContext(Dispatchers.Main) {
             (localPlayerController.getCurrentPosition()
@@ -497,7 +538,7 @@ class MainDataSource(
     }
 
     override fun onError(error: Throwable?) {
-        println("Media player error $error")
+        log.i(error ?: Exception("Unknown")) { "Media player error $error" }
         launch { updateLocalPlayerState(false) }
     }
 

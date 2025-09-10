@@ -5,6 +5,7 @@ import io.ktor.http.appendPathSegments
 import io.ktor.http.encodeURLQueryComponent
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.Metadata
+import io.music_assistant.client.data.model.server.ProviderMapping
 import io.music_assistant.client.data.model.server.SearchResult
 import io.music_assistant.client.data.model.server.ServerMediaItem
 
@@ -12,9 +13,9 @@ abstract class AppMediaItem(
     val itemId: String,
     val provider: String,
     val name: String,
-    //val providerMappings: List<ProviderMapping>?,
+    val providerMappings: List<ProviderMapping>?,
     metadata: Metadata?,
-    //val favorite: Boolean?,
+    val favorite: Boolean?,
     val mediaType: MediaType,
     //val sortName: String?,
     val uri: String?,
@@ -26,19 +27,34 @@ abstract class AppMediaItem(
     open val subtitle: String? = null
     val longId = itemId.hashCode().toLong()
 
+    val isInLibrary = provider == "library"
+
+    private val mappingsHashes = providerMappings?.map { it.hashCode() }?.toSet() ?: emptySet()
+
+    fun hasAnyMappingFrom(other: AppMediaItem): Boolean =
+        mappingsHashes.intersect(other.mappingsHashes).isNotEmpty()
+
     override fun equals(other: Any?): Boolean {
         return other is AppMediaItem
                 && itemId == other.itemId
                 && name == other.name
                 && mediaType == other.mediaType
                 && provider == other.provider
+                && favorite == other.favorite
+                && uri == other.uri
     }
 
     override fun hashCode(): Int {
         return mediaType.hashCode() +
                 19 * itemId.hashCode() +
                 31 * provider.hashCode() +
-                37 * name.hashCode()
+                37 * name.hashCode() +
+                41 * (favorite?.hashCode() ?: 0) +
+                43 * (uri?.hashCode() ?: 0)
+    }
+
+    override fun toString(): String {
+        return "AppMediaItem(itemId='$itemId', provider='$provider', name='$name', favorite=$favorite, mediaType=$mediaType, providerMappings=$providerMappings, uri=$uri)"
     }
 
     val imageInfo: ImageInfo? = metadata?.images?.getOrNull(0)
@@ -62,7 +78,10 @@ abstract class AppMediaItem(
                         // Append the static path segment
                         appendPathSegments("imageproxy")
                         parameters.apply {
-                            append("path", path.encodeURLQueryComponent()) // TODO check if needed twice
+                            append(
+                                "path",
+                                path.encodeURLQueryComponent()
+                            ) // TODO check if needed twice
                             append("provider", provider)
                             append("checksum", "")
                         }
@@ -74,9 +93,9 @@ abstract class AppMediaItem(
         itemId: String,
         provider: String,
         name: String,
-//        providerMappings: List<ProviderMapping>?,
+        providerMappings: List<ProviderMapping>?,
         metadata: Metadata?,
-//        favorite: Boolean?,
+        favorite: Boolean?,
 //        mediaType: MediaType,
         //sortName: String?,
         uri: String?,
@@ -88,9 +107,9 @@ abstract class AppMediaItem(
         itemId,
         provider,
         name,
-        //providerMappings,
+        providerMappings,
         metadata,
-        //favorite,
+        favorite,
         MediaType.ARTIST,
         //sortName,
         uri,
@@ -103,9 +122,9 @@ abstract class AppMediaItem(
         itemId: String,
         provider: String,
         name: String,
-//        providerMappings: List<ProviderMapping>?,
+        providerMappings: List<ProviderMapping>?,
         metadata: Metadata?,
-//        favorite: Boolean?,
+        favorite: Boolean?,
 //        mediaType: MediaType,
 //        sortName: String?,
         uri: String?,
@@ -121,9 +140,9 @@ abstract class AppMediaItem(
         itemId,
         provider,
         name,
-        //providerMappings,
+        providerMappings,
         metadata,
-        //favorite,
+        favorite,
         MediaType.ALBUM,
         //sortName,
         uri,
@@ -138,9 +157,9 @@ abstract class AppMediaItem(
         itemId: String,
         provider: String,
         name: String,
-//        providerMappings: List<ProviderMapping>?,
+        providerMappings: List<ProviderMapping>?,
         metadata: Metadata?,
-//        favorite: Boolean?,
+        favorite: Boolean?,
 //        mediaType: MediaType,
 //        sortName: String?,
         uri: String?,
@@ -162,9 +181,9 @@ abstract class AppMediaItem(
         itemId,
         provider,
         name,
-        //providerMappings,
+        providerMappings,
         metadata,
-        //favorite,
+        favorite,
         MediaType.TRACK,
         //sortName,
         uri,
@@ -181,9 +200,9 @@ abstract class AppMediaItem(
         itemId: String,
         provider: String,
         name: String,
-        //providerMappings: List<ProviderMapping>?,
+        providerMappings: List<ProviderMapping>?,
         metadata: Metadata?,
-        //favorite: Boolean?,
+        favorite: Boolean?,
         //mediaType: MediaType,
         //sortName: String?,
         uri: String?,
@@ -196,9 +215,9 @@ abstract class AppMediaItem(
         itemId,
         provider,
         name,
-        //providerMappings,
+        providerMappings,
         metadata,
-        //favorite,
+        favorite,
         MediaType.PLAYLIST,
         //sortName,
         uri,
@@ -216,9 +235,9 @@ abstract class AppMediaItem(
                     itemId = itemId,
                     provider = provider,
                     name = name,
-//                    providerMappings = providerMappings,
+                    providerMappings = providerMappings,
                     metadata = metadata,
-//                    favorite = favorite,
+                    favorite = favorite,
 //                    mediaType = mediaType,
 //                    sortName = sortName,
                     uri = uri,
@@ -232,9 +251,9 @@ abstract class AppMediaItem(
                     itemId = itemId,
                     provider = provider,
                     name = name,
-//                    providerMappings = providerMappings,
+                    providerMappings = providerMappings,
                     metadata = metadata,
-//                    favorite = favorite,
+                    favorite = favorite,
 //                    mediaType = mediaType,
 //                    sortName = sortName,
                     uri = uri,
@@ -252,9 +271,9 @@ abstract class AppMediaItem(
                     itemId = itemId,
                     provider = provider,
                     name = name,
-//                    providerMappings = providerMappings,
+                    providerMappings = providerMappings,
                     metadata = metadata,
-//                    favorite = favorite,
+                    favorite = favorite,
 //                    mediaType = mediaType,
 //                    sortName = sortName,
                     uri = uri,
@@ -276,9 +295,9 @@ abstract class AppMediaItem(
                     itemId = itemId,
                     provider = provider,
                     name = name,
-                    //providerMappings = providerMappings,
+                    providerMappings = providerMappings,
                     metadata = metadata,
-                    //favorite = favorite,
+                    favorite = favorite,
 //                    mediaType = mediaType,
 //                    sortName = sortName,
                     uri = uri,
@@ -304,9 +323,9 @@ abstract class AppMediaItem(
 
         fun SearchResult.toAppMediaItemList() =
             artists.toAppMediaItemList() +
-            albums.toAppMediaItemList() +
-            tracks.toAppMediaItemList() +
-            playlists.toAppMediaItemList()
+                    albums.toAppMediaItemList() +
+                    tracks.toAppMediaItemList() +
+                    playlists.toAppMediaItemList()
     }
 
 // TODO Radio, audiobooks, podcasts

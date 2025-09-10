@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,12 +24,14 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.ExtendedFloatingActionButton
 import androidx.compose.material.FabPosition
 import androidx.compose.material.Icon
@@ -47,8 +50,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -65,9 +68,13 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import compose.icons.FontAwesomeIcons
 import compose.icons.TablerIcons
+import compose.icons.fontawesomeicons.Regular
 import compose.icons.fontawesomeicons.Solid
+import compose.icons.fontawesomeicons.regular.Bookmark
+import compose.icons.fontawesomeicons.regular.Heart
 import compose.icons.fontawesomeicons.solid.ArrowLeft
 import compose.icons.fontawesomeicons.solid.ArrowUp
+import compose.icons.fontawesomeicons.solid.Heart
 import compose.icons.tablericons.CircleDashed
 import compose.icons.tablericons.FileMusic
 import compose.icons.tablericons.Folder
@@ -118,9 +125,12 @@ fun LibraryScreen(navController: NavController, args: AppRoutes.LibraryArgs) {
         onListSelected = viewModel::onTabSelected,
         onItemClicked = viewModel::onItemClicked,
         onCheckChanged = viewModel::onItemCheckChanged,
+        onFavoriteChanged = viewModel::onItemFavoriteChanged,
+        onAddToLibrary = viewModel::onAddToLibrary,
         onCheckedItemsClear = viewModel::clearCheckedItems,
         onSearchQueryChanged = viewModel::searchQueryChanged,
         onSearchTypeChanged = viewModel::searchTypeChanged,
+        onSearchLibraryOnlyChanged = viewModel::searchLibraryOnlyChanged,
         onUpClick = viewModel::onUpClick,
         onShowAlbumsChange = viewModel::onShowAlbumsChange,
         onPlaySelectedItems = { option ->
@@ -141,9 +151,12 @@ private fun Library(
     onListSelected: (LibraryViewModel.LibraryTab) -> Unit,
     onItemClicked: (LibraryViewModel.LibraryTab, AppMediaItem) -> Unit,
     onCheckChanged: (AppMediaItem) -> Unit,
+    onFavoriteChanged: (AppMediaItem) -> Unit,
+    onAddToLibrary: (AppMediaItem) -> Unit,
     onCheckedItemsClear: () -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     onSearchTypeChanged: (MediaType, Boolean) -> Unit,
+    onSearchLibraryOnlyChanged: (Boolean) -> Unit,
     onUpClick: (LibraryViewModel.LibraryTab) -> Unit,
     onShowAlbumsChange: (Boolean) -> Unit,
     onPlaySelectedItems: (QueueOption) -> Unit,
@@ -277,15 +290,19 @@ private fun Library(
                         searchState = state.searchState,
                         onQueryChanged = onSearchQueryChanged,
                         onTypeChanged = onSearchTypeChanged,
+                        onLibraryOnlyChanged = onSearchLibraryOnlyChanged,
                     )
                 }
                 ItemsListArea(
                     serverUrl = serverUrl,
                     list = it,
                     checkedItems = state.checkedItems,
+                    ongoingItems = state.ongoingItems,
                     nestedScrollConnection = nestedScrollConnection,
                     onItemClick = onItemClicked,
                     onCheckChanged = onCheckChanged,
+                    onFavoriteChanged = onFavoriteChanged,
+                    onAddToLibrary = onAddToLibrary,
                     onUpClick = onUpClick,
                 )
             }
@@ -299,9 +316,12 @@ private fun ItemsListArea(
     serverUrl: String?,
     list: LibraryViewModel.LibraryList,
     checkedItems: Set<AppMediaItem>,
+    ongoingItems: List<AppMediaItem>,
     nestedScrollConnection: NestedScrollConnection,
     onItemClick: (LibraryViewModel.LibraryTab, AppMediaItem) -> Unit,
     onCheckChanged: (AppMediaItem) -> Unit,
+    onFavoriteChanged: (AppMediaItem) -> Unit,
+    onAddToLibrary: (AppMediaItem) -> Unit,
     onUpClick: (LibraryViewModel.LibraryTab) -> Unit,
 ) {
     val parentItem = list.parentItems.lastOrNull()
@@ -355,12 +375,16 @@ private fun ItemsListArea(
                 } else {
                     ItemsList(
                         parentItem = parentItem,
+                        tab = list.tab,
                         serverUrl = serverUrl,
                         items = list.listState.items,
                         checkedItems = checkedItems,
+                        ongoingItems = ongoingItems,
                         nestedScrollConnection = nestedScrollConnection,
                         onClick = { item -> onItemClick(list.tab, item) },
                         onCheckChanged = onCheckChanged,
+                        onFavoriteChanged = onFavoriteChanged,
+                        onAddToLibrary = onAddToLibrary,
                         onUpClick = { onUpClick(list.tab) },
                     )
                 }
@@ -375,6 +399,7 @@ fun SearchArea(
     searchState: LibraryViewModel.SearchState,
     onQueryChanged: (String) -> Unit,
     onTypeChanged: (MediaType, Boolean) -> Unit,
+    onLibraryOnlyChanged: (Boolean) -> Unit,
 ) {
     Column(modifier = modifier) {
         Row(
@@ -388,24 +413,50 @@ fun SearchArea(
                         .clickable {
                             onTypeChanged(mediaType.type, !mediaType.isSelected)
                         }
+                        .padding(horizontal = 8.dp)
                 ) {
-                    androidx.compose.material.Checkbox(
-                        checked = mediaType.isSelected,
-                        onCheckedChange = { checked ->
-                            onTypeChanged(mediaType.type, checked)
-                        },
-                        modifier = Modifier.scale(0.8f)
+                    Icon(
+                        modifier = Modifier
+                            .padding(end = 4.dp)
+                            .size(26.dp),
+                        imageVector =
+                            if (mediaType.isSelected) TablerIcons.SquareCheck
+                            else TablerIcons.Square,
+                        contentDescription = "Select ${mediaType.type.name}"
                     )
                     Text(
                         text = mediaType.type.name.lowercase().capitalize(Locale.current),
-                        modifier = Modifier.padding(end = 6.dp),
+                        modifier = Modifier.padding(end = 4.dp),
                         style = MaterialTheme.typography.body2
                     )
                 }
             }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clickable {
+                        onLibraryOnlyChanged(!searchState.libraryOnly)
+                    }
+            ) {
+                Icon(
+                    modifier = Modifier
+                        .padding(end = 4.dp)
+                        .size(26.dp),
+                    imageVector =
+                        if (searchState.libraryOnly) TablerIcons.SquareCheck
+                        else TablerIcons.Square,
+                    contentDescription = "Toggle library only"
+                )
+                Text(
+                    text = "In library",
+                    modifier = Modifier.padding(end = 6.dp),
+                    style = MaterialTheme.typography.body2
+                )
+            }
         }
 
         OutlinedTextField(
+            modifier = Modifier.fillMaxWidth(),
             value = searchState.query,
             onValueChange = { newText -> onQueryChanged(newText) },
             label = {
@@ -416,7 +467,6 @@ fun SearchArea(
                         "Search query"
                 )
             },
-            modifier = Modifier.fillMaxWidth()
         )
     }
 }
@@ -424,13 +474,17 @@ fun SearchArea(
 @Composable
 private fun ItemsList(
     modifier: Modifier = Modifier,
+    tab: LibraryViewModel.LibraryTab,
     serverUrl: String?,
     parentItem: AppMediaItem?,
     items: List<AppMediaItem>,
+    ongoingItems: List<AppMediaItem>,
     checkedItems: Set<AppMediaItem>,
     nestedScrollConnection: NestedScrollConnection,
     onClick: (AppMediaItem) -> Unit,
     onCheckChanged: (AppMediaItem) -> Unit,
+    onFavoriteChanged: (AppMediaItem) -> Unit,
+    onAddToLibrary: (AppMediaItem) -> Unit,
     onUpClick: () -> Unit,
 ) {
     val listState = rememberLazyListState()
@@ -450,14 +504,21 @@ private fun ItemsList(
             ),
         state = listState,
     ) {
-        items((parentItem?.let { listOf(it) } ?: emptyList()) + items) { item ->
+        items(
+            items = (parentItem?.let { listOf(it) } ?: emptyList()) + items
+        ) { item ->
             val isChecked = item != parentItem && item in checkedItems
+            val isOngoing = ongoingItems.any { it.hasAnyMappingFrom(item) }
             Row(
                 modifier = Modifier
+                    .alpha(if (isOngoing) 0.7f else 1f)
                     .padding(vertical = 1.dp)
                     .fillMaxWidth()
                     .clip(shape = RoundedCornerShape(16.dp))
-                    .background(if (isChecked) MaterialTheme.colors.primary else Color.Transparent)
+                    .background(
+                        if (isChecked) MaterialTheme.colors.primary
+                        else Color.Transparent
+                    )
                     .clickable(
                         onClick = { if (item == parentItem) onUpClick() else onClick(item) },
                     )
@@ -490,8 +551,7 @@ private fun ItemsList(
                             .fillMaxSize()
                             .clip(RoundedCornerShape(size = 4.dp)),
                         placeholder = placeholder,
-                        fallback = placeholder
-                        ,
+                        fallback = placeholder,
                         model = item.imageInfo?.url(serverUrl),
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
@@ -507,7 +567,9 @@ private fun ItemsList(
                             )
                             .border(
                                 width = 1.dp,
-                                color = if (isChecked) MaterialTheme.colors.onPrimary else MaterialTheme.colors.primary,
+                                color =
+                                    if (isChecked) MaterialTheme.colors.onPrimary
+                                    else MaterialTheme.colors.primary,
                                 shape = CircleShape
                             ),
                         contentAlignment = Alignment.Center
@@ -527,21 +589,81 @@ private fun ItemsList(
                     }
                 }
 
-                Text(
-                    modifier = Modifier.weight(1f),
-                    text = item.name,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = if (isChecked) MaterialTheme.colors.onPrimary else MaterialTheme.colors.secondary,
-                    style = MaterialTheme.typography.body1,
-                    fontWeight = if (item == parentItem || isChecked) FontWeight.Bold else FontWeight.Normal
-                )
-
-                if (item != parentItem) {
+                Column(modifier = Modifier.wrapContentHeight().weight(1f)) {
+                    Text(
+                        modifier = Modifier.fillMaxWidth(),
+                        text = item.name,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color =
+                            if (isChecked) MaterialTheme.colors.onPrimary
+                            else MaterialTheme.colors.secondary,
+                        style = MaterialTheme.typography.body1,
+                        fontWeight =
+                            if (item == parentItem || isChecked) FontWeight.Bold
+                            else FontWeight.Normal
+                    )
+                    if (!item.isInLibrary) {
+                        Text(
+                            modifier = Modifier.fillMaxWidth().alpha(0.7f),
+                            text = item.provider,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color =
+                                if (isChecked) MaterialTheme.colors.onPrimary
+                                else MaterialTheme.colors.secondary,
+                            style = MaterialTheme.typography.body1,
+                            fontWeight =
+                                if (item == parentItem || isChecked) FontWeight.Bold
+                                else FontWeight.Normal
+                        )
+                    }
+                }
+                if (checkedItems.isEmpty()) {
+                    if (isOngoing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .padding(start = 8.dp, end = 8.dp)
+                                .size(18.dp)
+                        )
+                    } else if (item.isInLibrary) {
+                        Icon(
+                            modifier = Modifier
+                                .padding(start = 8.dp, end = 8.dp)
+                                .size(18.dp)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { onFavoriteChanged(item) },
+                            imageVector =
+                                if (item.favorite == true) FontAwesomeIcons.Solid.Heart
+                                else FontAwesomeIcons.Regular.Heart,
+                            contentDescription = "Favorite item",
+                            tint =
+                                if (item.favorite == true) Color(0xFFEF7BC4)
+                                else if (isChecked) MaterialTheme.colors.onPrimary
+                                else MaterialTheme.colors.secondary,
+                        )
+                    } else { // TODO handle async update of in-library status, when providerMapping will be stable
+                        Icon(
+                            modifier = Modifier
+                                .padding(start = 8.dp, end = 8.dp)
+                                .size(18.dp)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { onAddToLibrary(item) },
+                            imageVector = FontAwesomeIcons.Regular.Bookmark,
+                            contentDescription = "Favorite item",
+                            tint = if (isChecked) MaterialTheme.colors.onPrimary else MaterialTheme.colors.secondary,
+                        )
+                    }
+                }
+                if (item != parentItem && !isOngoing) {
                     Icon(
                         modifier = Modifier
-                            .padding(start = 16.dp)
-                            .size(18.dp)
+                            .padding(start = 8.dp)
+                            .size(26.dp)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
@@ -549,6 +671,12 @@ private fun ItemsList(
                         imageVector = if (isChecked) TablerIcons.SquareCheck else TablerIcons.Square,
                         contentDescription = "Select item",
                         tint = if (isChecked) MaterialTheme.colors.onPrimary else MaterialTheme.colors.secondary,
+                    )
+                } else {
+                    Spacer(
+                        Modifier
+                            .padding(start = 8.dp)
+                            .size(26.dp)
                     )
                 }
             }

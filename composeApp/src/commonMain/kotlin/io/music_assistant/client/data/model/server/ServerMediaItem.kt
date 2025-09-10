@@ -8,9 +8,9 @@ data class ServerMediaItem(
     @SerialName("item_id") val itemId: String,
     @SerialName("provider") val provider: String,
     @SerialName("name") val name: String,
-    //@SerialName("provider_mappings") val providerMappings: List<ProviderMapping>? = null,
+    @SerialName("provider_mappings") val providerMappings: List<ProviderMapping>? = null,
     @SerialName("metadata") val metadata: Metadata? = null,
-   // @SerialName("favorite") val favorite: Boolean? = null,
+    @SerialName("favorite") val favorite: Boolean? = null,
     @SerialName("media_type") val mediaType: MediaType,
     //@SerialName("sort_name") val sortName: String? = null,
     @SerialName("uri") val uri: String? = null,
@@ -68,16 +68,16 @@ data class MediaItemImage(
     @SerialName("remotely_accessible") val remotelyAccessible: Boolean
 )
 
-//@Serializable
-//data class ProviderMapping(
-//    @SerialName("item_id") val itemId: String,
+@Serializable
+data class ProviderMapping(
+    @SerialName("item_id") val itemId: String,
 //    @SerialName("provider_domain") val providerDomain: String,
-//    @SerialName("provider_instance") val providerInstance: String,
+    @SerialName("provider_instance") val providerInstance: String,
 //    @SerialName("available") val available: Boolean,
 //    @SerialName("audio_format") val audioFormat: AudioFormat? = null,
 //    @SerialName("url") val url: String? = null,
 //    @SerialName("details") val details: String?
-//)
+)
 
 //@Serializable
 //data class AudioFormat(

@@ -2,9 +2,12 @@ package io.music_assistant.client.ui.compose.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import co.touchlab.kermit.Logger
 import io.music_assistant.client.api.Answer
 import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
+import io.music_assistant.client.api.addMediaItemToLibraryRequest
+import io.music_assistant.client.api.favouriteMediaItemRequest
 import io.music_assistant.client.api.getAlbumTracksRequest
 import io.music_assistant.client.api.getArtistAlbumsRequest
 import io.music_assistant.client.api.getArtistTracksRequest
@@ -13,12 +16,16 @@ import io.music_assistant.client.api.getPlaylistTracksRequest
 import io.music_assistant.client.api.getPlaylistsRequest
 import io.music_assistant.client.api.playMediaRequest
 import io.music_assistant.client.api.searchRequest
+import io.music_assistant.client.api.unfavouriteMediaItemRequest
 import io.music_assistant.client.data.model.client.AppMediaItem
+import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItemList
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.server.SearchResult
 import io.music_assistant.client.data.model.server.ServerMediaItem
+import io.music_assistant.client.data.model.server.events.MediaItemAddedEvent
+import io.music_assistant.client.data.model.server.events.MediaItemUpdatedEvent
 import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,9 +61,11 @@ class LibraryViewModel(
             searchState = SearchState(
                 query = "",
                 mediaTypes = SearchState.searchTypes
-                    .map { SearchState.MediaTypeSelect(it, true) }
+                    .map { SearchState.MediaTypeSelect(it, true) },
+                libraryOnly = false
             ),
             checkedItems = emptySet(),
+            ongoingItems = emptyList(),
             showAlbums = true
         )
     )
@@ -101,6 +110,54 @@ class LibraryViewModel(
                     }
                 }
         }
+        viewModelScope.launch {
+            apiClient.events.collect { event ->
+                when (event) {
+                    is MediaItemUpdatedEvent -> event.data.toAppMediaItem()?.let { newItem ->
+                        updateStateWithNewItem(newItem)
+                    }
+
+                    is MediaItemAddedEvent -> event.data.toAppMediaItem()?.let { newItem ->
+                        updateStateWithNewItem(newItem)
+                    }
+
+                    else -> Unit
+                }
+            }
+        }
+    }
+
+    private fun updateStateWithNewItem(newItem: AppMediaItem) {
+        Logger.i { "Updating library state with new item: $newItem" }
+        _state.update { s ->
+            s.copy(
+                libraryLists = s.libraryLists.map { list ->
+                    val updatedParents = list.parentItems.map { parent ->
+                        if (parent.hasAnyMappingFrom(newItem)) {
+                            newItem
+                        } else parent
+                    }
+                    val updatedListState = when (val ls = list.listState) {
+                        is ListState.Data -> {
+                            ListState.Data(
+                                ls.items.map { item ->
+                                    if (item.hasAnyMappingFrom(newItem)) {
+                                        newItem
+                                    } else item
+                                }
+                            )
+                        }
+
+                        else -> ls
+                    }
+                    list.copy(
+                        parentItems = updatedParents,
+                        listState = updatedListState
+                    )
+                },
+                ongoingItems = s.ongoingItems.filter { item -> item.hasAnyMappingFrom(newItem) }
+            )
+        }
     }
 
     fun onTabSelected(tab: LibraryTab) {
@@ -122,6 +179,30 @@ class LibraryViewModel(
         }
     }
 
+    fun onItemFavoriteChanged(mediaItem: AppMediaItem) {
+        viewModelScope.launch {
+            mediaItem.favorite?.takeIf { it }?.let {
+                apiClient.sendRequest(
+                    unfavouriteMediaItemRequest(mediaItem.itemId, mediaItem.mediaType)
+                )
+            } ?: run {
+                mediaItem.uri?.let {
+                    apiClient.sendRequest(favouriteMediaItemRequest(it))
+                }
+            }
+        }
+    }
+
+    fun onAddToLibrary(mediaItem: AppMediaItem) {
+        if (mediaItem.isInLibrary) return
+        viewModelScope.launch {
+            mediaItem.uri?.let {
+                addToOngoing(mediaItem)
+                apiClient.sendRequest(addMediaItemToLibraryRequest(it))
+            }
+        }
+    }
+
     fun clearCheckedItems() = _state.update { s -> s.copy(checkedItems = emptySet()) }
 
     fun searchQueryChanged(query: String) {
@@ -135,6 +216,16 @@ class LibraryViewModel(
                     mediaTypes = s.searchState.mediaTypes.map {
                         if (it.type == type) it.copy(isSelected = isSelected) else it
                     }
+                )
+            )
+        }
+    }
+
+    fun searchLibraryOnlyChanged(newValue: Boolean) {
+        _state.update { s ->
+            s.copy(
+                searchState = s.searchState.copy(
+                    libraryOnly = newValue
                 )
             )
         }
@@ -193,6 +284,12 @@ class LibraryViewModel(
                     radioMode = false
                 )
             )
+        }
+    }
+
+    private fun addToOngoing(mediaItem: AppMediaItem) {
+        _state.update { s ->
+            s.copy(ongoingItems = s.ongoingItems.plus(mediaItem))
         }
     }
 
@@ -266,7 +363,12 @@ class LibraryViewModel(
         }
         refreshList(
             LibraryTab.Search,
-            searchRequest(searchState.query, searchState.selectedMediaTypes, limit = 50),
+            searchRequest(
+                query = searchState.query,
+                mediaTypes = searchState.selectedMediaTypes,
+                limit = 50,
+                libraryOnly = searchState.libraryOnly
+            ),
             { answer -> answer.resultAs<SearchResult>()?.toAppMediaItemList() },
         )
     }
@@ -341,6 +443,7 @@ class LibraryViewModel(
     data class SearchState(
         val query: String,
         val mediaTypes: List<MediaTypeSelect>,
+        val libraryOnly: Boolean,
     ) {
         val selectedMediaTypes = mediaTypes.filter { it.isSelected }.map { it.type }
 
@@ -365,6 +468,7 @@ class LibraryViewModel(
         val libraryLists: List<LibraryList>,
         val searchState: SearchState,
         val checkedItems: Set<AppMediaItem>,
+        val ongoingItems: List<AppMediaItem>,
         val showAlbums: Boolean
     )
 

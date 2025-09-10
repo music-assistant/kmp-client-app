@@ -9,6 +9,7 @@ import android.support.v4.media.MediaDescriptionCompat
 import androidx.annotation.DrawableRes
 import androidx.media.MediaBrowserServiceCompat
 import androidx.media.utils.MediaConstants
+import co.touchlab.kermit.Logger
 import io.music_assistant.client.R
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.api.getAlbumTracksRequest
@@ -53,14 +54,15 @@ class AutoLibrary(
                 .debounce(500)
                 .collect { (query, result) ->
                     val answer = apiClient.sendRequest(
-                        searchRequest(
-                            query,
-                            listOf(
+                        request = searchRequest(
+                            query = query,
+                            mediaTypes = listOf(
                                 MediaType.ARTIST,
                                 MediaType.ALBUM,
                                 MediaType.TRACK,
                                 MediaType.PLAYLIST
-                            )
+                            ),
+                            libraryOnly = false
                         )
                     )
                     answer?.resultAs<SearchResult>()?.let {
@@ -79,7 +81,7 @@ class AutoLibrary(
         id: String,
         result: MediaBrowserServiceCompat.Result<List<MediaItem>>
     ) {
-        println("Auto: items for $id")
+        Logger.withTag("AutoLibrary").i { "Items for $id" }
         when (id) {
             MediaIds.ROOT -> {
                 result.sendResult(

@@ -144,6 +144,7 @@ fun MainScreen(navController: NavController) {
                             state = it,
                             nestedScrollConnection = nestedScrollConnection,
                             viewModel = viewModel,
+                            forceShowFab = { isFabVisible = true },
                         )
                     } else {
                         VerticalDataLayout(
@@ -151,6 +152,7 @@ fun MainScreen(navController: NavController) {
                             state = it,
                             nestedScrollConnection = nestedScrollConnection,
                             viewModel = viewModel,
+                            forceShowFab = { isFabVisible = true },
                         )
                     }
                 }
@@ -202,6 +204,7 @@ private fun VerticalDataLayout(
     state: MainViewModel.State.Data,
     nestedScrollConnection: NestedScrollConnection,
     viewModel: MainViewModel,
+    forceShowFab: () -> Unit,
 ) {
     Column(
         Modifier.fillMaxSize(),
@@ -225,9 +228,9 @@ private fun VerticalDataLayout(
                 viewModel.openPlayerDspSettings(playerId)
             },
             onListReordered = viewModel::onPlayersSortChanged,
-        ) {
-            viewModel.selectPlayer(it)
-        }
+            onSelected = { viewModel.selectPlayer(it) },
+            forceShowFab = forceShowFab,
+        )
 
         state.selectedPlayer?.let { playerData ->
             QueueSection(
@@ -258,6 +261,7 @@ private fun HorizontalDataLayout(
     state: MainViewModel.State.Data,
     nestedScrollConnection: NestedScrollConnection,
     viewModel: MainViewModel,
+    forceShowFab: () -> Unit,
 ) {
     Row(
         Modifier.fillMaxSize(),
@@ -281,9 +285,9 @@ private fun HorizontalDataLayout(
                 viewModel.openPlayerDspSettings(playerId)
             },
             onListReordered = viewModel::onPlayersSortChanged,
-        ) {
-            viewModel.selectPlayer(it)
-        }
+            onSelected = { viewModel.selectPlayer(it) },
+            forceShowFab = forceShowFab,
+        )
 
         state.selectedPlayer?.let { playerData ->
             QueueSection(

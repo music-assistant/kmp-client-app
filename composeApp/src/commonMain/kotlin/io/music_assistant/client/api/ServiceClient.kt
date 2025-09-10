@@ -1,5 +1,6 @@
 package io.music_assistant.client.api
 
+import co.touchlab.kermit.Logger
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.websocket.WebSockets
@@ -138,7 +139,7 @@ class ServiceClient(private val settings: SettingsRepository) {
                         Event(message).event()?.let { _eventsFlow.emit(it) }
                     }
 
-                    else -> println("Unknown message: $message")
+                    else -> Logger.withTag("ServiceClient").i { "Unknown message: $message" }
                 }
             }
         } catch (e: Exception) {
@@ -156,6 +157,10 @@ class ServiceClient(private val settings: SettingsRepository) {
 
     suspend fun sendRequest(request: Request): Answer? = suspendCoroutine { continuation ->
         pendingResponses[request.messageId] = { response ->
+            if (response.json.contains("error_code")) {
+                Logger.withTag("ServiceClient")
+                    .e { "Error response for command ${request.command}: $response" }
+            }
             continuation.resume(response)
         }
         CoroutineScope(Dispatchers.IO).launch {
