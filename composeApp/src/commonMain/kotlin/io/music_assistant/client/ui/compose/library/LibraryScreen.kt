@@ -42,11 +42,13 @@ import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
@@ -82,6 +84,7 @@ import compose.icons.tablericons.List
 import compose.icons.tablericons.Man
 import compose.icons.tablericons.PlayerPlay
 import compose.icons.tablericons.PlayerTrackNext
+import compose.icons.tablericons.Playlist
 import compose.icons.tablericons.Plus
 import compose.icons.tablericons.QuestionMark
 import compose.icons.tablericons.Replace
@@ -92,7 +95,12 @@ import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.ui.compose.common.ActionIcon
 import io.music_assistant.client.ui.compose.common.MusicNotePainter
+import io.music_assistant.client.ui.compose.common.ToastHost
+import io.music_assistant.client.ui.compose.common.ToastState
 import io.music_assistant.client.ui.compose.common.VerticalHidingContainer
+import io.music_assistant.client.ui.compose.common.rememberToastState
+import io.music_assistant.client.ui.compose.main.OverflowMenu
+import io.music_assistant.client.ui.compose.main.OverflowMenuOption
 import io.music_assistant.client.ui.compose.nav.AppRoutes
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import kotlinx.coroutines.launch
@@ -100,6 +108,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun LibraryScreen(navController: NavController, args: AppRoutes.LibraryArgs) {
+    val toastState = rememberToastState()
     val viewModel = koinViewModel<LibraryViewModel>()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -116,7 +125,9 @@ fun LibraryScreen(navController: NavController, args: AppRoutes.LibraryArgs) {
         }
         navController.popBackStack()
     }
+    LaunchedEffect(Unit) { viewModel.toasts.collect { t -> toastState.showToast(t) } }
     Library(
+        toastState = toastState,
         serverUrl = serverUrl,
         args = args,
         state = state,
@@ -136,13 +147,16 @@ fun LibraryScreen(navController: NavController, args: AppRoutes.LibraryArgs) {
         onPlaySelectedItems = { option ->
             viewModel.playSelectedItems(args.queueOrPlayerId, option)
             navController.popBackStack()
-        }
+        },
+        onCreatePlaylist = viewModel::createPlaylist,
+        onAddToPlaylist = viewModel::addTrackToPlaylist
     )
 }
 
 @Composable
 private fun Library(
     modifier: Modifier = Modifier,
+    toastState: ToastState,
     serverUrl: String?,
     args: AppRoutes.LibraryArgs,
     state: LibraryViewModel.State,
@@ -160,6 +174,8 @@ private fun Library(
     onUpClick: (LibraryViewModel.LibraryTab) -> Unit,
     onShowAlbumsChange: (Boolean) -> Unit,
     onPlaySelectedItems: (QueueOption) -> Unit,
+    onCreatePlaylist: (String) -> Unit,
+    onAddToPlaylist: (AppMediaItem.Track, AppMediaItem.Playlist) -> Unit,
 ) {
     val isFabVisible = rememberSaveable { mutableStateOf(true) }
     val nestedScrollConnection = remember(selectedList?.parentItems) {
@@ -224,7 +240,7 @@ private fun Library(
                 if (state.checkedItems.isEmpty()) {
                     Text(
                         modifier = Modifier.padding(start = 16.dp),
-                        text = "Library",
+                        text = "Media",
                         style = MaterialTheme.typography.h6
                     )
                 } else {
@@ -283,29 +299,98 @@ private fun Library(
                     )
                 }
             }
-            selectedList?.let {
-                if (it.tab == LibraryViewModel.LibraryTab.Search) {
-                    SearchArea(
-                        modifier = Modifier.padding(4.dp),
-                        searchState = state.searchState,
-                        onQueryChanged = onSearchQueryChanged,
-                        onTypeChanged = onSearchTypeChanged,
-                        onLibraryOnlyChanged = onSearchLibraryOnlyChanged,
-                    )
+            selectedList?.let { list ->
+                when (list.tab) {
+                    LibraryViewModel.LibraryTab.Search -> {
+                        if (list.parentItems.isEmpty()) {
+                            SearchArea(
+                                modifier = Modifier.padding(4.dp),
+                                searchState = state.searchState,
+                                onQueryChanged = onSearchQueryChanged,
+                                onTypeChanged = onSearchTypeChanged,
+                                onLibraryOnlyChanged = onSearchLibraryOnlyChanged,
+                            )
+                        }
+                    }
+
+                    LibraryViewModel.LibraryTab.Playlists -> {
+                        if (list.parentItems.isEmpty()) {
+                            NewPlaylistArea(
+                                modifier = Modifier.padding(4.dp),
+                                existingNames = (list.listState as? LibraryViewModel.ListState.Data)
+                                    ?.items
+                                    ?.map { it.name.trim() }
+                                    ?.toSet()
+                                    ?: emptySet(),
+                                onCreatePlaylist = onCreatePlaylist
+                            )
+                        }
+                    }
+
+                    else -> Unit
                 }
                 ItemsListArea(
                     serverUrl = serverUrl,
-                    list = it,
+                    list = list,
                     checkedItems = state.checkedItems,
                     ongoingItems = state.ongoingItems,
+                    playlists = state.playlists,
                     nestedScrollConnection = nestedScrollConnection,
                     onItemClick = onItemClicked,
                     onCheckChanged = onCheckChanged,
                     onFavoriteChanged = onFavoriteChanged,
                     onAddToLibrary = onAddToLibrary,
+                    onAddToPlaylist = onAddToPlaylist,
                     onUpClick = onUpClick,
                 )
             }
+        }
+        ToastHost(
+            toastState = toastState,
+            modifier = Modifier
+                .consumeWindowInsets(scaffoldPadding)
+                .fillMaxSize()
+                .padding(bottom = 48.dp)
+        )
+    }
+}
+
+@Composable
+fun NewPlaylistArea(
+    modifier: Modifier,
+    existingNames: Set<String>,
+    onCreatePlaylist: (String) -> Unit
+) {
+    var playlistName by remember { mutableStateOf("") }
+    Row(
+        modifier = modifier.fillMaxWidth().wrapContentHeight()
+    ) {
+        OutlinedTextField(
+            modifier = Modifier.weight(1f),
+            value = playlistName,
+            onValueChange = { newText -> playlistName = newText },
+            label = {
+                Text(
+                    text = "New playlist"
+                )
+            },
+        )
+        Button(
+            modifier = Modifier
+                .padding(start = 8.dp)
+                .align(Alignment.CenterVertically),
+            enabled = playlistName.trim()
+                .takeIf { it.isNotEmpty() && !existingNames.contains(playlistName) } != null,
+            onClick = {
+                onCreatePlaylist(playlistName)
+                playlistName = ""
+            }
+        ) {
+            Icon(
+                modifier = Modifier.size(26.dp),
+                imageVector = TablerIcons.Plus,
+                contentDescription = "Add playlist"
+            )
         }
     }
 }
@@ -317,11 +402,13 @@ private fun ItemsListArea(
     list: LibraryViewModel.LibraryList,
     checkedItems: Set<AppMediaItem>,
     ongoingItems: List<AppMediaItem>,
+    playlists: List<AppMediaItem.Playlist>,
     nestedScrollConnection: NestedScrollConnection,
     onItemClick: (LibraryViewModel.LibraryTab, AppMediaItem) -> Unit,
     onCheckChanged: (AppMediaItem) -> Unit,
     onFavoriteChanged: (AppMediaItem) -> Unit,
     onAddToLibrary: (AppMediaItem) -> Unit,
+    onAddToPlaylist: (AppMediaItem.Track, AppMediaItem.Playlist) -> Unit,
     onUpClick: (LibraryViewModel.LibraryTab) -> Unit,
 ) {
     val parentItem = list.parentItems.lastOrNull()
@@ -375,16 +462,17 @@ private fun ItemsListArea(
                 } else {
                     ItemsList(
                         parentItem = parentItem,
-                        tab = list.tab,
                         serverUrl = serverUrl,
                         items = list.listState.items,
                         checkedItems = checkedItems,
                         ongoingItems = ongoingItems,
+                        playlists = playlists,
                         nestedScrollConnection = nestedScrollConnection,
                         onClick = { item -> onItemClick(list.tab, item) },
                         onCheckChanged = onCheckChanged,
                         onFavoriteChanged = onFavoriteChanged,
                         onAddToLibrary = onAddToLibrary,
+                        onAddToPlaylist = onAddToPlaylist,
                         onUpClick = { onUpClick(list.tab) },
                     )
                 }
@@ -474,17 +562,18 @@ fun SearchArea(
 @Composable
 private fun ItemsList(
     modifier: Modifier = Modifier,
-    tab: LibraryViewModel.LibraryTab,
     serverUrl: String?,
     parentItem: AppMediaItem?,
     items: List<AppMediaItem>,
     ongoingItems: List<AppMediaItem>,
     checkedItems: Set<AppMediaItem>,
+    playlists: List<AppMediaItem.Playlist>,
     nestedScrollConnection: NestedScrollConnection,
     onClick: (AppMediaItem) -> Unit,
     onCheckChanged: (AppMediaItem) -> Unit,
     onFavoriteChanged: (AppMediaItem) -> Unit,
     onAddToLibrary: (AppMediaItem) -> Unit,
+    onAddToPlaylist: (AppMediaItem.Track, AppMediaItem.Playlist) -> Unit,
     onUpClick: () -> Unit,
 ) {
     val listState = rememberLazyListState()
@@ -626,37 +715,63 @@ private fun ItemsList(
                                 .padding(start = 8.dp, end = 8.dp)
                                 .size(18.dp)
                         )
-                    } else if (item.isInLibrary) {
-                        Icon(
-                            modifier = Modifier
-                                .padding(start = 8.dp, end = 8.dp)
-                                .size(18.dp)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) { onFavoriteChanged(item) },
-                            imageVector =
-                                if (item.favorite == true) FontAwesomeIcons.Solid.Heart
-                                else FontAwesomeIcons.Regular.Heart,
-                            contentDescription = "Favorite item",
-                            tint =
-                                if (item.favorite == true) Color(0xFFEF7BC4)
-                                else if (isChecked) MaterialTheme.colors.onPrimary
-                                else MaterialTheme.colors.secondary,
-                        )
-                    } else { // TODO handle async update of in-library status, when providerMapping will be stable
-                        Icon(
-                            modifier = Modifier
-                                .padding(start = 8.dp, end = 8.dp)
-                                .size(18.dp)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) { onAddToLibrary(item) },
-                            imageVector = FontAwesomeIcons.Regular.Bookmark,
-                            contentDescription = "Favorite item",
-                            tint = if (isChecked) MaterialTheme.colors.onPrimary else MaterialTheme.colors.secondary,
-                        )
+                    } else {
+                        if (item is AppMediaItem.Track) {
+                            OverflowMenu(
+                                modifier = Modifier
+                                    .padding(start = 8.dp, end = 8.dp)
+                                    .size(18.dp)
+                                    .align(alignment = Alignment.CenterVertically),
+                                icon = TablerIcons.Playlist,
+                                iconTint = MaterialTheme.colors.secondary,
+                                options = playlists.map { playlist ->
+                                    OverflowMenuOption(
+                                        title = playlist.name,
+                                        onClick = {
+                                            onAddToPlaylist(item, playlist)
+                                        }
+                                    )
+                                }.ifEmpty {
+                                    listOf(
+                                        OverflowMenuOption(
+                                            title = "No editable playlists",
+                                            onClick = { /* No-op */ }
+                                        )
+                                    )
+                                }
+                            )
+                        }
+                        if (item.isInLibrary) {
+                            Icon(
+                                modifier = Modifier
+                                    .padding(start = 8.dp, end = 8.dp)
+                                    .size(18.dp)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) { onFavoriteChanged(item) },
+                                imageVector =
+                                    if (item.favorite == true) FontAwesomeIcons.Solid.Heart
+                                    else FontAwesomeIcons.Regular.Heart,
+                                contentDescription = "Favorite item",
+                                tint =
+                                    if (item.favorite == true) Color(0xFFEF7BC4)
+                                    else MaterialTheme.colors.secondary,
+                            )
+                        } else {
+                            Icon(
+                                modifier = Modifier
+                                    .padding(start = 8.dp, end = 8.dp)
+                                    .size(18.dp)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) { onAddToLibrary(item) },
+                                imageVector = FontAwesomeIcons.Regular.Bookmark,
+                                contentDescription = "Favorite item",
+                                tint = MaterialTheme.colors.secondary,
+                            )
+                        }
                     }
                 }
                 if (item != parentItem && !isOngoing) {

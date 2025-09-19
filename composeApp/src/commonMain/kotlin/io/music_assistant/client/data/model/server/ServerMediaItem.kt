@@ -28,7 +28,7 @@ data class ServerMediaItem(
     //@SerialName("album_type") val albumType: AlbumType? = null,
     // Playlist only
     //@SerialName("owner") val owner: String? = null,
-    //@SerialName("is_editable") val isEditable: Boolean? = null,
+    @SerialName("is_editable") val isEditable: Boolean? = null,
     // Track only
     @SerialName("duration") val duration: Double? = null,
     //@SerialName("isrc") val isrc: String? = null,

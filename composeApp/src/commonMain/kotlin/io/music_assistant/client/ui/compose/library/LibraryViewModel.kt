@@ -7,6 +7,8 @@ import io.music_assistant.client.api.Answer
 import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.api.addMediaItemToLibraryRequest
+import io.music_assistant.client.api.addTracksToPlaylistRequest
+import io.music_assistant.client.api.createPlaylistRequest
 import io.music_assistant.client.api.favouriteMediaItemRequest
 import io.music_assistant.client.api.getAlbumTracksRequest
 import io.music_assistant.client.api.getArtistAlbumsRequest
@@ -25,10 +27,13 @@ import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.server.SearchResult
 import io.music_assistant.client.data.model.server.ServerMediaItem
 import io.music_assistant.client.data.model.server.events.MediaItemAddedEvent
+import io.music_assistant.client.data.model.server.events.MediaItemDeletedEvent
 import io.music_assistant.client.data.model.server.events.MediaItemUpdatedEvent
 import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -46,6 +51,9 @@ class LibraryViewModel(
     private val connectionState = apiClient.sessionState
 
     val serverUrl = apiClient.serverInfo.filterNotNull().map { it.baseUrl }
+
+    private val _toasts = MutableSharedFlow<String>()
+    val toasts = _toasts.asSharedFlow()
 
     private val _state = MutableStateFlow(
         State(
@@ -66,6 +74,7 @@ class LibraryViewModel(
             ),
             checkedItems = emptySet(),
             ongoingItems = emptyList(),
+            playlists = emptyList(),
             showAlbums = true
         )
     )
@@ -80,8 +89,8 @@ class LibraryViewModel(
                     && _state.value.libraryLists.any { it.listState is ListState.NoData }
                 ) {
                     viewModelScope.launch {
-                        loadArtists()
-                        loadPlaylists()
+                        refreshListForTab(LibraryTab.Artists)
+                        refreshListForTab(LibraryTab.Playlists)
                     }
                 }
             }
@@ -114,11 +123,15 @@ class LibraryViewModel(
             apiClient.events.collect { event ->
                 when (event) {
                     is MediaItemUpdatedEvent -> event.data.toAppMediaItem()?.let { newItem ->
-                        updateStateWithNewItem(newItem)
+                        updateStateWithNewItem(newItem, ListModification.Update)
                     }
 
                     is MediaItemAddedEvent -> event.data.toAppMediaItem()?.let { newItem ->
-                        updateStateWithNewItem(newItem)
+                        updateStateWithNewItem(newItem, ListModification.Add)
+                    }
+
+                    is MediaItemDeletedEvent -> event.data.toAppMediaItem()?.let { newItem ->
+                        updateStateWithNewItem(newItem, ListModification.Delete)
                     }
 
                     else -> Unit
@@ -127,37 +140,76 @@ class LibraryViewModel(
         }
     }
 
-    private fun updateStateWithNewItem(newItem: AppMediaItem) {
+    private fun updateStateWithNewItem(newItem: AppMediaItem, modification: ListModification) {
         Logger.i { "Updating library state with new item: $newItem" }
+        val tabsToUpdate = mutableSetOf<LibraryTab>()
         _state.update { s ->
             s.copy(
                 libraryLists = s.libraryLists.map { list ->
-                    val updatedParents = list.parentItems.map { parent ->
-                        if (parent.hasAnyMappingFrom(newItem)) {
-                            newItem
-                        } else parent
+                    val updatedParents = when (modification) {
+                        ListModification.Add -> list.parentItems
+                        ListModification.Update -> buildUpdatedList(
+                            list.tab,
+                            newItem,
+                            list.parentItems,
+                            modification
+                        )
+
+                        ListModification.Delete -> list.parentItems.indexOfFirst {
+                            it.hasAnyMappingFrom(newItem)
+                        }
+                            .takeIf { it >= 0 }?.let {
+                                tabsToUpdate.add(list.tab)
+                                list.parentItems.take(it)
+                            } ?: list.parentItems
                     }
-                    val updatedListState = when (val ls = list.listState) {
+                    val updatedListState = when (val state = list.listState) {
                         is ListState.Data -> {
                             ListState.Data(
-                                ls.items.map { item ->
-                                    if (item.hasAnyMappingFrom(newItem)) {
-                                        newItem
-                                    } else item
-                                }
+                                buildUpdatedList(list.tab, newItem, state.items, modification)
                             )
                         }
 
-                        else -> ls
+                        else -> state
                     }
                     list.copy(
                         parentItems = updatedParents,
                         listState = updatedListState
                     )
                 },
-                ongoingItems = s.ongoingItems.filter { item -> item.hasAnyMappingFrom(newItem) }
+                ongoingItems = s.ongoingItems.filter { item -> item.hasAnyMappingFrom(newItem) },
+                playlists = buildUpdatedList(
+                    LibraryTab.Playlists,
+                    newItem,
+                    s.playlists,
+                    modification
+                )
             )
         }
+        tabsToUpdate.forEach { refreshListForTab(it) }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <T : AppMediaItem> buildUpdatedList(
+        tab: LibraryTab,
+        receivedItem: AppMediaItem,
+        current: List<T>,
+        modification: ListModification
+    ): List<T> {
+        return when (modification) {
+            ListModification.Add ->
+                if (tab == LibraryTab.Playlists)
+                    (current + receivedItem).sortedBy { it.name.lowercase() }
+                else
+                    current
+
+            ListModification.Delete -> current.filter { !it.hasAnyMappingFrom(receivedItem) }
+            ListModification.Update -> current.map { item ->
+                if (item.hasAnyMappingFrom(receivedItem)) {
+                    receivedItem
+                } else item
+            }
+        }.mapNotNull { it as? T }
     }
 
     fun onTabSelected(tab: LibraryTab) {
@@ -287,6 +339,25 @@ class LibraryViewModel(
         }
     }
 
+    fun createPlaylist(name: String) {
+        viewModelScope.launch {
+            apiClient.sendRequest(createPlaylistRequest(name))
+        }
+    }
+
+    fun addTrackToPlaylist(track: AppMediaItem.Track, playlist: AppMediaItem.Playlist) {
+        viewModelScope.launch {
+            apiClient.sendRequest(
+                addTracksToPlaylistRequest(
+                    playlistId = playlist.itemId,
+                    trackUris = track.uri?.let { listOf(it) } ?: return@launch,
+                )
+            )?.let {
+                _toasts.emit("Added to ${playlist.name}")
+            }
+        }
+    }
+
     private fun addToOngoing(mediaItem: AppMediaItem) {
         _state.update { s ->
             s.copy(ongoingItems = s.ongoingItems.plus(mediaItem))
@@ -412,7 +483,12 @@ class LibraryViewModel(
                                 } else {
                                     it
                                 }
-                            })
+                            },
+                            playlists = list.takeIf { tab == LibraryTab.Playlists }
+                                ?.mapNotNull { it as? AppMediaItem.Playlist }
+                                ?.filter { it.isEditable == true }
+                                ?.takeIf { it.isNotEmpty() } ?: s.playlists
+                        )
                     }
                 }
         } ?: run {
@@ -469,7 +545,12 @@ class LibraryViewModel(
         val searchState: SearchState,
         val checkedItems: Set<AppMediaItem>,
         val ongoingItems: List<AppMediaItem>,
-        val showAlbums: Boolean
+        val playlists: List<AppMediaItem.Playlist>,
+        val showAlbums: Boolean,
     )
+
+    private enum class ListModification {
+        Add, Update, Delete
+    }
 
 }

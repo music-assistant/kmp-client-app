@@ -210,7 +210,7 @@ abstract class AppMediaItem(
         //timestampAdded: Long?,
         //timestampModified: Long?,
         //val owner: String?,
-        //val isEditable: Boolean?,
+        val isEditable: Boolean?,
     ) : AppMediaItem(
         itemId,
         provider,
@@ -305,7 +305,7 @@ abstract class AppMediaItem(
 //                    timestampAdded = timestampAdded,
 //                    timestampModified = timestampModified,
 //                    owner = owner,
-//                    isEditable = isEditable,
+                    isEditable = isEditable,
                 )
 
                 MediaType.RADIO,
