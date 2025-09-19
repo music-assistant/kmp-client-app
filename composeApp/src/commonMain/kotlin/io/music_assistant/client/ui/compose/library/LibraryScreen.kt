@@ -47,6 +47,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
@@ -136,7 +137,8 @@ fun LibraryScreen(navController: NavController, args: AppRoutes.LibraryArgs) {
         onPlaySelectedItems = { option ->
             viewModel.playSelectedItems(args.queueOrPlayerId, option)
             navController.popBackStack()
-        }
+        },
+        onCreatePlaylist = viewModel::createPlaylist,
     )
 }
 
@@ -160,6 +162,7 @@ private fun Library(
     onUpClick: (LibraryViewModel.LibraryTab) -> Unit,
     onShowAlbumsChange: (Boolean) -> Unit,
     onPlaySelectedItems: (QueueOption) -> Unit,
+    onCreatePlaylist: (String) -> Unit,
 ) {
     val isFabVisible = rememberSaveable { mutableStateOf(true) }
     val nestedScrollConnection = remember(selectedList?.parentItems) {
@@ -224,7 +227,7 @@ private fun Library(
                 if (state.checkedItems.isEmpty()) {
                     Text(
                         modifier = Modifier.padding(start = 16.dp),
-                        text = "Library",
+                        text = "Media",
                         style = MaterialTheme.typography.h6
                     )
                 } else {
@@ -283,19 +286,39 @@ private fun Library(
                     )
                 }
             }
-            selectedList?.let {
-                if (it.tab == LibraryViewModel.LibraryTab.Search) {
-                    SearchArea(
-                        modifier = Modifier.padding(4.dp),
-                        searchState = state.searchState,
-                        onQueryChanged = onSearchQueryChanged,
-                        onTypeChanged = onSearchTypeChanged,
-                        onLibraryOnlyChanged = onSearchLibraryOnlyChanged,
-                    )
+            selectedList?.let { list ->
+                when (list.tab) {
+                    LibraryViewModel.LibraryTab.Search -> {
+                        if (list.parentItems.isEmpty()) {
+                            SearchArea(
+                                modifier = Modifier.padding(4.dp),
+                                searchState = state.searchState,
+                                onQueryChanged = onSearchQueryChanged,
+                                onTypeChanged = onSearchTypeChanged,
+                                onLibraryOnlyChanged = onSearchLibraryOnlyChanged,
+                            )
+                        }
+                    }
+
+                    LibraryViewModel.LibraryTab.Playlists -> {
+                        if (list.parentItems.isEmpty()) {
+                            NewPlaylistArea(
+                                modifier = Modifier.padding(4.dp),
+                                existingNames = (list.listState as? LibraryViewModel.ListState.Data)
+                                    ?.items
+                                    ?.map { it.name.trim() }
+                                    ?.toSet()
+                                    ?: emptySet(),
+                                onCreatePlaylist = onCreatePlaylist
+                            )
+                        }
+                    }
+
+                    else -> Unit
                 }
                 ItemsListArea(
                     serverUrl = serverUrl,
-                    list = it,
+                    list = list,
                     checkedItems = state.checkedItems,
                     ongoingItems = state.ongoingItems,
                     nestedScrollConnection = nestedScrollConnection,
@@ -306,6 +329,42 @@ private fun Library(
                     onUpClick = onUpClick,
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun NewPlaylistArea(
+    modifier: Modifier,
+    existingNames: Set<String>,
+    onCreatePlaylist: (String) -> Unit
+) {
+    var playlistName by remember { mutableStateOf("") }
+    Row(
+        modifier = modifier.fillMaxWidth().wrapContentHeight()
+    ) {
+        OutlinedTextField(
+            modifier = Modifier.weight(1f),
+            value = playlistName,
+            onValueChange = { newText -> playlistName = newText },
+            label = {
+                Text(
+                    text = "New playlist"
+                )
+            },
+        )
+        Button(
+            modifier = Modifier
+                .padding(start = 8.dp)
+                .align(Alignment.CenterVertically),
+            enabled = playlistName.trim()
+                .takeIf { it.isNotEmpty() && !existingNames.contains(playlistName) } != null,
+            onClick = {
+                onCreatePlaylist(playlistName)
+                playlistName = ""
+            }
+        ) {
+            Text(text = "Add")
         }
     }
 }
@@ -644,7 +703,7 @@ private fun ItemsList(
                                 else if (isChecked) MaterialTheme.colors.onPrimary
                                 else MaterialTheme.colors.secondary,
                         )
-                    } else { // TODO handle async update of in-library status, when providerMapping will be stable
+                    } else {
                         Icon(
                             modifier = Modifier
                                 .padding(start = 8.dp, end = 8.dp)

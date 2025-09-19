@@ -32,6 +32,7 @@ import io.music_assistant.client.data.model.server.ServerQueueItem
 import io.music_assistant.client.data.model.server.events.BuiltinPlayerEvent
 import io.music_assistant.client.data.model.server.events.BuiltinPlayerState
 import io.music_assistant.client.data.model.server.events.MediaItemAddedEvent
+import io.music_assistant.client.data.model.server.events.MediaItemDeletedEvent
 import io.music_assistant.client.data.model.server.events.MediaItemUpdatedEvent
 import io.music_assistant.client.data.model.server.events.PlayerUpdatedEvent
 import io.music_assistant.client.data.model.server.events.QueueItemsUpdatedEvent
@@ -400,6 +401,22 @@ class MainDataSource(
                                                         queueItems = current.queueItems?.map { qt ->
                                                             if (qt == oldItem) qt.copy(track = newItem) else qt
                                                         }
+                                                    )
+                                                }
+                                            }
+                                    }
+                                }
+                        }
+
+                        is MediaItemDeletedEvent -> {
+                            (event.data.toAppMediaItem() as? AppMediaItem.Track)
+                                ?.let { deletedItem ->
+                                    _selectedPlayerData.value?.queueItems?.let { items ->
+                                        items.firstOrNull { it.id == deletedItem.itemId }
+                                            ?.let { oldItem ->
+                                                _selectedPlayerData.update { current ->
+                                                    current?.copy(
+                                                        queueItems = current.queueItems?.let { it - oldItem }
                                                     )
                                                 }
                                             }

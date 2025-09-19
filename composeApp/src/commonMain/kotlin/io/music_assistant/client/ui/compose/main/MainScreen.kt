@@ -96,7 +96,7 @@ fun MainScreen(navController: NavController) {
                             },
                             text = {
                                 Text(
-                                    text = "Library",
+                                    text = "Media",
                                     style = MaterialTheme.typography.button
                                 )
                             }

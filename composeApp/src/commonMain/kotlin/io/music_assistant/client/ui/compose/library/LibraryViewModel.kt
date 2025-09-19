@@ -7,6 +7,7 @@ import io.music_assistant.client.api.Answer
 import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.api.addMediaItemToLibraryRequest
+import io.music_assistant.client.api.createPlaylistRequest
 import io.music_assistant.client.api.favouriteMediaItemRequest
 import io.music_assistant.client.api.getAlbumTracksRequest
 import io.music_assistant.client.api.getArtistAlbumsRequest
@@ -25,6 +26,7 @@ import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.server.SearchResult
 import io.music_assistant.client.data.model.server.ServerMediaItem
 import io.music_assistant.client.data.model.server.events.MediaItemAddedEvent
+import io.music_assistant.client.data.model.server.events.MediaItemDeletedEvent
 import io.music_assistant.client.data.model.server.events.MediaItemUpdatedEvent
 import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.FlowPreview
@@ -114,11 +116,15 @@ class LibraryViewModel(
             apiClient.events.collect { event ->
                 when (event) {
                     is MediaItemUpdatedEvent -> event.data.toAppMediaItem()?.let { newItem ->
-                        updateStateWithNewItem(newItem)
+                        updateStateWithNewItem(newItem, ListModification.Update)
                     }
 
                     is MediaItemAddedEvent -> event.data.toAppMediaItem()?.let { newItem ->
-                        updateStateWithNewItem(newItem)
+                        updateStateWithNewItem(newItem, ListModification.Add)
+                    }
+
+                    is MediaItemDeletedEvent -> event.data.toAppMediaItem()?.let { newItem ->
+                        updateStateWithNewItem(newItem, ListModification.Delete)
                     }
 
                     else -> Unit
@@ -127,7 +133,7 @@ class LibraryViewModel(
         }
     }
 
-    private fun updateStateWithNewItem(newItem: AppMediaItem) {
+    private fun updateStateWithNewItem(newItem: AppMediaItem, modification: ListModification) {
         Logger.i { "Updating library state with new item: $newItem" }
         _state.update { s ->
             s.copy(
@@ -137,18 +143,14 @@ class LibraryViewModel(
                             newItem
                         } else parent
                     }
-                    val updatedListState = when (val ls = list.listState) {
+                    val updatedListState = when (val state = list.listState) {
                         is ListState.Data -> {
                             ListState.Data(
-                                ls.items.map { item ->
-                                    if (item.hasAnyMappingFrom(newItem)) {
-                                        newItem
-                                    } else item
-                                }
+                                buildUpdatedList(list.tab, newItem, state.items, modification)
                             )
                         }
 
-                        else -> ls
+                        else -> state
                     }
                     list.copy(
                         parentItems = updatedParents,
@@ -157,6 +159,28 @@ class LibraryViewModel(
                 },
                 ongoingItems = s.ongoingItems.filter { item -> item.hasAnyMappingFrom(newItem) }
             )
+        }
+    }
+
+    private fun buildUpdatedList(
+        tab: LibraryTab,
+        receivedItem: AppMediaItem,
+        current: List<AppMediaItem>,
+        modification: ListModification
+    ): List<AppMediaItem> {
+        return when (modification) {
+            ListModification.Add ->
+                if (tab == LibraryTab.Playlists)
+                    (current + receivedItem).sortedBy { it.name.lowercase() }
+                else
+                    current
+
+            ListModification.Delete -> current.filter { !it.hasAnyMappingFrom(receivedItem) }
+            ListModification.Update -> current.map { item ->
+                if (item.hasAnyMappingFrom(receivedItem)) {
+                    receivedItem
+                } else item
+            }
         }
     }
 
@@ -284,6 +308,12 @@ class LibraryViewModel(
                     radioMode = false
                 )
             )
+        }
+    }
+
+    fun createPlaylist(name: String) {
+        viewModelScope.launch {
+            apiClient.sendRequest(createPlaylistRequest(name))
         }
     }
 
@@ -469,7 +499,11 @@ class LibraryViewModel(
         val searchState: SearchState,
         val checkedItems: Set<AppMediaItem>,
         val ongoingItems: List<AppMediaItem>,
-        val showAlbums: Boolean
+        val showAlbums: Boolean,
     )
+
+    private enum class ListModification {
+        Add, Update, Delete
+    }
 
 }
