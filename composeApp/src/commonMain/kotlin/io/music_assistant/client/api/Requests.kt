@@ -272,6 +272,14 @@ fun createPlaylistRequest(name: String) = Request(
     }
 )
 
+fun addTracksToPlaylistRequest(playlistId: String, trackUris: List<String>) = Request(
+    command = "music/playlists/add_playlist_tracks",
+    args = buildJsonObject {
+        put("db_playlist_id", JsonPrimitive(playlistId))
+        put("uris", myJson.decodeFromString<JsonArray>(myJson.encodeToString(trackUris)))
+    }
+)
+
 private fun getLibrarySubItemsRequest(
     command: String,
     itemId: String,
