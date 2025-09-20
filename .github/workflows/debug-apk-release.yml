@@ -37,7 +37,7 @@ jobs:
           # Timestamp-based version (YYYY.MM.DD.HHMM format)
           echo "timestamp=$(date -u +'%Y.%m.%d.%H%M')" >> $GITHUB_OUTPUT
           # Latest commit message
-          echo "commit_message=$(git log -1 --pretty=format:'%B')" >> $GITHUB_OUTPUT
+          echo "commit_message=${{ github.event.head_commit.message }}" >> $GITHUB_OUTPUT
 
       - name: Create and push Git tag
         id: tag
