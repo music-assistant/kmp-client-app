@@ -1,0 +1,158 @@
+AI-Coding-Handbook
+
+Purpose: Single source of truth for this repository. Keep it concise, accurate, and updated alongside code changes.
+
+Project Overview
+- Name: Music Assistant KMP Client (`MusicAssistantClient`)
+- Goal: Cross‑platform client for the Music Assistant server providing playback control, queues, and library browsing.
+- Tech: Kotlin Multiplatform + Compose Multiplatform; targets Android, iOS, Desktop (JVM); DI via Koin; HTTP/WebSocket via Ktor; persistence via Multiplatform Settings; logging via Kermit; image loading via Coil.
+
+High-Level Architecture
+- composeApp (KMP module)
+  - commonMain: Shared UI (Compose), domain/data, DI, settings, networking.
+  - androidMain: Android shells (activities/services/notification), player impl.
+  - iosMain: iOS glue (UIViewController host), Koin module, player shim.
+  - desktopMain: Desktop launcher and utilities.
+- iosApp (Swift app shell)
+  - SwiftUI entry point hosting the KMP `ComposeApp` framework UI.
+
+Key Data Flow
+1) `SettingsRepository` stores theme and server connection (`ConnectionInfo`).
+2) `ServiceClient` maintains WebSocket session to Music Assistant server, emits events, handles requests/responses.
+3) `MainDataSource` observes session/events, exposes players/queues, orchestrates local builtin player state via `MediaPlayerController`.
+4) UI `App()` composes screens; view models (Koin) read from repositories/data source and issue commands.
+
+Modules and Important Files
+Root Gradle
+- `build.gradle.kts` and `settings.gradle.kts`: plugin and repository management; includes `:composeApp`.
+
+composeApp module
+- `composeApp/build.gradle.kts`
+  - Targets: Android, iOS (x64/arm64/sim), Desktop.
+  - iOS builds a static framework `ComposeApp` consumed by Xcode project.
+  - Common deps: Compose runtime/foundation/material, Koin, Ktor, Navigation, Coil, Settings, Reorderable, Kermit.
+
+Shared (commonMain)
+- API (`composeApp/src/commonMain/kotlin/io/music_assistant/client/api/`)
+  - `ConnectionInfo.kt`: Host/port/TLS details and helpers.
+  - `Requests.kt`: Typed builders for server commands (players, queues, music library, builtin player).
+  - `ServiceClient.kt`: Ktor WebSocket client; manages `SessionState`, listens, routes responses/events, exposes `events` and `serverInfo`.
+- Data (`.../data/`)
+  - `MainDataSource.kt`: Core orchestrator; tracks players/queues, processes server events, interacts with `MediaPlayerController`; exposes state used by UI and handles actions.
+  - `model/`: DTOs for client and server representations and event decoding.
+- DI (`.../di/`)
+  - `initKoin.kt`: Starts Koin combining `sharedModule` with platform modules.
+  - `SharedModule.kt`: Provides `SettingsRepository`, `ServiceClient`, `MainDataSource`, `MediaPlayerController` (expect/actual), and ViewModels.
+- Player (`.../player/`)
+  - `MediaPlayerController.kt`: expect declarations for media controls; `PlatformContext` expect.
+  - Platform actuals live per target (Android/iOS/Desktop).
+- Settings (`.../settings/`)
+  - `provideSettings.kt`: Platform-agnostic Settings provider (actuals per target).
+  - `SettingsRepository.kt`: Theme, connection info, sorting, local player id.
+- UI (`.../ui/`)
+  - `compose/App.kt`: Root `App()` with theme and `NavHost` to `Main`, `Library`, `Settings`.
+  - `compose/main/*`: Main hub: players list, queue section, FAB actions; uses `MainViewModel` state.
+  - `compose/library/*`: Library browsing.
+  - `compose/settings/*`: Settings UI (theme, server config).
+  - `compose/nav/*`: Typed routes and helpers.
+  - `theme/*`: Colors, theme, system appearance bridge, `ThemeViewModel`.
+- Utils (`.../utils/`)
+  - `SessionState.kt`: Connected/Connecting/Disconnected states.
+  - `myJson.kt`: Shared JSON configuration for serialization.
+  - Navigation helpers, extensions.
+
+Android (androidMain)
+- Entry/activity: `MainActivity.kt`, `MyApplication.kt`.
+- Services: `MainMediaPlaybackService`, Android Auto service, notification manager, media session helper.
+- Player actual: `MediaPlayerController.android.kt` integrates with ExoPlayer (via Media3).
+- Resources: manifests, drawables, launcher assets.
+
+iOS (iosMain in KMP)
+- `MainViewController.kt`: `ComposeUIViewController { App() }` with Koin `iosModule()` initialization.
+- DI: `IosModule.kt` provides `PlatformContext`.
+- Player actual: `MediaPlayerController.ios.kt` (stubbed — implement for real playback when needed).
+
+iOS Swift App (iosApp)
+- `iOSApp.swift`: SwiftUI `@main` App hosting `ContentView`.
+- `ContentView.swift`: Wraps KMP `MainViewController()` into SwiftUI via `UIViewControllerRepresentable`.
+- `Configuration/Config.xcconfig`: `TEAM_ID`, `BUNDLE_ID`, `APP_NAME`.
+- Assets and Xcode project; build phase calls Gradle `:composeApp:embedAndSignAppleFrameworkForXcode` to produce `ComposeApp.framework`.
+
+Navigation
+- Start destination: `AppRoutes.Main` -> `MainScreen`.
+- Other routes: `LibraryScreen` with args, `SettingsScreen`.
+
+View Models (Koin)
+- `ThemeViewModel`, `MainViewModel`, `SettingsViewModel`, `LibraryViewModel` provided via `sharedModule`.
+- Use `koinViewModel<...>()` in Compose. State exposed via Kotlin Flows and collected with `collectAsStateWithLifecycle`.
+
+Builtin Player Flow
+- `MainDataSource` registers local builtin player with server using a persistent local player id.
+- Responds to server `BuiltinPlayerEvent` to prepare/play/pause/stop via `MediaPlayerController`.
+- Reports position/playing state back with `updateBuiltInPlayerStateRequest` at dynamic intervals.
+
+What Each Major Component Does
+- `ServiceClient`: network session, request/response routing, event stream.
+- `MainDataSource`: state aggregation, commands for queues and players, builtin player bridge.
+- `MediaPlayerController`: abstract media control API with platform implementations.
+- `SettingsRepository`: user preferences and connection info persistence.
+- UI screens: reflect state and delegate actions back to `MainDataSource` via ViewModels.
+- DI modules: wire dependencies per platform and shared.
+
+iOS Development: Build & Test Instructions
+Prerequisites
+- macOS with Xcode 15+ and Command Line Tools installed.
+- JDK 17 (Gradle config uses Java 17); Android SDK not required for iOS build.
+- CocoaPods not used; KMP builds a static framework consumed by Xcode.
+
+First-Time Setup
+1) Open Terminal in repo root.
+2) Ensure Gradle wrapper is executable: `chmod +x ./gradlew`.
+3) (Optional) Prebuild KMP framework for iOS simulator: `./gradlew :composeApp:embedAndSignAppleFrameworkForXcode`.
+
+Running on iOS Simulator via Xcode
+1) Open `iosApp/iosApp.xcodeproj` in Xcode.
+2) Set signing:
+   - Edit `iosApp/Configuration/Config.xcconfig` with your `TEAM_ID` and desired `BUNDLE_ID`.
+   - In the project’s Signing settings, ensure your team is selected.
+3) Select a Simulator (e.g., iPhone 15) and Build/Run.
+   - The Xcode build phase triggers the Gradle task to produce `ComposeApp.framework` into `composeApp/build/xcode-frameworks/...` and links it.
+
+Running on a Physical iOS Device
+1) Connect device and select as the run destination.
+2) Ensure provisioning allows your `BUNDLE_ID` and Team.
+3) Build/Run from Xcode; Gradle task will embed/sign the KMP framework as part of build.
+
+Configuring the App
+- On first launch you will be prompted to configure connection settings if none are stored.
+- Enter server host, port, and TLS choice to connect to a running Music Assistant server.
+
+Testing Checklist (Manual)
+- App launches and shows Main screen state.
+- Navigate to Settings and set server connection; verify session transitions from Connecting to Connected.
+- Players list loads; select a player; queue displays.
+- Perform player actions: play/pause/next/previous; verify requests sent.
+- Modify repeat/shuffle; verify state updates.
+- Add/remove/move queue items and observe updates.
+- Switch theme in Settings and verify UI update.
+
+Unit/UI Tests (KMP side)
+- Common logic is suitable for unit tests (ServiceClient abstractions, MainDataSource transformations). Add tests under `composeApp/src/commonTest`.
+- iOS UI tests can be added in Xcode for SwiftUI shell, though primary UI is Compose embedded view.
+
+iOS Player Implementation Note
+- `MediaPlayerController.ios.kt` is currently stubbed; implement using AVFoundation (AVPlayer) to enable local builtin playback on iOS. Ensure calls run on main thread and report position/playing state to `MainDataSource` as in Android.
+
+SwiftUI Best Practices (for iOS shell)
+- Follow `.cursor/rules/ios-swift-dev-rule.mdc` for view model observation, environment usage, accessibility, and previews when editing Swift files.
+
+Conventions
+- Koin for DI; prefer `singleOf`/`viewModelOf` wiring in `SharedModule.kt`.
+- Compose navigation uses typed routes in `ui/compose/nav` with `toRoute()` helpers.
+- Flows collected with lifecycle-aware `collectAsStateWithLifecycle`.
+
+How to Update This Handbook
+- Keep sections aligned with code changes. When adding modules or screens, add a short description here.
+- For iOS changes, update the Build & Test section if the Gradle/Xcode integration changes.
+
+
