@@ -156,3 +156,27 @@ How to Update This Handbook
 - For iOS changes, update the Build & Test section if the Gradle/Xcode integration changes.
 
 
+iOS TODOs (Current Gaps & Next Steps)
+- Implement local playback on iOS:
+  - File: `composeApp/src/iosMain/kotlin/io/music_assistant/client/player/MediaPlayerController.ios.kt`
+  - Replace TODOs using AVFoundation (AVPlayer): implement `prepare`, `start`, `pause`, `stop`, `seekTo`, `getCurrentPosition`, `getDuration`, `isPlaying`, `release`.
+  - Ensure all player interactions run on the main thread.
+  - Call `MediaPlayerListener` callbacks appropriately (`onReady`, `onAudioCompleted`, `onError`).
+  - Tie into `MainDataSource.updateLocalPlayerState` cadence for accurate progress reporting.
+
+- Verify DI wiring for iOS:
+  - File: `composeApp/src/iosMain/kotlin/io/music_assistant/client/di/IosModule.kt`
+  - Confirm any additional platform services (e.g., audio session configuration) are provided when AVPlayer is added.
+
+- Audio session configuration:
+  - Configure `AVAudioSession` (category `.playback`, mode `.default`, setActive true) during iOS bootstrap to allow background/lock‑screen playback when implemented.
+  - Consider interruptions handling (route changes, phone calls) and propagate to `MediaPlayerController`/`MainDataSource`.
+
+- Background and remote controls (future):
+  - If background playback is desired, add MPNowPlayingInfoCenter updates and remote command center handlers in Swift or via Skiko/interop layer.
+
+- Stability and lifecycle checks:
+  - Ensure `MainViewController()` and Koin init are idempotent on app foreground/background transitions.
+  - Validate that `ServiceClient` reconnects properly when app resumes on iOS.
+
+
