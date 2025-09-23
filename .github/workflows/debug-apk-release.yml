@@ -55,8 +55,6 @@ jobs:
           body: |
             ## Debug APK Release
             
-            **Latest automated debug build from main branch**
-            
             ### What's New
             ${{ github.event.head_commit.message }}
             
