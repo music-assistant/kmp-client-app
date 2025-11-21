@@ -19,6 +19,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
 
 class LibraryViewModelTest : RobolectricTest() {
     private lateinit var fakeSettings: FakeSettings
@@ -179,6 +180,8 @@ class LibraryViewModelTest : RobolectricTest() {
                 val artistsTab = state.libraryLists.find { it.tab == LibraryTab.Artists }
                 assertNotNull(artistsTab)
                 assertFalse(artistsTab.isSelected, "Artists tab should not be selected")
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -198,6 +201,8 @@ class LibraryViewModelTest : RobolectricTest() {
                 val searchTab = finalState.libraryLists.find { it.tab == LibraryTab.Search }
                 assertNotNull(searchTab, "Search tab should exist")
                 assertTrue(searchTab.isSelected, "Search tab should be selected")
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 

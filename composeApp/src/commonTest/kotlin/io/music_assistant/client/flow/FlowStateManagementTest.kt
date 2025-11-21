@@ -230,6 +230,9 @@ class FlowStateManagementTest : RobolectricTest() {
                 // Now search should be triggered (if we were connected)
                 // Since we're not connected, we just verify debounce worked
                 // by checking that state stabilized
+
+                // Cancel any background coroutines that might emit more events
+                cancelAndIgnoreRemainingEvents()
             }
         }
 

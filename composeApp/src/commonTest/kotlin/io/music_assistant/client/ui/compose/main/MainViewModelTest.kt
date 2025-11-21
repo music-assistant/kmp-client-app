@@ -360,6 +360,9 @@ class MainViewModelTest : RobolectricTest() {
                 val state = awaitItem()
                 // Without connection info, state should eventually reflect no server
                 assertIs<MainViewModel.State.Loading>(state)
+
+                // Cancel any background coroutines that might emit more events
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
