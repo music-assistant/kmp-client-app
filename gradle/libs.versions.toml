@@ -18,6 +18,7 @@ junit = "4.13.2"
 kermit = "2.0.8"
 kotlin = "2.2.20"
 kotlinx-coroutines = "1.10.2"
+turbine = "1.2.0"
 
 ktor = "3.3.0"
 
@@ -58,6 +59,8 @@ androidx-media3-exoplayer = { module = "androidx.media3:media3-exoplayer", versi
 
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-coroutines-swing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
+turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
 
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }

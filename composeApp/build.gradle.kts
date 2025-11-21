@@ -15,11 +15,11 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_17)
         }
     }
-    
+
     listOf(
         iosX64(),
         iosArm64(),
-        iosSimulatorArm64()
+        iosSimulatorArm64(),
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
@@ -27,12 +27,12 @@ kotlin {
             binaryOption("bundleId", "io.music_assistant.client.composeapp")
         }
     }
-    
+
     jvm("desktop")
-    
+
     sourceSets {
         val desktopMain by getting
-        
+
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
@@ -81,11 +81,12 @@ kotlin {
             implementation(libs.reorderable)
 
             implementation(libs.kermit)
-
         }
 
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.turbine)
         }
 
         desktopMain.dependencies {
@@ -105,12 +106,25 @@ kotlin {
 
 android {
     namespace = "io.music_assistant.client"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    compileSdk =
+        libs.versions.android.compileSdk
+            .get()
+            .toInt()
 
     defaultConfig {
         applicationId = "io.music_assistant.client"
-        minSdk { version = release(libs.versions.android.minSdk.get().toInt()) }
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
+        minSdk {
+            version =
+                release(
+                    libs.versions.android.minSdk
+                        .get()
+                        .toInt(),
+                )
+        }
+        targetSdk =
+            libs.versions.android.targetSdk
+                .get()
+                .toInt()
         versionCode = 2
         versionName = "0.1.0"
     }

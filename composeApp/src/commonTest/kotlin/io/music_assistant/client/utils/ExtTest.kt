@@ -1,29 +1,30 @@
 package io.music_assistant.client.utils
 
 import kotlin.test.Test
-import kotlin.test.assertTrue
-import kotlin.test.assertFalse
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 class ExtTest {
     @Test
     fun testValidHosts() {
-        val validHosts = listOf(
-            // Valid IPv4 addresses
-            "192.168.1.1",
-            "0.0.0.0",
-            "255.255.255.255",
-            "127.0.0.1",
-            "10.0.0.1",
-            // Valid hostnames
-            "localhost",
-            "example.com",
-            "sub.domain.co.uk",
-            "my-server",
-            "a123-b456"
-        )
+        val validHosts =
+            listOf(
+                // Valid IPv4 addresses
+                "192.168.1.1",
+                "0.0.0.0",
+                "255.255.255.255",
+                "127.0.0.1",
+                "10.0.0.1",
+                // Valid hostnames
+                "localhost",
+                "example.com",
+                "sub.domain.co.uk",
+                "my-server",
+                "a123-b456",
+            )
         for (host in validHosts) {
             assertTrue(host.isValidHost(), "Expected $host to be recognised as a valid host")
         }
@@ -31,27 +32,28 @@ class ExtTest {
 
     @Test
     fun testInvalidHosts() {
-        val invalidHosts = listOf(
-            // Invalid IPv4 addresses
-            "256.256.256.256",
-            "192.168.1",
-            "192.168.1.1.1",
-            "abc.def.ghi.jkl",
-            "123.456.78.90",
-            "192.168.1.-1",
-            "192.168.1.256",
-            "",
-            "...",
-            "1.1.1.01",
-            // Invalid hostnames
-            "-invalidhostname",
-            "invalid-.hostname",
-            ".startingdot",
-            "endingdot.",
-            "toolonglabeltoolonglabeltoolonglabeltoolonglabeltoolonglabeltoolonglabeltoolonglabeltoolonglabel.com",
-            "has space.com",
-            "invalid_underscore.com"
-        )
+        val invalidHosts =
+            listOf(
+                // Invalid IPv4 addresses
+                "256.256.256.256",
+                "192.168.1",
+                "192.168.1.1.1",
+                "abc.def.ghi.jkl",
+                "123.456.78.90",
+                "192.168.1.-1",
+                "192.168.1.256",
+                "",
+                "...",
+                "1.1.1.01",
+                // Invalid hostnames
+                "-invalidhostname",
+                "invalid-.hostname",
+                ".startingdot",
+                "endingdot.",
+                "toolonglabeltoolonglabeltoolonglabeltoolonglabeltoolonglabeltoolonglabeltoolonglabeltoolonglabel.com",
+                "has space.com",
+                "invalid_underscore.com",
+            )
         for (host in invalidHosts) {
             assertFalse(host.isValidHost(), "Expected $host to be recognised as an invalid host")
         }
@@ -80,4 +82,4 @@ class ExtTest {
         assertEquals("--:--", (null as Duration?).toMinSec())
         assertEquals("10:00", Duration.parse("600s").toMinSec())
     }
-} 
+}
