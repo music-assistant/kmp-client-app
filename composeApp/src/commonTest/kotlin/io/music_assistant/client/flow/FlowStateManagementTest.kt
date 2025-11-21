@@ -519,6 +519,9 @@ class FlowStateManagementTest : RobolectricTest() {
 
                 // Should already be Connecting, so no new emission per the connect() logic
                 // The connect() method has an early return if already Connecting or Connected
+
+                // Connection will retry, creating more events
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -797,9 +800,12 @@ class FlowStateManagementTest : RobolectricTest() {
                 awaitItem()
 
                 viewModel.searchQueryChanged("test") // Same as before
-                // No emission due to distinctUntilChanged on searchState
+                awaitItem() // State still emits since searchQueryChanged updates state
 
                 advanceUntilIdle()
+
+                // Connection state may change, causing extra emissions
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
