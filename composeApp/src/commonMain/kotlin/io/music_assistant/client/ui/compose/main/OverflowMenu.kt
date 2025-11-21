@@ -32,7 +32,7 @@ fun OverflowMenuThreeDots(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box(
-        modifier = modifier.wrapContentSize(Alignment.TopStart)
+        modifier = modifier.wrapContentSize(Alignment.TopStart),
     ) {
         IconButton(onClick = { expanded = true }) {
             Icon(
@@ -44,14 +44,14 @@ fun OverflowMenuThreeDots(
         }
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
         ) {
             options.forEach { option ->
                 DropdownMenuItem(
                     onClick = {
                         option.onClick()
                         expanded = false
-                    }
+                    },
                 ) {
                     Text(modifier = Modifier.padding(all = 4.dp), text = option.title)
                 }
@@ -69,7 +69,7 @@ fun OverflowMenu(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box(
-        modifier = modifier.wrapContentSize(Alignment.TopStart)
+        modifier = modifier.wrapContentSize(Alignment.TopStart),
     ) {
         IconButton(onClick = { expanded = true }) {
             Icon(
@@ -81,14 +81,14 @@ fun OverflowMenu(
         }
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
         ) {
             options.forEach { option ->
                 DropdownMenuItem(
                     onClick = {
                         option.onClick()
                         expanded = false
-                    }
+                    },
                 ) {
                     Text(modifier = Modifier.padding(all = 4.dp), text = option.title)
                 }
@@ -99,17 +99,18 @@ fun OverflowMenu(
 
 data class OverflowMenuOption(
     val title: String,
-    val onClick: () -> Unit
+    val onClick: () -> Unit,
 )
 
 @Preview
 @Composable
 fun OverflowMenuPreview() {
     OverflowMenuThreeDots(
-        options = listOf(
-            OverflowMenuOption("Option 1") { /* Handle Option 1 */ },
-            OverflowMenuOption("Option 2") { /* Handle Option 2 */ },
-            OverflowMenuOption("Option 3") { /* Handle Option 3 */ }
-        )
+        options =
+            listOf(
+                OverflowMenuOption("Option 1") { /* Handle Option 1 */ },
+                OverflowMenuOption("Option 2") { /* Handle Option 2 */ },
+                OverflowMenuOption("Option 3") { /* Handle Option 3 */ },
+            ),
     )
 }

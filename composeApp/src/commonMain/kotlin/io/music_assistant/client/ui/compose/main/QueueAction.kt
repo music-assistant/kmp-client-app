@@ -1,10 +1,9 @@
 package io.music_assistant.client.ui.compose.main
 
 sealed interface QueueAction {
-
     data class RemoveItems(
         val queueId: String,
-        val items: List<String>
+        val items: List<String>,
     ) : QueueAction
 
     data class ClearQueue(
@@ -13,7 +12,7 @@ sealed interface QueueAction {
 
     data class PlayQueueItem(
         val queueId: String,
-        val queueItemId: String
+        val queueItemId: String,
     ) : QueueAction
 
     data class MoveItem(
@@ -27,5 +26,5 @@ sealed interface QueueAction {
         val sourceId: String,
         val targetId: String,
         val autoplay: Boolean,
-    ): QueueAction
+    ) : QueueAction
 }

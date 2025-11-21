@@ -18,43 +18,39 @@ fun QueueTrackControls(
     chosenItems: List<QueueTrack>,
     enabled: Boolean,
     queueAction: (QueueAction) -> Unit,
-    onChosenItemsClear: () -> Unit
+    onChosenItemsClear: () -> Unit,
 ) {
-
     ActionIcon(
         icon = TablerIcons.CircleDashed,
         size = 24.dp,
-        enabled = enabled
+        enabled = enabled,
     ) { onChosenItemsClear() }
     Text(
         text = "${chosenItems.size} selected ${if (chosenItems.size == 1) "track" else "tracks"}:",
         color = MaterialTheme.colors.onSurface,
         style = MaterialTheme.typography.body2,
-        fontWeight = FontWeight.Bold
+        fontWeight = FontWeight.Bold,
     )
     queueId?.let {
         if (chosenItems.size == 1) {
             ActionIcon(
                 icon = TablerIcons.PlayerPlay,
                 size = 24.dp,
-                enabled = enabled
+                enabled = enabled,
             ) {
                 queueAction(
-                    QueueAction.PlayQueueItem(it, chosenItems.first().id)
+                    QueueAction.PlayQueueItem(it, chosenItems.first().id),
                 )
             }
         }
         ActionIcon(
             icon = TablerIcons.CircleX,
             size = 24.dp,
-            enabled = enabled
+            enabled = enabled,
         ) {
             queueAction(
-                QueueAction.RemoveItems(it, chosenItems.map { it.id })
+                QueueAction.RemoveItems(it, chosenItems.map { it.id }),
             )
         }
     }
-
 }
-
-

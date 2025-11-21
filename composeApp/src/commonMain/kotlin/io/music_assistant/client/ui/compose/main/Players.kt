@@ -37,19 +37,23 @@ fun HorizontalPlayersPager(
     onSelected: (Player) -> Unit,
     forceShowFab: () -> Unit,
 ) {
-    val pagerState = key(players.map { it.player.id }) {
-        rememberPagerState(
-            initialPage = players.indexOfFirst { it.player.id == selectedPlayerId }
-                .takeIf { it >= 0 } ?: 0,
-            pageCount = { players.size },
-        )
-    }
+    val pagerState =
+        key(players.map { it.player.id }) {
+            rememberPagerState(
+                initialPage =
+                    players
+                        .indexOfFirst { it.player.id == selectedPlayerId }
+                        .takeIf { it >= 0 } ?: 0,
+                pageCount = { players.size },
+            )
+        }
 
     fun onItemMoved(indexShift: Int) {
-        val newPlayers = players.map { it.player.id }.toMutableList().apply {
-            val newIndex = (pagerState.currentPage + indexShift).coerceIn(0, players.size - 1)
-            add(newIndex, removeAt(pagerState.currentPage))
-        }
+        val newPlayers =
+            players.map { it.player.id }.toMutableList().apply {
+                val newIndex = (pagerState.currentPage + indexShift).coerceIn(0, players.size - 1)
+                add(newIndex, removeAt(pagerState.currentPage))
+            }
         onListReordered(newPlayers)
     }
     LaunchedEffect(pagerState) {
@@ -99,19 +103,23 @@ fun VerticalPlayersPager(
     onSelected: (Player) -> Unit,
     forceShowFab: () -> Unit,
 ) {
-    val pagerState = key(players.map { it.player.id }) {
-        rememberPagerState(
-            initialPage = players.indexOfFirst { it.player.id == selectedPlayerId }
-                .takeIf { it >= 0 } ?: 0,
-            pageCount = { players.size },
-        )
-    }
+    val pagerState =
+        key(players.map { it.player.id }) {
+            rememberPagerState(
+                initialPage =
+                    players
+                        .indexOfFirst { it.player.id == selectedPlayerId }
+                        .takeIf { it >= 0 } ?: 0,
+                pageCount = { players.size },
+            )
+        }
 
     fun onItemMoved(indexShift: Int) {
-        val newPlayers = players.map { it.player.id }.toMutableList().apply {
-            val newIndex = (pagerState.currentPage + indexShift).coerceIn(0, players.size - 1)
-            add(newIndex, removeAt(pagerState.currentPage))
-        }
+        val newPlayers =
+            players.map { it.player.id }.toMutableList().apply {
+                val newIndex = (pagerState.currentPage + indexShift).coerceIn(0, players.size - 1)
+                add(newIndex, removeAt(pagerState.currentPage))
+            }
         onListReordered(newPlayers)
     }
     LaunchedEffect(pagerState) {
@@ -153,61 +161,8 @@ fun VerticalPlayersPager(
 fun HorizontalPlayersPagerPreview() {
     HorizontalPlayersPager(
         serverUrl = null,
-        players = listOf(
-            PlayerData(
-                Player(
-                    "1",
-                    "Player 1",
-                    shouldBeShown = true,
-                    canSetVolume = true,
-                    queueId = null,
-                    isPlaying = false,
-                    isBuiltin = false,
-                    isAnnouncing = false
-                ), null
-            ),
-            PlayerData(
-                Player(
-                    "2",
-                    "Player 2",
-                    shouldBeShown = true,
-                    canSetVolume = true,
-                    queueId = null,
-                    isPlaying = false,
-                    isBuiltin = false,
-                    isAnnouncing = false
-                ), null
-            ),
-            PlayerData(
-                Player(
-                    "3",
-                    "Player 3",
-                    shouldBeShown = true,
-                    canSetVolume = true,
-                    queueId = null,
-                    isPlaying = false,
-                    isBuiltin = false,
-                    isAnnouncing = false
-                ), null
-            ),
-        ),
-        selectedPlayerId = "2",
-        playerAction = { _, _ -> },
-        settingsAction = {},
-        dspSettingsAction = {},
-        onListReordered = {},
-        onSelected = {},
-        forceShowFab = {}
-    )
-}
-
-@Preview
-@Composable
-fun VerticalPlayersPagerPreview() {
-    Box(modifier = Modifier.size(1920.dp)) {
-        VerticalPlayersPager(
-            serverUrl = null,
-            players = listOf(
+        players =
+            listOf(
                 PlayerData(
                     Player(
                         "1",
@@ -217,8 +172,9 @@ fun VerticalPlayersPagerPreview() {
                         queueId = null,
                         isPlaying = false,
                         isBuiltin = false,
-                        isAnnouncing = false
-                    ), null
+                        isAnnouncing = false,
+                    ),
+                    null,
                 ),
                 PlayerData(
                     Player(
@@ -229,8 +185,9 @@ fun VerticalPlayersPagerPreview() {
                         queueId = null,
                         isPlaying = false,
                         isBuiltin = false,
-                        isAnnouncing = false
-                    ), null
+                        isAnnouncing = false,
+                    ),
+                    null,
                 ),
                 PlayerData(
                     Player(
@@ -241,17 +198,76 @@ fun VerticalPlayersPagerPreview() {
                         queueId = null,
                         isPlaying = false,
                         isBuiltin = false,
-                        isAnnouncing = false
-                    ), null
+                        isAnnouncing = false,
+                    ),
+                    null,
                 ),
             ),
+        selectedPlayerId = "2",
+        playerAction = { _, _ -> },
+        settingsAction = {},
+        dspSettingsAction = {},
+        onListReordered = {},
+        onSelected = {},
+        forceShowFab = {},
+    )
+}
+
+@Preview
+@Composable
+fun VerticalPlayersPagerPreview() {
+    Box(modifier = Modifier.size(1920.dp)) {
+        VerticalPlayersPager(
+            serverUrl = null,
+            players =
+                listOf(
+                    PlayerData(
+                        Player(
+                            "1",
+                            "Player 1",
+                            shouldBeShown = true,
+                            canSetVolume = true,
+                            queueId = null,
+                            isPlaying = false,
+                            isBuiltin = false,
+                            isAnnouncing = false,
+                        ),
+                        null,
+                    ),
+                    PlayerData(
+                        Player(
+                            "2",
+                            "Player 2",
+                            shouldBeShown = true,
+                            canSetVolume = true,
+                            queueId = null,
+                            isPlaying = false,
+                            isBuiltin = false,
+                            isAnnouncing = false,
+                        ),
+                        null,
+                    ),
+                    PlayerData(
+                        Player(
+                            "3",
+                            "Player 3",
+                            shouldBeShown = true,
+                            canSetVolume = true,
+                            queueId = null,
+                            isPlaying = false,
+                            isBuiltin = false,
+                            isAnnouncing = false,
+                        ),
+                        null,
+                    ),
+                ),
             selectedPlayerId = "2",
             playerAction = { _, _ -> },
             settingsAction = {},
             dspSettingsAction = {},
             onListReordered = {},
             onSelected = {},
-            forceShowFab = {}
+            forceShowFab = {},
         )
     }
 }

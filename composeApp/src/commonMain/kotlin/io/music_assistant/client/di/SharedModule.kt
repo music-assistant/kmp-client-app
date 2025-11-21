@@ -13,14 +13,15 @@ import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
-val sharedModule = module {
-    single { provideSettings() }
-    singleOf(::SettingsRepository)
-    singleOf(::ServiceClient)
-    singleOf(::MainDataSource)
-    singleOf(::MediaPlayerController)
-    viewModelOf(::ThemeViewModel)
-    factory { MainViewModel(get(), get(), get()) }
-    factory { SettingsViewModel(get(), get()) }
-    factory { LibraryViewModel(get()) }
-}
+val sharedModule =
+    module {
+        single { provideSettings() }
+        singleOf(::SettingsRepository)
+        singleOf(::ServiceClient)
+        singleOf(::MainDataSource)
+        singleOf(::MediaPlayerController)
+        viewModelOf(::ThemeViewModel)
+        factory { MainViewModel(get(), get(), get()) }
+        factory { SettingsViewModel(get(), get()) }
+        factory { LibraryViewModel(get()) }
+    }

@@ -7,8 +7,10 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 @Serializable
-data class Request @OptIn(ExperimentalUuidApi::class) constructor(
-    @SerialName("command") val command: String,
-    @SerialName("args") val args: JsonObject? = null,
-    @SerialName("message_id") val messageId: String = Uuid.random().toString()
-)
+data class Request
+    @OptIn(ExperimentalUuidApi::class)
+    constructor(
+        @SerialName("command") val command: String,
+        @SerialName("args") val args: JsonObject? = null,
+        @SerialName("message_id") val messageId: String = Uuid.random().toString(),
+    )

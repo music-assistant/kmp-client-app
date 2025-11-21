@@ -60,21 +60,22 @@ fun MainScreen(navController: NavController) {
     val state by viewModel.state.collectAsStateWithLifecycle(MainViewModel.State.Loading)
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
     var isFabVisible by rememberSaveable { mutableStateOf(true) }
-    val nestedScrollConnection = remember {
-        object : NestedScrollConnection {
-            override fun onPreScroll(
-                available: Offset,
-                source: NestedScrollSource
-            ): Offset {
-                if (available.y < -1) {
-                    isFabVisible = false
-                } else if (available.y > 1) {
-                    isFabVisible = true
+    val nestedScrollConnection =
+        remember {
+            object : NestedScrollConnection {
+                override fun onPreScroll(
+                    available: Offset,
+                    source: NestedScrollSource,
+                ): Offset {
+                    if (available.y < -1) {
+                        isFabVisible = false
+                    } else if (available.y > 1) {
+                        isFabVisible = true
+                    }
+                    return Offset.Zero
                 }
-                return Offset.Zero
             }
         }
-    }
     Scaffold(
         backgroundColor = MaterialTheme.colors.background,
         floatingActionButton = {
@@ -83,13 +84,14 @@ fun MainScreen(navController: NavController) {
             ) {
                 Row(
                     modifier = Modifier.navigationBarsPadding().wrapContentSize(),
-                    verticalAlignment = Alignment.Bottom
+                    verticalAlignment = Alignment.Bottom,
                 ) {
                     if (state is MainViewModel.State.Data) {
                         ExtendedFloatingActionButton(
                             modifier = Modifier.height(48.dp).padding(end = 8.dp),
                             onClick = {
-                                (state as? MainViewModel.State.Data)?.selectedPlayer
+                                (state as? MainViewModel.State.Data)
+                                    ?.selectedPlayer
                                     ?.let { selected ->
                                         navController.navigate(selected.libraryArgs)
                                     }
@@ -97,9 +99,9 @@ fun MainScreen(navController: NavController) {
                             text = {
                                 Text(
                                     text = "Media",
-                                    style = MaterialTheme.typography.button
+                                    style = MaterialTheme.typography.button,
                                 )
-                            }
+                            },
                         )
                     }
                     FloatingActionButton(
@@ -128,12 +130,13 @@ fun MainScreen(navController: NavController) {
             }
         }
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(scaffoldPadding)
-                .consumeWindowInsets(scaffoldPadding)
-                .systemBarsPadding()
-                .background(color = MaterialTheme.colors.background)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(scaffoldPadding)
+                    .consumeWindowInsets(scaffoldPadding)
+                    .systemBarsPadding()
+                    .background(color = MaterialTheme.colors.background),
         ) {
             lastDataState?.let {
                 BoxWithConstraints {
@@ -160,43 +163,49 @@ fun MainScreen(navController: NavController) {
             when (state) {
                 MainViewModel.State.Disconnected,
                 MainViewModel.State.Loading,
-                MainViewModel.State.NoServer -> ServiceLayout(
-                    stateValue = state,
-                )
+                MainViewModel.State.NoServer,
+                -> {
+                    ServiceLayout(
+                        stateValue = state,
+                    )
+                }
 
-                is MainViewModel.State.Data -> Unit
+                is MainViewModel.State.Data -> {
+                    Unit
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ServiceLayout(
-    stateValue: MainViewModel.State,
-) {
+private fun ServiceLayout(stateValue: MainViewModel.State) {
     Column(
-        modifier = Modifier.fillMaxSize()
-            .background(color = MaterialTheme.colors.background.copy(alpha = 0.9f))
-            .clickable { /* Absorb interaction*/ },
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(color = MaterialTheme.colors.background.copy(alpha = 0.9f))
+                .clickable { /* Absorb interaction*/ },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            modifier = Modifier
-                .padding(all = 16.dp),
-            text = when (stateValue) {
-                is MainViewModel.State.Data -> "Connected to server"
-                MainViewModel.State.Disconnected -> "Disconnected"
-                MainViewModel.State.Loading -> "Connecting to server"
-                MainViewModel.State.NoServer -> "Please setup server connection"
-            },
+            modifier =
+                Modifier
+                    .padding(all = 16.dp),
+            text =
+                when (stateValue) {
+                    is MainViewModel.State.Data -> "Connected to server"
+                    MainViewModel.State.Disconnected -> "Disconnected"
+                    MainViewModel.State.Loading -> "Connecting to server"
+                    MainViewModel.State.NoServer -> "Please setup server connection"
+                },
             style = MaterialTheme.typography.h5,
             color = MaterialTheme.colors.onBackground,
         )
         CircularProgressIndicator()
     }
 }
-
 
 @Composable
 private fun VerticalDataLayout(
@@ -209,7 +218,7 @@ private fun VerticalDataLayout(
     Column(
         Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         val playersData = state.playerData
         val selectedPlayerData = state.selectedPlayerData
@@ -246,10 +255,10 @@ private fun VerticalDataLayout(
                 },
                 onItemChosenChanged = { id ->
                     viewModel.onItemChosenChanged(
-                        id
+                        id,
                     )
                 },
-                onChosenItemsClear = { viewModel.onChosenItemsClear() }
+                onChosenItemsClear = { viewModel.onChosenItemsClear() },
             )
         }
     }
@@ -266,7 +275,7 @@ private fun HorizontalDataLayout(
     Row(
         Modifier.fillMaxSize(),
         verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         val playersData = state.playerData
         val selectedPlayerData = state.selectedPlayerData
@@ -303,10 +312,10 @@ private fun HorizontalDataLayout(
                 },
                 onItemChosenChanged = { id ->
                     viewModel.onItemChosenChanged(
-                        id
+                        id,
                     )
                 },
-                onChosenItemsClear = { viewModel.onChosenItemsClear() }
+                onChosenItemsClear = { viewModel.onChosenItemsClear() },
             )
         }
     }

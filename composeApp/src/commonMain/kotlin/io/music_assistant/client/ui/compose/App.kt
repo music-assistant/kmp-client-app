@@ -25,17 +25,18 @@ import org.koin.core.annotation.KoinExperimentalAPI
 fun App() {
     val themeViewModel = koinViewModel<ThemeViewModel>()
     val theme = themeViewModel.theme.collectAsStateWithLifecycle(ThemeSetting.FollowSystem)
-    val darkTheme = when (theme.value) {
-        ThemeSetting.Dark -> true
-        ThemeSetting.Light -> false
-        ThemeSetting.FollowSystem -> isSystemInDarkTheme()
-    }
+    val darkTheme =
+        when (theme.value) {
+            ThemeSetting.Dark -> true
+            ThemeSetting.Light -> false
+            ThemeSetting.FollowSystem -> isSystemInDarkTheme()
+        }
     SystemAppearance(isDarkTheme = darkTheme)
     AppTheme(darkTheme = darkTheme) {
         val navController = rememberNavControllerCustom()
         NavHost(
             navController = navController,
-            startDestination = AppRoutes.Main
+            startDestination = AppRoutes.Main,
         ) {
             composable<AppRoutes.Main> { MainScreen(navController) }
             composable<AppRoutes.LibraryArgs> { backStackEntry ->
@@ -46,5 +47,3 @@ fun App() {
         }
     }
 }
-
-

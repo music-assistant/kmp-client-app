@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class BuiltinPlayerState (
+data class BuiltinPlayerState(
     @SerialName("powered") val powered: Boolean,
     @SerialName("playing") val playing: Boolean,
     @SerialName("paused") val paused: Boolean,

@@ -10,13 +10,13 @@ import kotlinx.serialization.Serializable
 data class QueueItemsUpdatedEvent(
     @SerialName("event") override val event: EventType,
     @SerialName("object_id") override val objectId: String,
-    @SerialName("data") override val data: ServerQueue
+    @SerialName("data") override val data: ServerQueue,
 ) : Event<ServerQueue> {
     fun queue() = data.toQueue()
 }
 
-//@Serializable
-//data class StreamDetails(
+// @Serializable
+// data class StreamDetails(
 //    @SerialName("provider") val provider: String,
 //    @SerialName("item_id") val itemId: String,
 //    @SerialName("audio_format") val audioFormat: AudioFormat,
@@ -34,16 +34,14 @@ data class QueueItemsUpdatedEvent(
 //    @SerialName("strip_silence_begin") val stripSilenceBegin: Boolean,
 //    @SerialName("strip_silence_end") val stripSilenceEnd: Boolean,
 //    @SerialName("dsp") val dsp: Map<String, DSPSettings>
-//)
+// )
 
-//@Serializable
-//data class DSPSettings(
+// @Serializable
+// data class DSPSettings(
 //    @SerialName("state") val state: String,
 //    @SerialName("input_gain") val inputGain: Double,
 //    @SerialName("filters") val filters: List<String>,
 //    @SerialName("output_gain") val outputGain: Double,
 //    @SerialName("output_limiter") val outputLimiter: Boolean,
 //    @SerialName("output_format") val outputFormat: AudioFormat? = null
-//)
-
-
+// )

@@ -45,9 +45,10 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
     private lateinit var imageLoader: ImageLoader
 
     private val dataSource: MainDataSource by inject()
-    private val players = dataSource.playersData
-        .map { list -> list.filter { it.queue?.currentItem != null } }
-        .stateIn(scope, SharingStarted.Eagerly, emptyList())
+    private val players =
+        dataSource.playersData
+            .map { list -> list.filter { it.queue?.currentItem != null } }
+            .stateIn(scope, SharingStarted.Eagerly, emptyList())
     private val activePlayerIndex = MutableStateFlow(-1)
     private val currentPlayerData =
         combine(players, activePlayerIndex) { players, index ->
@@ -57,23 +58,26 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
             }
             players.getOrNull(index) ?: players.getOrNull(0)
         }.stateIn(scope, SharingStarted.Eagerly, null)
-    private val mediaNotificationData = combine(
-        currentPlayerData.filterNotNull(),
-        players.map { it.size > 1 }
-    ) { player, moreThanOnePlayer ->
-        MediaNotificationData.from(
-            dataSource.apiClient.serverInfo.value?.baseUrl,
-            player,
-            moreThanOnePlayer
-        )
-    }
-        .distinctUntilChanged { old, new -> MediaNotificationData.areTooSimilarToUpdate(old, new) }
-        .stateIn(scope, SharingStarted.WhileSubscribed(), null)
-        .filterNotNull()
+    private val mediaNotificationData =
+        combine(
+            currentPlayerData.filterNotNull(),
+            players.map { it.size > 1 },
+        ) { player, moreThanOnePlayer ->
+            MediaNotificationData.from(
+                dataSource.apiClient.serverInfo.value
+                    ?.baseUrl,
+                player,
+                moreThanOnePlayer,
+            )
+        }.distinctUntilChanged { old, new -> MediaNotificationData.areTooSimilarToUpdate(old, new) }
+            .stateIn(scope, SharingStarted.WhileSubscribed(), null)
+            .filterNotNull()
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        return START_STICKY
-    }
+    override fun onStartCommand(
+        intent: Intent?,
+        flags: Int,
+        startId: Int,
+    ): Int = START_STICKY
 
     override fun onCreate() {
         super.onCreate()
@@ -81,7 +85,7 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
         mediaNotificationManager = MediaNotificationManager(this, mediaSessionHelper)
         startForeground(
             MediaNotificationManager.NOTIFICATION_ID,
-            mediaNotificationManager.createNotification(null)
+            mediaNotificationManager.createNotification(null),
         )
         sessionToken = mediaSessionHelper.getSessionToken()
         imageLoader = ImageLoader(this)
@@ -99,24 +103,29 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
         registerNotificationDismissReceiver()
     }
 
-    private val notificationDismissReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            players.value
-                .indexOfFirst { it.player.isPlaying }
-                .takeIf { it >= 0 }
-                ?.let { playingPosition ->
-                    activePlayerIndex.update { playingPosition }
-                    Toast.makeText(
-                        this@MainMediaPlaybackService,
-                        "You have playing players",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                } ?: run {
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
+    private val notificationDismissReceiver =
+        object : BroadcastReceiver() {
+            override fun onReceive(
+                context: Context?,
+                intent: Intent?,
+            ) {
+                players.value
+                    .indexOfFirst { it.player.isPlaying }
+                    .takeIf { it >= 0 }
+                    ?.let { playingPosition ->
+                        activePlayerIndex.update { playingPosition }
+                        Toast
+                            .makeText(
+                                this@MainMediaPlaybackService,
+                                "You have playing players",
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                    } ?: run {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                }
             }
         }
-    }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     private fun registerNotificationDismissReceiver() {
@@ -158,42 +167,58 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
                 }
             }
 
-            override fun onCustomAction(action: String, extras: Bundle?) {
+            override fun onCustomAction(
+                action: String,
+                extras: Bundle?,
+            ) {
                 when (action) {
-                    "ACTION_SWITCH_PLAYER" -> switchPlayer()
-                    "ACTION_TOGGLE_SHUFFLE" -> currentPlayerData.value?.let { playerData ->
-                        playerData.queue?.let {
-                            dataSource.playerAction(
-                                playerData,
-                                PlayerAction.ToggleShuffle(current = it.shuffleEnabled)
-                            )
+                    "ACTION_SWITCH_PLAYER" -> {
+                        switchPlayer()
+                    }
+
+                    "ACTION_TOGGLE_SHUFFLE" -> {
+                        currentPlayerData.value?.let { playerData ->
+                            playerData.queue?.let {
+                                dataSource.playerAction(
+                                    playerData,
+                                    PlayerAction.ToggleShuffle(current = it.shuffleEnabled),
+                                )
+                            }
                         }
                     }
 
-                    "ACTION_TOGGLE_REPEAT" -> currentPlayerData.value?.let { playerData ->
-                        playerData.queue?.repeatMode?.let { repeatMode ->
-                            dataSource.playerAction(
-                                playerData,
-                                PlayerAction.ToggleRepeatMode(current = repeatMode)
-                            )
+                    "ACTION_TOGGLE_REPEAT" -> {
+                        currentPlayerData.value?.let { playerData ->
+                            playerData.queue?.repeatMode?.let { repeatMode ->
+                                dataSource.playerAction(
+                                    playerData,
+                                    PlayerAction.ToggleRepeatMode(current = repeatMode),
+                                )
+                            }
                         }
                     }
                 }
             }
         }
 
-    override fun onGetRoot(p0: String, p1: Int, p2: Bundle?): BrowserRoot? = null
+    override fun onGetRoot(
+        p0: String,
+        p1: Int,
+        p2: Bundle?,
+    ): BrowserRoot? = null
 
     override fun onLoadChildren(
         parentId: String,
-        result: Result<MutableList<MediaBrowserCompat.MediaItem>>
+        result: Result<MutableList<MediaBrowserCompat.MediaItem>>,
     ) = Unit
 
     private fun switchPlayer() {
         activePlayerIndex.update {
             if (players.value.size > 1) {
                 (it + 1) % players.value.size
-            } else 0
+            } else {
+                0
+            }
         }
     }
 
@@ -204,15 +229,21 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
     }
 
     private suspend fun updatePlaybackState(data: MediaNotificationData) {
-        val bitmap = data.imageUrl?.let {
-            ((imageLoader.execute(
-                ImageRequest.Builder(this@MainMediaPlaybackService)
-                    .data(it)
-                    .memoryCachePolicy(CachePolicy.ENABLED)
-                    .memoryCacheKey(it)
-                    .build()
-            ) as? SuccessResult)?.image as? BitmapImage)?.bitmap
-        }
+        val bitmap =
+            data.imageUrl?.let {
+                (
+                    (
+                        imageLoader.execute(
+                            ImageRequest
+                                .Builder(this@MainMediaPlaybackService)
+                                .data(it)
+                                .memoryCachePolicy(CachePolicy.ENABLED)
+                                .memoryCacheKey(it)
+                                .build(),
+                        ) as? SuccessResult
+                    )?.image as? BitmapImage
+                )?.bitmap
+            }
         mediaSessionHelper.updatePlaybackState(data, bitmap)
         val notification =
             mediaNotificationManager.createNotification(bitmap)
@@ -220,7 +251,7 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
             startForeground(
                 MediaNotificationManager.NOTIFICATION_ID,
                 notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
             )
         } else {
             startForeground(MediaNotificationManager.NOTIFICATION_ID, notification)

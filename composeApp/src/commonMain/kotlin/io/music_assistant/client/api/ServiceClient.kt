@@ -33,40 +33,49 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-class ServiceClient(private val settings: SettingsRepository) {
-
-    private val client = HttpClient(CIO) {
-        install(WebSockets) { contentConverter = KotlinxWebsocketSerializationConverter(myJson) }
-    }
+class ServiceClient(
+    private val settings: SettingsRepository,
+) {
+    private val client =
+        HttpClient(CIO) {
+            install(WebSockets) { contentConverter = KotlinxWebsocketSerializationConverter(myJson) }
+        }
     private var listeningJob: Job? = null
 
     private var _sessionState: MutableStateFlow<SessionState> =
         MutableStateFlow(SessionState.Disconnected.Initial)
-    val sessionState = _sessionState.onEach {
-        when (it) {
-            is SessionState.Connected -> {
-                settings.updateConnectionInfo(it.connectionInfo)
-            }
+    val sessionState =
+        _sessionState.onEach {
+            when (it) {
+                is SessionState.Connected -> {
+                    settings.updateConnectionInfo(it.connectionInfo)
+                }
 
-            is SessionState.Disconnected -> {
-                listeningJob?.cancel()
-                listeningJob = null
-                when (it) {
-                    SessionState.Disconnected.ByUser,
-                    SessionState.Disconnected.NoServerData -> Unit
+                is SessionState.Disconnected -> {
+                    listeningJob?.cancel()
+                    listeningJob = null
+                    when (it) {
+                        SessionState.Disconnected.ByUser,
+                        SessionState.Disconnected.NoServerData,
+                        -> {
+                            Unit
+                        }
 
-                    is SessionState.Disconnected.Error,
-                    SessionState.Disconnected.Initial -> {
-                        settings.connectionInfo.value?.let { connectionInfo ->
-                            connect(connectionInfo)
-                        } ?: _sessionState.update { SessionState.Disconnected.NoServerData }
+                        is SessionState.Disconnected.Error,
+                        SessionState.Disconnected.Initial,
+                        -> {
+                            settings.connectionInfo.value?.let { connectionInfo ->
+                                connect(connectionInfo)
+                            } ?: _sessionState.update { SessionState.Disconnected.NoServerData }
+                        }
                     }
                 }
-            }
 
-            is SessionState.Connecting -> Unit
+                is SessionState.Connecting -> {
+                    Unit
+                }
+            }
         }
-    }
 
     private val _eventsFlow = MutableSharedFlow<Event<out Any>>(extraBufferCapacity = 10)
     val events: Flow<Event<out Any>> = _eventsFlow.asSharedFlow()
@@ -78,7 +87,10 @@ class ServiceClient(private val settings: SettingsRepository) {
     fun connect(connection: ConnectionInfo) {
         when (_sessionState.value) {
             is SessionState.Connecting,
-            is SessionState.Connected -> return
+            is SessionState.Connected,
+            -> {
+                return
+            }
 
             is SessionState.Disconnected -> {
                 _sessionState.update { SessionState.Connecting(connection) }
@@ -113,8 +125,6 @@ class ServiceClient(private val settings: SettingsRepository) {
                 }
             }
         }
-
-
     }
 
     private suspend fun listenForMessages() {
@@ -139,7 +149,9 @@ class ServiceClient(private val settings: SettingsRepository) {
                         Event(message).event()?.let { _eventsFlow.emit(it) }
                     }
 
-                    else -> Logger.withTag("ServiceClient").i { "Unknown message: $message" }
+                    else -> {
+                        Logger.withTag("ServiceClient").i { "Unknown message: $message" }
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -155,35 +167,37 @@ class ServiceClient(private val settings: SettingsRepository) {
 
     suspend fun sendCommand(command: String): Answer? = sendRequest(Request(command = command))
 
-    suspend fun sendRequest(request: Request): Answer? = suspendCoroutine { continuation ->
-        pendingResponses[request.messageId] = { response ->
-            if (response.json.contains("error_code")) {
-                Logger.withTag("ServiceClient")
-                    .e { "Error response for command ${request.command}: $response" }
+    suspend fun sendRequest(request: Request): Answer? =
+        suspendCoroutine { continuation ->
+            pendingResponses[request.messageId] = { response ->
+                if (response.json.contains("error_code")) {
+                    Logger
+                        .withTag("ServiceClient")
+                        .e { "Error response for command ${request.command}: $response" }
+                }
+                continuation.resume(response)
             }
-            continuation.resume(response)
-        }
-        CoroutineScope(Dispatchers.IO).launch {
-            val state = _sessionState.value as? SessionState.Connected
-                ?: run {
+            CoroutineScope(Dispatchers.IO).launch {
+                val state =
+                    _sessionState.value as? SessionState.Connected
+                        ?: run {
+                            pendingResponses.remove(request.messageId)
+                            continuation.resume(null)
+                            return@launch
+                        }
+                try {
+                    state.session.sendSerialized(request)
+                } catch (e: Exception) {
                     pendingResponses.remove(request.messageId)
                     continuation.resume(null)
-                    return@launch
+                    disconnect(SessionState.Disconnected.Error(Exception("Error sending command: ${e.message}")))
                 }
-            try {
-                state.session.sendSerialized(request)
-            } catch (e: Exception) {
-                pendingResponses.remove(request.messageId)
-                continuation.resume(null)
-                disconnect(SessionState.Disconnected.Error(Exception("Error sending command: ${e.message}")))
             }
         }
-    }
 
     fun disconnectByUser() {
         disconnect(SessionState.Disconnected.ByUser)
     }
-
 
     private fun disconnect(newState: SessionState.Disconnected) {
         CoroutineScope(Dispatchers.IO).launch {

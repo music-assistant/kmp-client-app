@@ -1,14 +1,14 @@
 package io.music_assistant.client.data.model.server.events
 
-//@Serializable
-//data class MediaItemPlayedEvent(
+// @Serializable
+// data class MediaItemPlayedEvent(
 //    @SerialName("event") override val event: EventType,
 //    @SerialName("object_id") override val objectId: String,
 //    @SerialName("data") override val data: MediaItemData
-//): Event<MediaItemData>
+// ): Event<MediaItemData>
 
-//@Serializable
-//data class MediaItemData(
+// @Serializable
+// data class MediaItemData(
 //    @SerialName("uri") val uri: String,
 //    @SerialName("media_type") val mediaType: MediaType,
 //    @SerialName("name") val name: String,
@@ -20,4 +20,4 @@ package io.music_assistant.client.data.model.server.events
 //    @SerialName("seconds_played") val secondsPlayed: Int,
 //    @SerialName("fully_played") val fullyPlayed: Boolean,
 //    @SerialName("is_playing") val isPlaying: Boolean
-//)
+// )

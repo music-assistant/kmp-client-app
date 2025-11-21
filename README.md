@@ -32,7 +32,7 @@ Download and install debug APK from latest release on [releases page](https://gi
    - after turning it on, in overflow menu (three dots on top) choose `Developer settings`;
    - in dev settings, find and enable `Unknown sources`;
    - after this, customize your launcher to show Music Assistant.
-     
+
 2. Set up VPN.
    Since Music Assistant API isn't exposed, you will need to have active VPN connection on your phone, so the app can reach the server.
    Make sure you have Android Auto in exclusions in your VPN app, because Android Auto won't work with VPN connection.

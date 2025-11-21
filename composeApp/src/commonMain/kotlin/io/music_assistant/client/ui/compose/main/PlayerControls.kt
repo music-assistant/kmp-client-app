@@ -31,15 +31,16 @@ fun PlayerControls(
     modifier: Modifier = Modifier,
     playerData: PlayerData,
     enabled: Boolean,
-    playerAction: (PlayerData, PlayerAction) -> Unit
+    playerAction: (PlayerData, PlayerAction) -> Unit,
 ) {
     val player = playerData.player
     val queue = playerData.queue
     val buttonsEnabled = queue?.currentItem != null
     Row(
-        modifier = modifier
-            .padding(bottom = 8.dp)
-            .fillMaxWidth(),
+        modifier =
+            modifier
+                .padding(bottom = 8.dp)
+                .fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -54,10 +55,12 @@ fun PlayerControls(
 
         queue?.let {
             ActionIcon(
-                icon = if (it.shuffleEnabled)
-                    TablerIcons.Switch2
-                else
-                    TablerIcons.ArrowsRight,
+                icon =
+                    if (it.shuffleEnabled) {
+                        TablerIcons.Switch2
+                    } else {
+                        TablerIcons.ArrowsRight
+                    },
                 tint = MaterialTheme.colors.onPrimary,
                 size = 26.dp,
                 enabled = enabled && buttonsEnabled,
@@ -72,10 +75,11 @@ fun PlayerControls(
         ) { playerAction(playerData, PlayerAction.Previous) }
 
         ActionIcon(
-            icon = when (player.isPlaying) {
-                true -> FontAwesomeIcons.Solid.Pause
-                false -> FontAwesomeIcons.Solid.Play
-            },
+            icon =
+                when (player.isPlaying) {
+                    true -> FontAwesomeIcons.Solid.Pause
+                    false -> FontAwesomeIcons.Solid.Play
+                },
             tint = MaterialTheme.colors.onPrimary,
             size = 32.dp,
             enabled = enabled && buttonsEnabled,
@@ -91,17 +95,23 @@ fun PlayerControls(
         queue?.let {
             val repeatMode = it.repeatMode
             ActionIcon(
-                icon = when (repeatMode) {
-                    RepeatMode.ONE -> TablerIcons.RepeatOnce
-                    RepeatMode.OFF,
-                    RepeatMode.ALL,
-                    null -> TablerIcons.Repeat
-                },
-                tint = when (repeatMode) {
-                    RepeatMode.OFF, null -> MaterialTheme.colors.onPrimary.copy(alpha = 0.5f)
-                    RepeatMode.ALL,
-                    RepeatMode.ONE -> MaterialTheme.colors.onPrimary
-                },
+                icon =
+                    when (repeatMode) {
+                        RepeatMode.ONE -> TablerIcons.RepeatOnce
+
+                        RepeatMode.OFF,
+                        RepeatMode.ALL,
+                        null,
+                        -> TablerIcons.Repeat
+                    },
+                tint =
+                    when (repeatMode) {
+                        RepeatMode.OFF, null -> MaterialTheme.colors.onPrimary.copy(alpha = 0.5f)
+
+                        RepeatMode.ALL,
+                        RepeatMode.ONE,
+                        -> MaterialTheme.colors.onPrimary
+                    },
                 size = 26.dp,
                 enabled = enabled && buttonsEnabled && repeatMode != null,
             ) {

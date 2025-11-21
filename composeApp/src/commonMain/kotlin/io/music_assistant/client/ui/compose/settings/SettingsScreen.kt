@@ -49,13 +49,13 @@ fun SettingsScreen(navController: NavController) {
     val viewModel = koinViewModel<SettingsViewModel>()
     val connectionInfo by viewModel.connectionInfo.collectAsStateWithLifecycle(null)
     val sessionState by viewModel.connectionState.collectAsStateWithLifecycle(
-        SessionState.Disconnected.Initial
+        SessionState.Disconnected.Initial,
     )
     val serverInfo = viewModel.serverInfo.collectAsStateWithLifecycle(null)
     var shouldPopOnConnected by remember {
         mutableStateOf(
-            sessionState !is SessionState.Connected
-                    && sessionState != SessionState.Disconnected.Initial
+            sessionState !is SessionState.Connected &&
+                sessionState != SessionState.Disconnected.Initial,
         )
     }
     if (sessionState is SessionState.Connected && shouldPopOnConnected) {
@@ -71,17 +71,19 @@ fun SettingsScreen(navController: NavController) {
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { scaffoldPadding ->
         Column(
-            modifier = Modifier
-                .background(color = MaterialTheme.colors.background)
-                .fillMaxSize()
-                .padding(scaffoldPadding)
-                .consumeWindowInsets(scaffoldPadding)
-                .systemBarsPadding(),
+            modifier =
+                Modifier
+                    .background(color = MaterialTheme.colors.background)
+                    .fillMaxSize()
+                    .padding(scaffoldPadding)
+                    .consumeWindowInsets(scaffoldPadding)
+                    .systemBarsPadding(),
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(all = 16.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(all = 16.dp),
             ) {
                 if (sessionState is SessionState.Connected) {
                     ActionIcon(
@@ -99,7 +101,7 @@ fun SettingsScreen(navController: NavController) {
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
         ) {
             var ipAddress by remember { mutableStateOf("") }
             var port by remember { mutableStateOf("8095") }
@@ -117,27 +119,33 @@ fun SettingsScreen(navController: NavController) {
                 text = "Server settings",
                 color = MaterialTheme.colors.onBackground,
                 style = MaterialTheme.typography.h3,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
             )
             Text(
                 modifier = Modifier.padding(bottom = 24.dp),
-                text = when (val state = sessionState) {
-                    is SessionState.Connected -> {
-                        "Connected to ${state.connectionInfo.host}:${state.connectionInfo.port}" +
-                                (serverInfo.value?.let { "\nServer version ${it.serverVersion}, schema ${it.schemaVersion}" }
-                                    ?: "")
-                    }
-
-                    is SessionState.Connecting -> "Connecting to $ipAddress:$port."
-                    is SessionState.Disconnected -> {
-                        when (state) {
-                            SessionState.Disconnected.ByUser -> ""
-                            is SessionState.Disconnected.Error -> "Disconnected${state.reason?.message?.let { ": $it" } ?: ""}"
-                            SessionState.Disconnected.Initial -> ""
-                            SessionState.Disconnected.NoServerData -> "Please provide server address and port."
+                text =
+                    when (val state = sessionState) {
+                        is SessionState.Connected -> {
+                            "Connected to ${state.connectionInfo.host}:${state.connectionInfo.port}" +
+                                (
+                                    serverInfo.value?.let { "\nServer version ${it.serverVersion}, schema ${it.schemaVersion}" }
+                                        ?: ""
+                                )
                         }
-                    }
-                },
+
+                        is SessionState.Connecting -> {
+                            "Connecting to $ipAddress:$port."
+                        }
+
+                        is SessionState.Disconnected -> {
+                            when (state) {
+                                SessionState.Disconnected.ByUser -> ""
+                                is SessionState.Disconnected.Error -> "Disconnected${state.reason?.message?.let { ": $it" } ?: ""}"
+                                SessionState.Disconnected.Initial -> ""
+                                SessionState.Disconnected.NoServerData -> "Please provide server address and port."
+                            }
+                        }
+                    },
                 color = MaterialTheme.colors.onBackground,
                 style = MaterialTheme.typography.h5,
                 textAlign = TextAlign.Center,
@@ -153,9 +161,10 @@ fun SettingsScreen(navController: NavController) {
                     Text("IP address")
                 },
                 singleLine = true,
-                colors = TextFieldDefaults.textFieldColors(
-                    textColor = MaterialTheme.colors.onBackground,
-                )
+                colors =
+                    TextFieldDefaults.textFieldColors(
+                        textColor = MaterialTheme.colors.onBackground,
+                    ),
             )
             TextField(
                 modifier = Modifier.padding(bottom = 16.dp),
@@ -166,36 +175,41 @@ fun SettingsScreen(navController: NavController) {
                     Text("Port (8095 by default)")
                 },
                 singleLine = true,
-                colors = TextFieldDefaults.textFieldColors(
-                    textColor = MaterialTheme.colors.onBackground,
-                )
+                colors =
+                    TextFieldDefaults.textFieldColors(
+                        textColor = MaterialTheme.colors.onBackground,
+                    ),
             )
             Row(
                 modifier = Modifier.padding(bottom = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Checkbox(
                     modifier = Modifier.align(Alignment.CenterVertically),
                     enabled = inputFieldsEnabled,
                     checked = isTls,
-                    onCheckedChange = { isTls = it })
+                    onCheckedChange = { isTls = it },
+                )
                 Text(modifier = Modifier.align(Alignment.CenterVertically), text = "Use TLS")
             }
             Button(
                 enabled = ipAddress.isValidHost() && port.isIpPort() && sessionState !is SessionState.Connecting,
                 onClick = {
-                    if (sessionState is SessionState.Connected)
+                    if (sessionState is SessionState.Connected) {
                         viewModel.disconnect()
-                    else
+                    } else {
                         shouldPopOnConnected = true
+                    }
                     viewModel.attemptConnection(ipAddress, port, isTls)
-                }
+                },
             ) {
                 Text(
-                    text = if (sessionState is SessionState.Connected)
-                        "Disconnect"
-                    else
-                        "Connect"
+                    text =
+                        if (sessionState is SessionState.Connected) {
+                            "Disconnect"
+                        } else {
+                            "Connect"
+                        },
                 )
             }
         }

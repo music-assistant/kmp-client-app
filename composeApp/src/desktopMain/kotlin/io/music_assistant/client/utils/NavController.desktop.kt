@@ -7,11 +7,10 @@ import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.compose.DialogNavigator
 
 @Composable
-actual fun rememberNavControllerCustom(): NavHostController {
-    return remember {
+actual fun rememberNavControllerCustom(): NavHostController =
+    remember {
         NavHostController().apply {
             navigatorProvider.addNavigator(ComposeNavigator())
             navigatorProvider.addNavigator(DialogNavigator())
         }
     }
-}

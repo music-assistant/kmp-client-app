@@ -12,21 +12,26 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
-enum class ToastDuration(val millis: Long) {
+enum class ToastDuration(
+    val millis: Long,
+) {
     SHORT(2000L),
-    LONG(3500L)
+    LONG(3500L),
 }
 
 data class ToastData(
     val message: String,
-    val duration: ToastDuration = ToastDuration.SHORT
+    val duration: ToastDuration = ToastDuration.SHORT,
 )
 
 class ToastState {
     private val _currentToast = mutableStateOf<ToastData?>(null)
     val currentToast: State<ToastData?> = _currentToast
 
-    fun showToast(message: String, duration: ToastDuration = ToastDuration.SHORT) {
+    fun showToast(
+        message: String,
+        duration: ToastDuration = ToastDuration.SHORT,
+    ) {
         _currentToast.value = ToastData(message, duration)
     }
 
@@ -36,14 +41,12 @@ class ToastState {
 }
 
 @Composable
-fun rememberToastState(): ToastState {
-    return remember { ToastState() }
-}
+fun rememberToastState(): ToastState = remember { ToastState() }
 
 @Composable
 fun ToastHost(
     toastState: ToastState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val currentToast by toastState.currentToast
 
@@ -57,21 +60,23 @@ fun ToastHost(
 
     Box(
         modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.BottomCenter
+        contentAlignment = Alignment.BottomCenter,
     ) {
         AnimatedVisibility(
             visible = currentToast != null,
-            enter = slideInVertically(
-                initialOffsetY = { it }
-            ) + fadeIn(),
-            exit = slideOutVertically(
-                targetOffsetY = { it }
-            ) + fadeOut()
+            enter =
+                slideInVertically(
+                    initialOffsetY = { it },
+                ) + fadeIn(),
+            exit =
+                slideOutVertically(
+                    targetOffsetY = { it },
+                ) + fadeOut(),
         ) {
             currentToast?.let { toast ->
                 ToastItem(
                     message = toast.message,
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(16.dp),
                 )
             }
         }
@@ -81,15 +86,15 @@ fun ToastHost(
 @Composable
 private fun ToastItem(
     message: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = modifier
-            .background(
-                color = Color.Black.copy(alpha = 0.8f),
-                shape = RoundedCornerShape(8.dp)
-            )
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+        modifier =
+            modifier
+                .background(
+                    color = Color.Black.copy(alpha = 0.8f),
+                    shape = RoundedCornerShape(8.dp),
+                ).padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         Text(
             text = message,

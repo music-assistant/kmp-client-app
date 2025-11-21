@@ -12,12 +12,13 @@ import kotlinx.serialization.json.encodeToJsonElement
 
 fun simplePlayerRequest(
     playerId: String,
-    command: String
+    command: String,
 ) = Request(
     command = "players/cmd/$command",
-    args = buildJsonObject {
-        put("player_id", JsonPrimitive(playerId))
-    }
+    args =
+        buildJsonObject {
+            put("player_id", JsonPrimitive(playerId))
+        },
 )
 
 fun playerQueueItemsRequest(
@@ -26,11 +27,13 @@ fun playerQueueItemsRequest(
     offset: Int = 0,
 ) = Request(
     command = "player_queues/items",
-    args = buildJsonObject {
-        put("queue_id", JsonPrimitive(queueId))
-        put("limit", JsonPrimitive(limit))
-        put("offset", JsonPrimitive(offset))
-    })
+    args =
+        buildJsonObject {
+            put("queue_id", JsonPrimitive(queueId))
+            put("limit", JsonPrimitive(limit))
+            put("offset", JsonPrimitive(offset))
+        },
+)
 
 fun playerQueueMoveItemRequest(
     queueId: String,
@@ -38,29 +41,34 @@ fun playerQueueMoveItemRequest(
     positionShift: Int,
 ) = Request(
     command = "player_queues/move_item",
-    args = buildJsonObject {
-        put("queue_id", JsonPrimitive(queueId))
-        put("queue_item_id", JsonPrimitive(queueItemId))
-        put("pos_shift", JsonPrimitive(positionShift))
-    })
+    args =
+        buildJsonObject {
+            put("queue_id", JsonPrimitive(queueId))
+            put("queue_item_id", JsonPrimitive(queueItemId))
+            put("pos_shift", JsonPrimitive(positionShift))
+        },
+)
 
 fun playerQueueRemoveItemRequest(
     queueId: String,
     queueItemId: String,
 ) = Request(
     command = "player_queues/delete_item",
-    args = buildJsonObject {
-        put("queue_id", JsonPrimitive(queueId))
-        put("item_id_or_index", JsonPrimitive(queueItemId))
-    })
+    args =
+        buildJsonObject {
+            put("queue_id", JsonPrimitive(queueId))
+            put("item_id_or_index", JsonPrimitive(queueItemId))
+        },
+)
 
-fun playerQueueClearRequest(
-    queueId: String,
-) = Request(
-    command = "player_queues/clear",
-    args = buildJsonObject {
-        put("queue_id", JsonPrimitive(queueId))
-    })
+fun playerQueueClearRequest(queueId: String) =
+    Request(
+        command = "player_queues/clear",
+        args =
+            buildJsonObject {
+                put("queue_id", JsonPrimitive(queueId))
+            },
+    )
 
 fun playerQueueTransferRequest(
     sourceId: String,
@@ -68,51 +76,61 @@ fun playerQueueTransferRequest(
     autoplay: Boolean,
 ) = Request(
     command = "player_queues/transfer",
-    args = buildJsonObject {
-        put("source_queue_id", JsonPrimitive(sourceId))
-        put("target_queue_id", JsonPrimitive(targetId))
-        put("auto_play", JsonPrimitive(autoplay))
-    })
+    args =
+        buildJsonObject {
+            put("source_queue_id", JsonPrimitive(sourceId))
+            put("target_queue_id", JsonPrimitive(targetId))
+            put("auto_play", JsonPrimitive(autoplay))
+        },
+)
 
 fun playerQueuePlayIndexRequest(
     queueId: String,
     queueItemId: String,
 ) = Request(
     command = "player_queues/play_index",
-    args = buildJsonObject {
-        put("queue_id", JsonPrimitive(queueId))
-        put("index", JsonPrimitive(queueItemId))
-    })
+    args =
+        buildJsonObject {
+            put("queue_id", JsonPrimitive(queueId))
+            put("index", JsonPrimitive(queueItemId))
+        },
+)
 
 fun playerQueueSetRepeatModeRequest(
     queueId: String,
     repeatMode: RepeatMode,
 ) = Request(
     command = "player_queues/repeat",
-    args = buildJsonObject {
-        put("queue_id", JsonPrimitive(queueId))
-        put("repeat_mode", JsonPrimitive(repeatMode.name.lowercase()))
-    })
+    args =
+        buildJsonObject {
+            put("queue_id", JsonPrimitive(queueId))
+            put("repeat_mode", JsonPrimitive(repeatMode.name.lowercase()))
+        },
+)
 
 fun playerQueueSetShuffleRequest(
     queueId: String,
     enabled: Boolean,
 ) = Request(
     command = "player_queues/shuffle",
-    args = buildJsonObject {
-        put("queue_id", JsonPrimitive(queueId))
-        put("shuffle_enabled", JsonPrimitive(enabled))
-    })
+    args =
+        buildJsonObject {
+            put("queue_id", JsonPrimitive(queueId))
+            put("shuffle_enabled", JsonPrimitive(enabled))
+        },
+)
 
 fun playerQueueSeekRequest(
     queueId: String,
     position: Long,
 ) = Request(
     command = "player_queues/seek",
-    args = buildJsonObject {
-        put("queue_id", JsonPrimitive(queueId))
-        put("position", JsonPrimitive(position))
-    })
+    args =
+        buildJsonObject {
+            put("queue_id", JsonPrimitive(queueId))
+            put("position", JsonPrimitive(position))
+        },
+)
 
 fun getArtistsRequest(
     favorite: Boolean? = null,
@@ -123,14 +141,15 @@ fun getArtistsRequest(
     albumArtistsOnly: Boolean = false,
 ) = Request(
     command = "music/artists/library_items",
-    args = buildJsonObject {
-        favorite?.let { put("favorite", JsonPrimitive(it)) }
-        search?.let { put("search", JsonPrimitive(it)) }
-        put("limit", JsonPrimitive(limit))
-        put("offset", JsonPrimitive(offset))
-        orderBy?.let { put("order_by", JsonPrimitive(it)) }
-        put("album_artists_only", JsonPrimitive(albumArtistsOnly))
-    }
+    args =
+        buildJsonObject {
+            favorite?.let { put("favorite", JsonPrimitive(it)) }
+            search?.let { put("search", JsonPrimitive(it)) }
+            put("limit", JsonPrimitive(limit))
+            put("offset", JsonPrimitive(offset))
+            orderBy?.let { put("order_by", JsonPrimitive(it)) }
+            put("album_artists_only", JsonPrimitive(albumArtistsOnly))
+        },
 )
 
 fun getArtistAlbumsRequest(
@@ -139,7 +158,9 @@ fun getArtistAlbumsRequest(
     inLibraryOnly: Boolean = false,
 ) = getLibrarySubItemsRequest(
     "music/artists/artist_albums",
-    itemId, providerInstanceIdOrDomain, inLibraryOnly
+    itemId,
+    providerInstanceIdOrDomain,
+    inLibraryOnly,
 )
 
 fun getArtistTracksRequest(
@@ -148,7 +169,9 @@ fun getArtistTracksRequest(
     inLibraryOnly: Boolean = false,
 ) = getLibrarySubItemsRequest(
     "music/artists/artist_tracks",
-    itemId, providerInstanceIdOrDomain, inLibraryOnly
+    itemId,
+    providerInstanceIdOrDomain,
+    inLibraryOnly,
 )
 
 fun getAlbumTracksRequest(
@@ -157,9 +180,10 @@ fun getAlbumTracksRequest(
     inLibraryOnly: Boolean = false,
 ) = getLibrarySubItemsRequest(
     "music/albums/album_tracks",
-    itemId, providerInstanceIdOrDomain, inLibraryOnly
+    itemId,
+    providerInstanceIdOrDomain,
+    inLibraryOnly,
 )
-
 
 fun getPlaylistsRequest(
     favorite: Boolean? = null,
@@ -169,13 +193,14 @@ fun getPlaylistsRequest(
     orderBy: String? = null,
 ) = Request(
     command = "music/playlists/library_items",
-    args = buildJsonObject {
-        favorite?.let { put("favorite", JsonPrimitive(it)) }
-        search?.let { put("search", JsonPrimitive(it)) }
-        put("limit", JsonPrimitive(limit))
-        put("offset", JsonPrimitive(offset))
-        orderBy?.let { put("order_by", JsonPrimitive(it)) }
-    }
+    args =
+        buildJsonObject {
+            favorite?.let { put("favorite", JsonPrimitive(it)) }
+            search?.let { put("search", JsonPrimitive(it)) }
+            put("limit", JsonPrimitive(limit))
+            put("offset", JsonPrimitive(offset))
+            orderBy?.let { put("order_by", JsonPrimitive(it)) }
+        },
 )
 
 fun getPlaylistTracksRequest(
@@ -184,40 +209,43 @@ fun getPlaylistTracksRequest(
     forceRefresh: Boolean? = null,
 ) = Request(
     command = "music/playlists/playlist_tracks",
-    args = buildJsonObject {
-        put("item_id", JsonPrimitive(itemId))
-        put("provider_instance_id_or_domain", JsonPrimitive(providerInstanceIdOrDomain))
-        forceRefresh?.let { put("force_refresh", JsonPrimitive(it)) }
-
-    }
+    args =
+        buildJsonObject {
+            put("item_id", JsonPrimitive(itemId))
+            put("provider_instance_id_or_domain", JsonPrimitive(providerInstanceIdOrDomain))
+            forceRefresh?.let { put("force_refresh", JsonPrimitive(it)) }
+        },
 )
 
-fun addMediaItemToLibraryRequest(
-    itemUri: String,
-) = Request(
-    command = "music/library/add_item",
-    args = buildJsonObject {
-        put("item", JsonPrimitive(itemUri))
-    }
-)
-fun favouriteMediaItemRequest(
-    itemUri: String,
-) = Request(
-    command = "music/favorites/add_item",
-    args = buildJsonObject {
-        put("item", JsonPrimitive(itemUri))
-    }
-)
+fun addMediaItemToLibraryRequest(itemUri: String) =
+    Request(
+        command = "music/library/add_item",
+        args =
+            buildJsonObject {
+                put("item", JsonPrimitive(itemUri))
+            },
+    )
+
+fun favouriteMediaItemRequest(itemUri: String) =
+    Request(
+        command = "music/favorites/add_item",
+        args =
+            buildJsonObject {
+                put("item", JsonPrimitive(itemUri))
+            },
+    )
 
 fun unfavouriteMediaItemRequest(
     itemId: String,
     mediaType: MediaType,
 ) = Request(
     command = "music/favorites/remove_item",
-    args = buildJsonObject {
-        put("library_item_id", JsonPrimitive(itemId))
-        put("media_type", JsonPrimitive(mediaType.name.lowercase()))
-    })
+    args =
+        buildJsonObject {
+            put("library_item_id", JsonPrimitive(itemId))
+            put("media_type", JsonPrimitive(mediaType.name.lowercase()))
+        },
+)
 
 fun playMediaRequest(
     media: List<String>,
@@ -226,58 +254,77 @@ fun playMediaRequest(
     radioMode: Boolean? = null,
 ) = Request(
     command = "player_queues/play_media",
-    args = buildJsonObject {
-        put("media", JsonArray(media.map { JsonPrimitive(it) }))
-        option?.let { put("option", JsonPrimitive(it.name.lowercase())) }
-        radioMode?.let { put("radio_mode", JsonPrimitive(it)) }
-        put("queue_id", JsonPrimitive(queueOrPlayerId))
-    }
+    args =
+        buildJsonObject {
+            put("media", JsonArray(media.map { JsonPrimitive(it) }))
+            option?.let { put("option", JsonPrimitive(it.name.lowercase())) }
+            radioMode?.let { put("radio_mode", JsonPrimitive(it)) }
+            put("queue_id", JsonPrimitive(queueOrPlayerId))
+        },
 )
 
-fun registerBuiltInPlayerRequest(playerName: String, playerId: String) = Request(
+fun registerBuiltInPlayerRequest(
+    playerName: String,
+    playerId: String,
+) = Request(
     command = "builtin_player/register",
-    args = buildJsonObject {
-        put("player_name", JsonPrimitive(playerName))
-        put("player_id", JsonPrimitive(playerId))
-
-    }
+    args =
+        buildJsonObject {
+            put("player_name", JsonPrimitive(playerName))
+            put("player_id", JsonPrimitive(playerId))
+        },
 )
 
-fun updateBuiltInPlayerStateRequest(playerId: String, state: BuiltinPlayerState) = Request(
+fun updateBuiltInPlayerStateRequest(
+    playerId: String,
+    state: BuiltinPlayerState,
+) = Request(
     command = "builtin_player/update_state",
-    args = buildJsonObject {
-        put("player_id", JsonPrimitive(playerId))
-        put("state", myJson.encodeToJsonElement(state))
-
-    }
+    args =
+        buildJsonObject {
+            put("player_id", JsonPrimitive(playerId))
+            put("state", myJson.encodeToJsonElement(state))
+        },
 )
 
-fun searchRequest(query: String, mediaTypes: List<MediaType>, limit: Int = 20, libraryOnly: Boolean) = Request(
+fun searchRequest(
+    query: String,
+    mediaTypes: List<MediaType>,
+    limit: Int = 20,
+    libraryOnly: Boolean,
+) = Request(
     command = "music/search",
-    args = buildJsonObject {
-        put("search_query", JsonPrimitive(query.replace("-", " ")))
-        put(
-            "media_types",
-            myJson.decodeFromString<JsonArray>(myJson.encodeToString(mediaTypes))
-        )
-        put("limit", JsonPrimitive(limit))
-        put("library_only", JsonPrimitive(libraryOnly))
-    }
+    args =
+        buildJsonObject {
+            put("search_query", JsonPrimitive(query.replace("-", " ")))
+            put(
+                "media_types",
+                myJson.decodeFromString<JsonArray>(myJson.encodeToString(mediaTypes)),
+            )
+            put("limit", JsonPrimitive(limit))
+            put("library_only", JsonPrimitive(libraryOnly))
+        },
 )
 
-fun createPlaylistRequest(name: String) = Request(
-    command = "music/playlists/create_playlist",
-    args = buildJsonObject {
-        put("name", JsonPrimitive(name.trim()))
-    }
-)
+fun createPlaylistRequest(name: String) =
+    Request(
+        command = "music/playlists/create_playlist",
+        args =
+            buildJsonObject {
+                put("name", JsonPrimitive(name.trim()))
+            },
+    )
 
-fun addTracksToPlaylistRequest(playlistId: String, trackUris: List<String>) = Request(
+fun addTracksToPlaylistRequest(
+    playlistId: String,
+    trackUris: List<String>,
+) = Request(
     command = "music/playlists/add_playlist_tracks",
-    args = buildJsonObject {
-        put("db_playlist_id", JsonPrimitive(playlistId))
-        put("uris", myJson.decodeFromString<JsonArray>(myJson.encodeToString(trackUris)))
-    }
+    args =
+        buildJsonObject {
+            put("db_playlist_id", JsonPrimitive(playlistId))
+            put("uris", myJson.decodeFromString<JsonArray>(myJson.encodeToString(trackUris)))
+        },
 )
 
 private fun getLibrarySubItemsRequest(
@@ -287,10 +334,10 @@ private fun getLibrarySubItemsRequest(
     inLibraryOnly: Boolean = false,
 ) = Request(
     command = command,
-    args = buildJsonObject {
-        put("item_id", JsonPrimitive(itemId))
-        put("provider_instance_id_or_domain", JsonPrimitive(providerInstanceIdOrDomain))
-        put("in_library_only", JsonPrimitive(inLibraryOnly))
-    }
+    args =
+        buildJsonObject {
+            put("item_id", JsonPrimitive(itemId))
+            put("provider_instance_id_or_domain", JsonPrimitive(providerInstanceIdOrDomain))
+            put("in_library_only", JsonPrimitive(inLibraryOnly))
+        },
 )
-

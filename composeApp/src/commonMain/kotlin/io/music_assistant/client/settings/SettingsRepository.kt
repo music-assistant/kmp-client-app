@@ -10,14 +10,14 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 class SettingsRepository(
-    private val settings: Settings
+    private val settings: Settings,
 ) {
-
-    private val _theme = MutableStateFlow(
-        ThemeSetting.valueOf(
-            settings.getString("theme", ThemeSetting.FollowSystem.name)
+    private val _theme =
+        MutableStateFlow(
+            ThemeSetting.valueOf(
+                settings.getString("theme", ThemeSetting.FollowSystem.name),
+            ),
         )
-    )
     val theme = _theme.asStateFlow()
 
     fun switchTheme(theme: ThemeSetting) {
@@ -25,13 +25,14 @@ class SettingsRepository(
         _theme.update { theme }
     }
 
-    private val _connectionInfo = MutableStateFlow(
-        settings.getStringOrNull("host")?.takeIf { it.isNotBlank() }?.let { host ->
-            settings.getIntOrNull("port")?.takeIf { it > 0 }?.let { port ->
-                ConnectionInfo(host, port, settings.getBoolean("isTls", false))
-            }
-        }
-    )
+    private val _connectionInfo =
+        MutableStateFlow(
+            settings.getStringOrNull("host")?.takeIf { it.isNotBlank() }?.let { host ->
+                settings.getIntOrNull("port")?.takeIf { it > 0 }?.let { port ->
+                    ConnectionInfo(host, port, settings.getBoolean("isTls", false))
+                }
+            },
+        )
     val connectionInfo = _connectionInfo.asStateFlow()
 
     fun updateConnectionInfo(connectionInfo: ConnectionInfo?) {
@@ -43,9 +44,10 @@ class SettingsRepository(
         }
     }
 
-    private val _playersSorting = MutableStateFlow(
-        settings.getStringOrNull("players_sort")?.split(",")
-    )
+    private val _playersSorting =
+        MutableStateFlow(
+            settings.getStringOrNull("players_sort")?.split(","),
+        )
     val playersSorting = _playersSorting.asStateFlow()
 
     fun updatePlayersSorting(newValue: List<String>) {

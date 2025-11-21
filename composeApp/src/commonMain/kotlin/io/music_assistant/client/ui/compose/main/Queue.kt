@@ -72,7 +72,7 @@ fun QueueSection(
     chosenItemsIds: Set<String>?,
     queueAction: (QueueAction) -> Unit,
     onItemChosenChanged: (String) -> Unit,
-    onChosenItemsClear: () -> Unit
+    onChosenItemsClear: () -> Unit,
 ) {
     Column(
         modifier = modifier.fillMaxSize(),
@@ -94,14 +94,14 @@ fun QueueSection(
         } ?: run {
             Box(
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "Nothing here...",
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colors.onSurface,
                     style = MaterialTheme.typography.body2,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
             }
         }
@@ -121,25 +121,27 @@ private fun QueueUI(
     enabled: Boolean,
     queueAction: (QueueAction) -> Unit,
     onItemChosenChanged: (String) -> Unit,
-    onChosenItemsClear: () -> Unit
+    onChosenItemsClear: () -> Unit,
 ) {
-
     var internalItems by remember(items) { mutableStateOf(items) }
     var dragEndIndex by remember { mutableStateOf<Int?>(null) }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
-    val currentIndex = internalItems.indexOfFirst {
-        it.id == queue?.currentItem?.id
-    }
-    val reorderableLazyListState = rememberReorderableLazyListState(listState) { from, to ->
-        if (to.index <= currentIndex) {
-            return@rememberReorderableLazyListState
+    val currentIndex =
+        internalItems.indexOfFirst {
+            it.id == queue?.currentItem?.id
         }
-        internalItems = internalItems.toMutableList().apply {
-            add(to.index, removeAt(from.index))
+    val reorderableLazyListState =
+        rememberReorderableLazyListState(listState) { from, to ->
+            if (to.index <= currentIndex) {
+                return@rememberReorderableLazyListState
+            }
+            internalItems =
+                internalItems.toMutableList().apply {
+                    add(to.index, removeAt(from.index))
+                }
+            dragEndIndex = to.index
         }
-        dragEndIndex = to.index
-    }
     val queueInfo = "${currentIndex + 1}/${internalItems.size}"
     val isInChooseMode = (chosenItemsIds?.size ?: 0) > 0
     LaunchedEffect(queue?.currentItem?.id) {
@@ -149,11 +151,12 @@ private fun QueueUI(
         }
     }
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(44.dp)
-            .padding(horizontal = 12.dp)
-            .alpha(if (enabled) 1f else 0.5f),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .padding(horizontal = 12.dp)
+                .alpha(if (enabled) 1f else 0.5f),
         horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -164,7 +167,7 @@ private fun QueueUI(
                 chosenItems = chosenItems,
                 enabled = enabled,
                 queueAction = { queueAction(it) },
-                onChosenItemsClear = onChosenItemsClear
+                onChosenItemsClear = onChosenItemsClear,
             )
         } else {
             Text(
@@ -173,67 +176,74 @@ private fun QueueUI(
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colors.onSurface,
                 style = MaterialTheme.typography.body2,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
             )
             queue?.let {
                 Icon(
-                    modifier = Modifier
-                        .padding(start = 14.dp)
-                        .clickable(enabled = enabled) { queueAction(QueueAction.ClearQueue(it.id)) }
-                        .size(24.dp)
-                        .padding(all = 2.dp)
-                        .align(alignment = Alignment.CenterVertically),
+                    modifier =
+                        Modifier
+                            .padding(start = 14.dp)
+                            .clickable(enabled = enabled) { queueAction(QueueAction.ClearQueue(it.id)) }
+                            .size(24.dp)
+                            .padding(all = 2.dp)
+                            .align(alignment = Alignment.CenterVertically),
                     imageVector = TablerIcons.ClipboardX,
                     contentDescription = null,
                     tint = MaterialTheme.colors.primary,
                 )
                 OverflowMenu(
-                    modifier = Modifier
-                        .padding(start = 14.dp)
-                        .size(24.dp)
-                        .padding(all = 2.dp)
-                        .align(alignment = Alignment.CenterVertically),
+                    modifier =
+                        Modifier
+                            .padding(start = 14.dp)
+                            .size(24.dp)
+                            .padding(all = 2.dp)
+                            .align(alignment = Alignment.CenterVertically),
                     icon = TablerIcons.ArrowBigRight,
                     iconTint = MaterialTheme.colors.primary,
-                    options = players.filter { p -> p.player.id != queue.id }.map { playerData ->
-                        OverflowMenuOption(
-                            title = playerData.player.name,
-                            onClick = {
-                                queueAction(
-                                    QueueAction.Transfer(
-                                        queue.id,
-                                        playerData.player.id,
-                                        isPlaying
-                                    )
+                    options =
+                        players
+                            .filter { p -> p.player.id != queue.id }
+                            .map { playerData ->
+                                OverflowMenuOption(
+                                    title = playerData.player.name,
+                                    onClick = {
+                                        queueAction(
+                                            QueueAction.Transfer(
+                                                queue.id,
+                                                playerData.player.id,
+                                                isPlaying,
+                                            ),
+                                        )
+                                    },
                                 )
-                            }
-                        )
-                    }.ifEmpty {
-                        listOf(
-                            OverflowMenuOption(
-                                title = "No other players available",
-                                onClick = { /* No-op */ }
-                            )
-                        )
-                    }
+                            }.ifEmpty {
+                                listOf(
+                                    OverflowMenuOption(
+                                        title = "No other players available",
+                                        onClick = { /* No-op */ },
+                                    ),
+                                )
+                            },
                 )
             }
         }
     }
     LazyColumn(
-        modifier = Modifier.fillMaxSize()
-            .clip(shape = RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colors.onSecondary)
-            .nestedScroll(nestedScrollConnection)
-            .draggable(
-                orientation = Orientation.Vertical,
-                state = rememberDraggableState { delta ->
-                    coroutineScope.launch {
-                        listState.scrollBy(-delta)
-                    }
-                },
-            )
-            .alpha(if (enabled) 1f else 0.5f),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .clip(shape = RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colors.onSecondary)
+                .nestedScroll(nestedScrollConnection)
+                .draggable(
+                    orientation = Orientation.Vertical,
+                    state =
+                        rememberDraggableState { delta ->
+                            coroutineScope.launch {
+                                listState.scrollBy(-delta)
+                            }
+                        },
+                ).alpha(if (enabled) 1f else 0.5f),
         state = listState,
     ) {
         itemsIndexed(items = internalItems, key = { _, item -> item.id }) { index, item ->
@@ -246,68 +256,72 @@ private fun QueueUI(
                 enabled = enabled,
             ) {
                 Row(
-                    modifier = Modifier
-                        .padding(vertical = 1.dp)
-                        .alpha(if (isPlayed && !isChosen) 0.5f else 1f)
-                        .fillMaxWidth()
-                        .clip(shape = RoundedCornerShape(16.dp))
-                        .background(
-                            when {
-                                isChosen -> MaterialTheme.colors.primary
-                                else -> Color.Transparent
-                            }
-                        )
-                        .conditional(
-                            condition = isPlayed,
-                            ifTrue = {
-                                clickable(!isInChooseMode) {
-                                    queue?.id?.let { queueId ->
-                                        queueAction(
-                                            QueueAction.PlayQueueItem(
-                                                queueId, item.id
+                    modifier =
+                        Modifier
+                            .padding(vertical = 1.dp)
+                            .alpha(if (isPlayed && !isChosen) 0.5f else 1f)
+                            .fillMaxWidth()
+                            .clip(shape = RoundedCornerShape(16.dp))
+                            .background(
+                                when {
+                                    isChosen -> MaterialTheme.colors.primary
+                                    else -> Color.Transparent
+                                },
+                            ).conditional(
+                                condition = isPlayed,
+                                ifTrue = {
+                                    clickable(!isInChooseMode) {
+                                        queue?.id?.let { queueId ->
+                                            queueAction(
+                                                QueueAction.PlayQueueItem(
+                                                    queueId,
+                                                    item.id,
+                                                ),
                                             )
-                                        )
-                                    }
-                                }
-                            },
-                            ifFalse = {
-                                combinedClickable(
-                                    enabled = enabled,
-                                    onClick = {
-                                        if (isInChooseMode) {
-                                            onItemChosenChanged(item.id)
-                                        } else if (!isCurrent) {
-                                            queue?.id?.let { queueId ->
-                                                queueAction(
-                                                    QueueAction.PlayQueueItem(
-                                                        queueId, item.id
-                                                    )
-                                                )
-                                            }
                                         }
-                                    },
-                                    onLongClick = {
-                                        onItemChosenChanged(item.id)
-                                    },
-                                )
-                            }
-                        )
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                                    }
+                                },
+                                ifFalse = {
+                                    combinedClickable(
+                                        enabled = enabled,
+                                        onClick = {
+                                            if (isInChooseMode) {
+                                                onItemChosenChanged(item.id)
+                                            } else if (!isCurrent) {
+                                                queue?.id?.let { queueId ->
+                                                    queueAction(
+                                                        QueueAction.PlayQueueItem(
+                                                            queueId,
+                                                            item.id,
+                                                        ),
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        onLongClick = {
+                                            onItemChosenChanged(item.id)
+                                        },
+                                    )
+                                },
+                            ).padding(horizontal = 12.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start
+                    horizontalArrangement = Arrangement.Start,
                 ) {
-                    val placeholder = MusicNotePainter(
-                        backgroundColor = MaterialTheme.colors.background,
-                        iconColor = when {
-                            isChosen -> MaterialTheme.colors.onPrimary
-                            else -> MaterialTheme.colors.secondary
-                        }
-                    )
+                    val placeholder =
+                        MusicNotePainter(
+                            backgroundColor = MaterialTheme.colors.background,
+                            iconColor =
+                                when {
+                                    isChosen -> MaterialTheme.colors.onPrimary
+                                    else -> MaterialTheme.colors.secondary
+                                },
+                        )
                     AsyncImage(
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(size = 4.dp)),
+                        modifier =
+                            Modifier
+                                .padding(end = 8.dp)
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(size = 4.dp)),
                         placeholder = placeholder,
                         fallback = placeholder,
                         model = item.track.imageInfo?.url(serverUrl),
@@ -319,27 +333,30 @@ private fun QueueUI(
                             modifier = Modifier.padding(end = 8.dp).size(12.dp),
                             imageVector = FontAwesomeIcons.Solid.DotCircle,
                             contentDescription = null,
-                            tint = when {
-                                isChosen -> MaterialTheme.colors.onPrimary
-                                else -> MaterialTheme.colors.secondary
-                            },
+                            tint =
+                                when {
+                                    isChosen -> MaterialTheme.colors.onPrimary
+                                    else -> MaterialTheme.colors.secondary
+                                },
                         )
                     }
                     Column(
-                        modifier = Modifier.weight(1f).wrapContentHeight()
+                        modifier = Modifier.weight(1f).wrapContentHeight(),
                     ) {
                         Text(
                             modifier = Modifier.fillMaxWidth().alpha(0.7f),
-                            text = item.track.artists
-                                ?.takeIf { it.isNotEmpty() }
-                                ?.joinToString(separator = ", ") { it.name }
-                                ?: "Unknown",
+                            text =
+                                item.track.artists
+                                    ?.takeIf { it.isNotEmpty() }
+                                    ?.joinToString(separator = ", ") { it.name }
+                                    ?: "Unknown",
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            color = when {
-                                isChosen -> MaterialTheme.colors.onPrimary
-                                else -> MaterialTheme.colors.secondary
-                            },
+                            color =
+                                when {
+                                    isChosen -> MaterialTheme.colors.onPrimary
+                                    else -> MaterialTheme.colors.secondary
+                                },
                             style = MaterialTheme.typography.body2,
                         )
                         Text(
@@ -347,37 +364,39 @@ private fun QueueUI(
                             text = item.track.name,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            color = when {
-                                isChosen -> MaterialTheme.colors.onPrimary
-                                else -> MaterialTheme.colors.secondary
-                            },
+                            color =
+                                when {
+                                    isChosen -> MaterialTheme.colors.onPrimary
+                                    else -> MaterialTheme.colors.secondary
+                                },
                             style = MaterialTheme.typography.body1,
-                            fontWeight = when {
-                                isCurrent -> FontWeight.Bold
-                                else -> FontWeight.Normal
-                            }
+                            fontWeight =
+                                when {
+                                    isCurrent -> FontWeight.Bold
+                                    else -> FontWeight.Normal
+                                },
                         )
                     }
                     if (chosenItemsIds?.isNotEmpty() == false && !isCurrent && !isPlayed) {
                         Icon(
-                            modifier = Modifier
-                                .draggableHandle(
-                                    onDragStopped = {
-                                        dragEndIndex?.let { to ->
-                                            queue?.id?.let { queueId ->
-                                                queueAction(
-                                                    QueueAction.MoveItem(
-                                                        queueId,
-                                                        item.id,
-                                                        from = index,
-                                                        to = to
+                            modifier =
+                                Modifier
+                                    .draggableHandle(
+                                        onDragStopped = {
+                                            dragEndIndex?.let { to ->
+                                                queue?.id?.let { queueId ->
+                                                    queueAction(
+                                                        QueueAction.MoveItem(
+                                                            queueId,
+                                                            item.id,
+                                                            from = index,
+                                                            to = to,
+                                                        ),
                                                     )
-                                                )
+                                                }
                                             }
-                                        }
-                                    }
-                                )
-                                .size(16.dp),
+                                        },
+                                    ).size(16.dp),
                             imageVector = TablerIcons.GripVertical,
                             contentDescription = null,
                             tint = MaterialTheme.colors.secondary,

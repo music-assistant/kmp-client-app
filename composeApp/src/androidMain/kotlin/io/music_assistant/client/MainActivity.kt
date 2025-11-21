@@ -15,17 +15,17 @@ import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 
 class MainActivity : ComponentActivity() {
-
     private val dataSource: MainDataSource by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        dataSource.isAnythingPlaying.asLiveData()
+        dataSource.isAnythingPlaying
+            .asLiveData()
             .observe(this) {
                 if (it) {
-                        val serviceIntent = Intent(this, MainMediaPlaybackService::class.java)
-                        serviceIntent.action = "ACTION_PLAY"
+                    val serviceIntent = Intent(this, MainMediaPlaybackService::class.java)
+                    serviceIntent.action = "ACTION_PLAY"
                     lifecycleScope.launch {
                         // This allows app to start before showing notification -
                         // otherwise if something is playing on app start, service doesn't start...

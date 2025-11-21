@@ -107,7 +107,10 @@ import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun LibraryScreen(navController: NavController, args: AppRoutes.LibraryArgs) {
+fun LibraryScreen(
+    navController: NavController,
+    args: AppRoutes.LibraryArgs,
+) {
     val toastState = rememberToastState()
     val viewModel = koinViewModel<LibraryViewModel>()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
@@ -149,7 +152,7 @@ fun LibraryScreen(navController: NavController, args: AppRoutes.LibraryArgs) {
             navController.popBackStack()
         },
         onCreatePlaylist = viewModel::createPlaylist,
-        onAddToPlaylist = viewModel::addTrackToPlaylist
+        onAddToPlaylist = viewModel::addTrackToPlaylist,
     )
 }
 
@@ -178,27 +181,28 @@ private fun Library(
     onAddToPlaylist: (AppMediaItem.Track, AppMediaItem.Playlist) -> Unit,
 ) {
     val isFabVisible = rememberSaveable { mutableStateOf(true) }
-    val nestedScrollConnection = remember(selectedList?.parentItems) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(
-                available: Offset,
-                source: NestedScrollSource
-            ): Offset {
-                if (available.y < -1 && selectedList?.parentItems?.lastOrNull()?.mediaType == MediaType.ARTIST) {
-                    isFabVisible.value = false
-                } else if (available.y > 1) {
-                    isFabVisible.value = true
+    val nestedScrollConnection =
+        remember(selectedList?.parentItems) {
+            object : NestedScrollConnection {
+                override fun onPreScroll(
+                    available: Offset,
+                    source: NestedScrollSource,
+                ): Offset {
+                    if (available.y < -1 && selectedList?.parentItems?.lastOrNull()?.mediaType == MediaType.ARTIST) {
+                        isFabVisible.value = false
+                    } else if (available.y > 1) {
+                        isFabVisible.value = true
+                    }
+                    return Offset.Zero
                 }
-                return Offset.Zero
             }
         }
-    }
     Scaffold(
         backgroundColor = MaterialTheme.colors.background,
         floatingActionButton = {
             if (
-                selectedList?.listState is LibraryViewModel.ListState.Data
-                && selectedList.parentItems.lastOrNull()?.mediaType == MediaType.ARTIST
+                selectedList?.listState is LibraryViewModel.ListState.Data &&
+                selectedList.parentItems.lastOrNull()?.mediaType == MediaType.ARTIST
             ) {
                 VerticalHidingContainer(
                     isVisible = isFabVisible.value,
@@ -209,9 +213,9 @@ private fun Library(
                         text = {
                             Text(
                                 text = if (state.showAlbums) "Tracks" else "Albums",
-                                style = MaterialTheme.typography.button
+                                style = MaterialTheme.typography.button,
                             )
-                        }
+                        },
                     )
                 }
             }
@@ -220,18 +224,20 @@ private fun Library(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { scaffoldPadding ->
         Column(
-            modifier = modifier
-                .background(color = MaterialTheme.colors.background)
-                .fillMaxSize()
-                .padding(scaffoldPadding)
-                .consumeWindowInsets(scaffoldPadding)
-                .systemBarsPadding()
+            modifier =
+                modifier
+                    .background(color = MaterialTheme.colors.background)
+                    .fillMaxSize()
+                    .padding(scaffoldPadding)
+                    .consumeWindowInsets(scaffoldPadding)
+                    .systemBarsPadding(),
         ) {
             Row(
-                modifier = Modifier
-                    .height(56.dp)
-                    .fillMaxWidth()
-                    .padding(all = 16.dp),
+                modifier =
+                    Modifier
+                        .height(56.dp)
+                        .fillMaxWidth()
+                        .padding(all = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 ActionIcon(
@@ -241,7 +247,7 @@ private fun Library(
                     Text(
                         modifier = Modifier.padding(start = 16.dp),
                         text = "Media",
-                        style = MaterialTheme.typography.h6
+                        style = MaterialTheme.typography.h6,
                     )
                 } else {
                     val artists =
@@ -250,39 +256,45 @@ private fun Library(
                     val tracks = state.checkedItems.filterIsInstance<AppMediaItem.Track>().size
                     val playlists =
                         state.checkedItems.filterIsInstance<AppMediaItem.Playlist>().size
-                    val chosenItemsDescription = listOf(
-                        Pair("artist", artists),
-                        Pair("album", albums),
-                        Pair("track", tracks),
-                        Pair("playlist", playlists),
-                    ).mapNotNull { pair ->
-                        pair.takeIf { pair.second > 0 }
-                            ?.let { "${it.second} ${it.first}${if (it.second > 1) "s" else ""}" }
-                    }.joinToString(separator = ", ").capitalize(Locale.current)
+                    val chosenItemsDescription =
+                        listOf(
+                            Pair("artist", artists),
+                            Pair("album", albums),
+                            Pair("track", tracks),
+                            Pair("playlist", playlists),
+                        ).mapNotNull { pair ->
+                            pair
+                                .takeIf { pair.second > 0 }
+                                ?.let { "${it.second} ${it.first}${if (it.second > 1) "s" else ""}" }
+                        }.joinToString(separator = ", ")
+                            .capitalize(Locale.current)
                     ActionIcon(
                         icon = TablerIcons.CircleDashed,
                         size = 24.dp,
                     ) { onCheckedItemsClear() }
                     Text(
-                        modifier = Modifier.padding(start = 8.dp).weight(1f)
-                            .basicMarquee(iterations = 100),
+                        modifier =
+                            Modifier
+                                .padding(start = 8.dp)
+                                .weight(1f)
+                                .basicMarquee(iterations = 100),
                         text = "$chosenItemsDescription, player: ${args.name}",
                     )
                     ActionIcon(
                         icon = TablerIcons.PlayerPlay,
-                        size = 24.dp
+                        size = 24.dp,
                     ) { onPlaySelectedItems(QueueOption.PLAY) }
                     ActionIcon(
                         icon = TablerIcons.PlayerTrackNext,
-                        size = 24.dp
+                        size = 24.dp,
                     ) { onPlaySelectedItems(QueueOption.NEXT) }
                     ActionIcon(
                         icon = TablerIcons.Plus,
-                        size = 24.dp
+                        size = 24.dp,
                     ) { onPlaySelectedItems(QueueOption.ADD) }
                     ActionIcon(
                         icon = TablerIcons.Replace,
-                        size = 24.dp
+                        size = 24.dp,
                     ) { onPlaySelectedItems(QueueOption.REPLACE) }
                 }
             }
@@ -295,7 +307,7 @@ private fun Library(
                         },
                         text = {
                             Text(text = list.tab.name)
-                        }
+                        },
                     )
                 }
             }
@@ -317,17 +329,20 @@ private fun Library(
                         if (list.parentItems.isEmpty()) {
                             NewPlaylistArea(
                                 modifier = Modifier.padding(4.dp),
-                                existingNames = (list.listState as? LibraryViewModel.ListState.Data)
-                                    ?.items
-                                    ?.map { it.name.trim() }
-                                    ?.toSet()
-                                    ?: emptySet(),
-                                onCreatePlaylist = onCreatePlaylist
+                                existingNames =
+                                    (list.listState as? LibraryViewModel.ListState.Data)
+                                        ?.items
+                                        ?.map { it.name.trim() }
+                                        ?.toSet()
+                                        ?: emptySet(),
+                                onCreatePlaylist = onCreatePlaylist,
                             )
                         }
                     }
 
-                    else -> Unit
+                    else -> {
+                        Unit
+                    }
                 }
                 ItemsListArea(
                     serverUrl = serverUrl,
@@ -347,10 +362,11 @@ private fun Library(
         }
         ToastHost(
             toastState = toastState,
-            modifier = Modifier
-                .consumeWindowInsets(scaffoldPadding)
-                .fillMaxSize()
-                .padding(bottom = 48.dp)
+            modifier =
+                Modifier
+                    .consumeWindowInsets(scaffoldPadding)
+                    .fillMaxSize()
+                    .padding(bottom = 48.dp),
         )
     }
 }
@@ -359,11 +375,11 @@ private fun Library(
 fun NewPlaylistArea(
     modifier: Modifier,
     existingNames: Set<String>,
-    onCreatePlaylist: (String) -> Unit
+    onCreatePlaylist: (String) -> Unit,
 ) {
     var playlistName by remember { mutableStateOf("") }
     Row(
-        modifier = modifier.fillMaxWidth().wrapContentHeight()
+        modifier = modifier.fillMaxWidth().wrapContentHeight(),
     ) {
         OutlinedTextField(
             modifier = Modifier.weight(1f),
@@ -371,25 +387,28 @@ fun NewPlaylistArea(
             onValueChange = { newText -> playlistName = newText },
             label = {
                 Text(
-                    text = "New playlist"
+                    text = "New playlist",
                 )
             },
         )
         Button(
-            modifier = Modifier
-                .padding(start = 8.dp)
-                .align(Alignment.CenterVertically),
-            enabled = playlistName.trim()
-                .takeIf { it.isNotEmpty() && !existingNames.contains(playlistName) } != null,
+            modifier =
+                Modifier
+                    .padding(start = 8.dp)
+                    .align(Alignment.CenterVertically),
+            enabled =
+                playlistName
+                    .trim()
+                    .takeIf { it.isNotEmpty() && !existingNames.contains(playlistName) } != null,
             onClick = {
                 onCreatePlaylist(playlistName)
                 playlistName = ""
-            }
+            },
         ) {
             Icon(
                 modifier = Modifier.size(26.dp),
                 imageVector = TablerIcons.Plus,
-                contentDescription = "Add playlist"
+                contentDescription = "Add playlist",
             )
         }
     }
@@ -414,8 +433,9 @@ private fun ItemsListArea(
     val parentItem = list.parentItems.lastOrNull()
 
     Box(
-        modifier = modifier
-            .fillMaxSize(),
+        modifier =
+            modifier
+                .fillMaxSize(),
     ) {
         when (list.listState) {
             LibraryViewModel.ListState.Loading -> {
@@ -425,11 +445,11 @@ private fun ItemsListArea(
             LibraryViewModel.ListState.Error -> {
                 Column(
                     modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = CenterHorizontally
+                    horizontalAlignment = CenterHorizontally,
                 ) {
                     Text(
                         modifier = Modifier.padding(bottom = 16.dp),
-                        text = "Error loading list"
+                        text = "Error loading list",
                     )
                     parentItem?.let {
                         Button(onClick = { onUpClick(list.tab) }) {
@@ -447,11 +467,11 @@ private fun ItemsListArea(
                 if (list.listState.items.isEmpty()) {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = CenterHorizontally
+                        horizontalAlignment = CenterHorizontally,
                     ) {
                         Text(
                             modifier = Modifier.padding(bottom = 16.dp),
-                            text = "No items found"
+                            text = "No items found",
                         )
                         parentItem?.let {
                             Button(onClick = { onUpClick(list.tab) }) {
@@ -492,53 +512,65 @@ fun SearchArea(
     Column(modifier = modifier) {
         Row(
             modifier = Modifier.height(32.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             searchState.mediaTypes.forEach { mediaType ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clickable {
-                            onTypeChanged(mediaType.type, !mediaType.isSelected)
-                        }
-                        .padding(horizontal = 8.dp)
+                    modifier =
+                        Modifier
+                            .clickable {
+                                onTypeChanged(mediaType.type, !mediaType.isSelected)
+                            }.padding(horizontal = 8.dp),
                 ) {
                     Icon(
-                        modifier = Modifier
-                            .padding(end = 4.dp)
-                            .size(26.dp),
+                        modifier =
+                            Modifier
+                                .padding(end = 4.dp)
+                                .size(26.dp),
                         imageVector =
-                            if (mediaType.isSelected) TablerIcons.SquareCheck
-                            else TablerIcons.Square,
-                        contentDescription = "Select ${mediaType.type.name}"
+                            if (mediaType.isSelected) {
+                                TablerIcons.SquareCheck
+                            } else {
+                                TablerIcons.Square
+                            },
+                        contentDescription = "Select ${mediaType.type.name}",
                     )
                     Text(
-                        text = mediaType.type.name.lowercase().capitalize(Locale.current),
+                        text =
+                            mediaType.type.name
+                                .lowercase()
+                                .capitalize(Locale.current),
                         modifier = Modifier.padding(end = 4.dp),
-                        style = MaterialTheme.typography.body2
+                        style = MaterialTheme.typography.body2,
                     )
                 }
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clickable {
-                        onLibraryOnlyChanged(!searchState.libraryOnly)
-                    }
+                modifier =
+                    Modifier
+                        .clickable {
+                            onLibraryOnlyChanged(!searchState.libraryOnly)
+                        },
             ) {
                 Icon(
-                    modifier = Modifier
-                        .padding(end = 4.dp)
-                        .size(26.dp),
+                    modifier =
+                        Modifier
+                            .padding(end = 4.dp)
+                            .size(26.dp),
                     imageVector =
-                        if (searchState.libraryOnly) TablerIcons.SquareCheck
-                        else TablerIcons.Square,
-                    contentDescription = "Toggle library only"
+                        if (searchState.libraryOnly) {
+                            TablerIcons.SquareCheck
+                        } else {
+                            TablerIcons.Square
+                        },
+                    contentDescription = "Toggle library only",
                 )
                 Text(
                     text = "In library",
                     modifier = Modifier.padding(end = 6.dp),
-                    style = MaterialTheme.typography.body2
+                    style = MaterialTheme.typography.body2,
                 )
             }
         }
@@ -549,10 +581,12 @@ fun SearchArea(
             onValueChange = { newText -> onQueryChanged(newText) },
             label = {
                 Text(
-                    text = if (searchState.query.trim().length < 3)
-                        "Type at least 3 symbols for search"
-                    else
-                        "Search query"
+                    text =
+                        if (searchState.query.trim().length < 3) {
+                            "Type at least 3 symbols for search"
+                        } else {
+                            "Search query"
+                        },
                 )
             },
         )
@@ -579,66 +613,74 @@ private fun ItemsList(
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     LazyColumn(
-        modifier = modifier.fillMaxSize()
-            .clip(shape = RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colors.onSecondary)
-            .nestedScroll(nestedScrollConnection)
-            .draggable(
-                orientation = Orientation.Vertical,
-                state = rememberDraggableState { delta ->
-                    coroutineScope.launch {
-                        listState.scrollBy(-delta)
-                    }
-                },
-            ),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .clip(shape = RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colors.onSecondary)
+                .nestedScroll(nestedScrollConnection)
+                .draggable(
+                    orientation = Orientation.Vertical,
+                    state =
+                        rememberDraggableState { delta ->
+                            coroutineScope.launch {
+                                listState.scrollBy(-delta)
+                            }
+                        },
+                ),
         state = listState,
     ) {
         items(
-            items = (parentItem?.let { listOf(it) } ?: emptyList()) + items
+            items = (parentItem?.let { listOf(it) } ?: emptyList()) + items,
         ) { item ->
             val isChecked = item != parentItem && item in checkedItems
             val isOngoing = ongoingItems.any { it.hasAnyMappingFrom(item) }
             Row(
-                modifier = Modifier
-                    .alpha(if (isOngoing) 0.7f else 1f)
-                    .padding(vertical = 1.dp)
-                    .fillMaxWidth()
-                    .clip(shape = RoundedCornerShape(16.dp))
-                    .background(
-                        if (isChecked) MaterialTheme.colors.primary
-                        else Color.Transparent
-                    )
-                    .clickable(
-                        onClick = { if (item == parentItem) onUpClick() else onClick(item) },
-                    )
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                modifier =
+                    Modifier
+                        .alpha(if (isOngoing) 0.7f else 1f)
+                        .padding(vertical = 1.dp)
+                        .fillMaxWidth()
+                        .clip(shape = RoundedCornerShape(16.dp))
+                        .background(
+                            if (isChecked) {
+                                MaterialTheme.colors.primary
+                            } else {
+                                Color.Transparent
+                            },
+                        ).clickable(
+                            onClick = { if (item == parentItem) onUpClick() else onClick(item) },
+                        ).padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start
+                horizontalArrangement = Arrangement.Start,
             ) {
                 if (item == parentItem) {
                     Icon(
-                        modifier = Modifier
-                            .padding(end = 24.dp, start = 12.dp)
-                            .size(18.dp),
+                        modifier =
+                            Modifier
+                                .padding(end = 24.dp, start = 12.dp)
+                                .size(18.dp),
                         imageVector = FontAwesomeIcons.Solid.ArrowUp,
-                        contentDescription = "Up"
+                        contentDescription = "Up",
                     )
                 }
                 Box(
-                    modifier = Modifier
-                        .padding(end = 12.dp)
-                        .size(48.dp)
+                    modifier =
+                        Modifier
+                            .padding(end = 12.dp)
+                            .size(48.dp),
                 ) {
                     val placeholder =
                         MusicNotePainter(
                             backgroundColor = MaterialTheme.colors.background,
-                            iconColor = MaterialTheme.colors.secondary
+                            iconColor = MaterialTheme.colors.secondary,
                         )
 
                     AsyncImage(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(size = 4.dp)),
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(size = 4.dp)),
                         placeholder = placeholder,
                         fallback = placeholder,
                         model = item.imageInfo?.url(serverUrl),
@@ -646,34 +688,38 @@ private fun ItemsList(
                         contentScale = ContentScale.Crop,
                     )
                     Box(
-                        modifier = Modifier
-                            .size(22.dp)
-                            .offset(x = 4.dp, y = 4.dp)
-                            .align(Alignment.BottomEnd)
-                            .background(
-                                color = Color.Black,
-                                shape = CircleShape
-                            )
-                            .border(
-                                width = 1.dp,
-                                color =
-                                    if (isChecked) MaterialTheme.colors.onPrimary
-                                    else MaterialTheme.colors.primary,
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier
+                                .size(22.dp)
+                                .offset(x = 4.dp, y = 4.dp)
+                                .align(Alignment.BottomEnd)
+                                .background(
+                                    color = Color.Black,
+                                    shape = CircleShape,
+                                ).border(
+                                    width = 1.dp,
+                                    color =
+                                        if (isChecked) {
+                                            MaterialTheme.colors.onPrimary
+                                        } else {
+                                            MaterialTheme.colors.primary
+                                        },
+                                    shape = CircleShape,
+                                ),
+                        contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             modifier = Modifier.size(12.dp),
-                            imageVector = when (item) {
-                                is AppMediaItem.Track -> TablerIcons.FileMusic
-                                is AppMediaItem.Album -> TablerIcons.Folder
-                                is AppMediaItem.Artist -> TablerIcons.Man
-                                is AppMediaItem.Playlist -> TablerIcons.List
-                                else -> TablerIcons.QuestionMark
-                            },
+                            imageVector =
+                                when (item) {
+                                    is AppMediaItem.Track -> TablerIcons.FileMusic
+                                    is AppMediaItem.Album -> TablerIcons.Folder
+                                    is AppMediaItem.Artist -> TablerIcons.Man
+                                    is AppMediaItem.Playlist -> TablerIcons.List
+                                    else -> TablerIcons.QuestionMark
+                                },
                             contentDescription = "Item type",
-                            tint = Color.White
+                            tint = Color.White,
                         )
                     }
                 }
@@ -685,12 +731,18 @@ private fun ItemsList(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         color =
-                            if (isChecked) MaterialTheme.colors.onPrimary
-                            else MaterialTheme.colors.secondary,
+                            if (isChecked) {
+                                MaterialTheme.colors.onPrimary
+                            } else {
+                                MaterialTheme.colors.secondary
+                            },
                         style = MaterialTheme.typography.body1,
                         fontWeight =
-                            if (item == parentItem || isChecked) FontWeight.Bold
-                            else FontWeight.Normal
+                            if (item == parentItem || isChecked) {
+                                FontWeight.Bold
+                            } else {
+                                FontWeight.Normal
+                            },
                     )
                     if (!item.isInLibrary) {
                         Text(
@@ -699,74 +751,92 @@ private fun ItemsList(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             color =
-                                if (isChecked) MaterialTheme.colors.onPrimary
-                                else MaterialTheme.colors.secondary,
+                                if (isChecked) {
+                                    MaterialTheme.colors.onPrimary
+                                } else {
+                                    MaterialTheme.colors.secondary
+                                },
                             style = MaterialTheme.typography.body1,
                             fontWeight =
-                                if (item == parentItem || isChecked) FontWeight.Bold
-                                else FontWeight.Normal
+                                if (item == parentItem || isChecked) {
+                                    FontWeight.Bold
+                                } else {
+                                    FontWeight.Normal
+                                },
                         )
                     }
                 }
                 if (checkedItems.isEmpty()) {
                     if (isOngoing) {
                         CircularProgressIndicator(
-                            modifier = Modifier
-                                .padding(start = 8.dp, end = 8.dp)
-                                .size(18.dp)
+                            modifier =
+                                Modifier
+                                    .padding(start = 8.dp, end = 8.dp)
+                                    .size(18.dp),
                         )
                     } else {
                         if (item is AppMediaItem.Track) {
                             OverflowMenu(
-                                modifier = Modifier
-                                    .padding(start = 8.dp, end = 8.dp)
-                                    .size(18.dp)
-                                    .align(alignment = Alignment.CenterVertically),
+                                modifier =
+                                    Modifier
+                                        .padding(start = 8.dp, end = 8.dp)
+                                        .size(18.dp)
+                                        .align(alignment = Alignment.CenterVertically),
                                 icon = TablerIcons.Playlist,
                                 iconTint = MaterialTheme.colors.secondary,
-                                options = playlists.map { playlist ->
-                                    OverflowMenuOption(
-                                        title = playlist.name,
-                                        onClick = {
-                                            onAddToPlaylist(item, playlist)
-                                        }
-                                    )
-                                }.ifEmpty {
-                                    listOf(
-                                        OverflowMenuOption(
-                                            title = "No editable playlists",
-                                            onClick = { /* No-op */ }
-                                        )
-                                    )
-                                }
+                                options =
+                                    playlists
+                                        .map { playlist ->
+                                            OverflowMenuOption(
+                                                title = playlist.name,
+                                                onClick = {
+                                                    onAddToPlaylist(item, playlist)
+                                                },
+                                            )
+                                        }.ifEmpty {
+                                            listOf(
+                                                OverflowMenuOption(
+                                                    title = "No editable playlists",
+                                                    onClick = { /* No-op */ },
+                                                ),
+                                            )
+                                        },
                             )
                         }
                         if (item.isInLibrary) {
                             Icon(
-                                modifier = Modifier
-                                    .padding(start = 8.dp, end = 8.dp)
-                                    .size(18.dp)
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null
-                                    ) { onFavoriteChanged(item) },
+                                modifier =
+                                    Modifier
+                                        .padding(start = 8.dp, end = 8.dp)
+                                        .size(18.dp)
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null,
+                                        ) { onFavoriteChanged(item) },
                                 imageVector =
-                                    if (item.favorite == true) FontAwesomeIcons.Solid.Heart
-                                    else FontAwesomeIcons.Regular.Heart,
+                                    if (item.favorite == true) {
+                                        FontAwesomeIcons.Solid.Heart
+                                    } else {
+                                        FontAwesomeIcons.Regular.Heart
+                                    },
                                 contentDescription = "Favorite item",
                                 tint =
-                                    if (item.favorite == true) Color(0xFFEF7BC4)
-                                    else MaterialTheme.colors.secondary,
+                                    if (item.favorite == true) {
+                                        Color(0xFFEF7BC4)
+                                    } else {
+                                        MaterialTheme.colors.secondary
+                                    },
                             )
                         } else {
                             Icon(
-                                modifier = Modifier
-                                    .padding(start = 8.dp, end = 8.dp)
-                                    .size(18.dp)
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null
-                                    ) { onAddToLibrary(item) },
+                                modifier =
+                                    Modifier
+                                        .padding(start = 8.dp, end = 8.dp)
+                                        .size(18.dp)
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null,
+                                        ) { onAddToLibrary(item) },
                                 imageVector = FontAwesomeIcons.Regular.Bookmark,
                                 contentDescription = "Favorite item",
                                 tint = MaterialTheme.colors.secondary,
@@ -776,13 +846,14 @@ private fun ItemsList(
                 }
                 if (item != parentItem && !isOngoing) {
                     Icon(
-                        modifier = Modifier
-                            .padding(start = 8.dp)
-                            .size(26.dp)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { onCheckChanged(item) },
+                        modifier =
+                            Modifier
+                                .padding(start = 8.dp)
+                                .size(26.dp)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                ) { onCheckChanged(item) },
                         imageVector = if (isChecked) TablerIcons.SquareCheck else TablerIcons.Square,
                         contentDescription = "Select item",
                         tint = if (isChecked) MaterialTheme.colors.onPrimary else MaterialTheme.colors.secondary,
@@ -791,7 +862,7 @@ private fun ItemsList(
                     Spacer(
                         Modifier
                             .padding(start = 8.dp)
-                            .size(26.dp)
+                            .size(26.dp),
                     )
                 }
             }

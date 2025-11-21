@@ -178,5 +178,3 @@ iOS TODOs (Current Gaps & Next Steps)
 - Stability and lifecycle checks:
   - Ensure `MainViewController()` and Koin init are idempotent on app foreground/background transitions.
   - Validate that `ServiceClient` reconnects properly when app resumes on iOS.
-
-

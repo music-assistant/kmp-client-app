@@ -19,11 +19,12 @@ class MyApplication : Application() {
     }
 
     private fun createNotificationChannel(context: Context) {
-        val channel = NotificationChannel(
-            MediaNotificationManager.CHANNEL_ID,
-            "Media Playback",
-            NotificationManager.IMPORTANCE_LOW
-        )
+        val channel =
+            NotificationChannel(
+                MediaNotificationManager.CHANNEL_ID,
+                "Media Playback",
+                NotificationManager.IMPORTANCE_LOW,
+            )
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(channel)
     }

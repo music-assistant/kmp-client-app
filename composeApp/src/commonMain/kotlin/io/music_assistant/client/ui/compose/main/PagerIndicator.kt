@@ -45,13 +45,14 @@ fun HorizontalPagerIndicator(
     Row(
         modifier = modifier.fillMaxWidth().wrapContentHeight(),
         horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         if (pagerState.currentPage > 0) {
             Icon(
-                modifier = Modifier
-                    .size(20.dp)
-                    .clickable { onItemMoved(-1) },
+                modifier =
+                    Modifier
+                        .size(20.dp)
+                        .clickable { onItemMoved(-1) },
                 imageVector = FontAwesomeIcons.Solid.ArrowCircleLeft,
                 tint = MaterialTheme.colors.secondary,
                 contentDescription = null,
@@ -62,19 +63,23 @@ fun HorizontalPagerIndicator(
         Row(
             modifier = Modifier.padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             if (pageCount <= 10) {
                 repeat(pageCount) { index ->
                     val color =
-                        if (pagerState.currentPage == index) MaterialTheme.colors.primary
-                        else MaterialTheme.colors.primary.copy(alpha = 0.3f)
+                        if (pagerState.currentPage == index) {
+                            MaterialTheme.colors.primary
+                        } else {
+                            MaterialTheme.colors.primary.copy(alpha = 0.3f)
+                        }
                     Box(
-                        modifier = Modifier
-                            .padding(2.dp)
-                            .clip(CircleShape)
-                            .background(color)
-                            .size(4.dp)
+                        modifier =
+                            Modifier
+                                .padding(2.dp)
+                                .clip(CircleShape)
+                                .background(color)
+                                .size(4.dp),
                     )
                 }
             } else {
@@ -88,9 +93,10 @@ fun HorizontalPagerIndicator(
         }
         if (pagerState.currentPage < pageCount - 1) {
             Icon(
-                modifier = Modifier
-                    .size(20.dp)
-                    .clickable { onItemMoved(1) },
+                modifier =
+                    Modifier
+                        .size(20.dp)
+                        .clickable { onItemMoved(1) },
                 imageVector = FontAwesomeIcons.Solid.ArrowCircleRight,
                 tint = MaterialTheme.colors.secondary,
                 contentDescription = null,
@@ -111,13 +117,14 @@ fun VerticalPagerIndicator(
     Column(
         modifier = modifier.wrapContentWidth().fillMaxHeight(),
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (pagerState.currentPage > 0) {
             Icon(
-                modifier = Modifier
-                    .size(20.dp)
-                    .clickable { onItemMoved(-1) },
+                modifier =
+                    Modifier
+                        .size(20.dp)
+                        .clickable { onItemMoved(-1) },
                 imageVector = FontAwesomeIcons.Solid.ArrowCircleUp,
                 tint = MaterialTheme.colors.secondary,
                 contentDescription = null,
@@ -128,19 +135,23 @@ fun VerticalPagerIndicator(
         Column(
             modifier = Modifier.padding(horizontal = 8.dp),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (pageCount <= 10) {
                 repeat(pageCount) { index ->
                     val color =
-                        if (pagerState.currentPage == index) MaterialTheme.colors.primary
-                        else MaterialTheme.colors.primary.copy(alpha = 0.3f)
+                        if (pagerState.currentPage == index) {
+                            MaterialTheme.colors.primary
+                        } else {
+                            MaterialTheme.colors.primary.copy(alpha = 0.3f)
+                        }
                     Box(
-                        modifier = Modifier
-                            .padding(2.dp)
-                            .clip(CircleShape)
-                            .background(color)
-                            .size(4.dp)
+                        modifier =
+                            Modifier
+                                .padding(2.dp)
+                                .clip(CircleShape)
+                                .background(color)
+                                .size(4.dp),
                     )
                 }
             } else {
@@ -154,9 +165,10 @@ fun VerticalPagerIndicator(
         }
         if (pagerState.currentPage < pageCount - 1) {
             Icon(
-                modifier = Modifier
-                    .size(20.dp)
-                    .clickable { onItemMoved(1) },
+                modifier =
+                    Modifier
+                        .size(20.dp)
+                        .clickable { onItemMoved(1) },
                 imageVector = FontAwesomeIcons.Solid.ArrowCircleDown,
                 tint = MaterialTheme.colors.secondary,
                 contentDescription = null,
@@ -173,8 +185,8 @@ fun HorizontalPagerIndicatorPreview() {
     MaterialTheme {
         HorizontalPagerIndicator(
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-            pagerState = rememberPagerState (pageCount = {5}, initialPage = 2),
-            onItemMoved = {}
+            pagerState = rememberPagerState(pageCount = { 5 }, initialPage = 2),
+            onItemMoved = {},
         )
     }
 }
@@ -185,8 +197,8 @@ fun VerticalPagerIndicatorPreview() {
     MaterialTheme {
         VerticalPagerIndicator(
             modifier = Modifier.fillMaxHeight().wrapContentWidth(),
-            pagerState = rememberPagerState (pageCount = {5}, initialPage = 2),
-            onItemMoved = {}
+            pagerState = rememberPagerState(pageCount = { 5 }, initialPage = 2),
+            onItemMoved = {},
         )
     }
 }

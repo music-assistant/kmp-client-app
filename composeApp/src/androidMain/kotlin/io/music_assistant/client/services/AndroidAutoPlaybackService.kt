@@ -44,19 +44,22 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
     private val dataSource: MainDataSource by inject()
     private val library: AutoLibrary by inject()
     private val currentPlayerData =
-        dataSource.playersData.map { it.firstOrNull { playerData -> playerData.player.isBuiltin } }
+        dataSource.playersData
+            .map { it.firstOrNull { playerData -> playerData.player.isBuiltin } }
             .stateIn(scope, SharingStarted.Eagerly, null)
-    private val mediaNotificationData = currentPlayerData.filterNotNull()
-        .map {
-            MediaNotificationData.from(
-                dataSource.apiClient.serverInfo.value?.baseUrl,
-                it,
-                false
-            )
-        }
-        .distinctUntilChanged { old, new -> MediaNotificationData.areTooSimilarToUpdate(old, new) }
-        .stateIn(scope, SharingStarted.WhileSubscribed(), null)
-        .filterNotNull()
+    private val mediaNotificationData =
+        currentPlayerData
+            .filterNotNull()
+            .map {
+                MediaNotificationData.from(
+                    dataSource.apiClient.serverInfo.value
+                        ?.baseUrl,
+                    it,
+                    false,
+                )
+            }.distinctUntilChanged { old, new -> MediaNotificationData.areTooSimilarToUpdate(old, new) }
+            .stateIn(scope, SharingStarted.WhileSubscribed(), null)
+            .filterNotNull()
 
     override fun onCreate() {
         super.onCreate()
@@ -69,14 +72,18 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
         }
         scope.launch {
             dataSource.builtinPlayerQueue.collect { list ->
-                mediaSessionHelper.updateQueue(list.map {
-                    QueueItem(
-                        it.track.toMediaDescription(
-                            dataSource.apiClient.serverInfo.value?.baseUrl,
-                            defaultIconUri
-                        ), it.track.longId
-                    )
-                })
+                mediaSessionHelper.updateQueue(
+                    list.map {
+                        QueueItem(
+                            it.track.toMediaDescription(
+                                dataSource.apiClient.serverInfo.value
+                                    ?.baseUrl,
+                                defaultIconUri,
+                            ),
+                            it.track.longId,
+                        )
+                    },
+                )
             }
         }
     }
@@ -89,13 +96,16 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
                 }
             }
 
-            override fun onPlayFromMediaId(mediaId: String?, extras: Bundle?) {
+            override fun onPlayFromMediaId(
+                mediaId: String?,
+                extras: Bundle?,
+            ) {
                 currentPlayerData.value?.let { playerData ->
                     mediaId?.let {
                         library.play(
                             it,
                             extras,
-                            playerData.queue?.id ?: playerData.player.id
+                            playerData.queue?.id ?: playerData.player.id,
                         )
                     }
                 }
@@ -119,13 +129,15 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
 
             override fun onSkipToQueueItem(id: Long) {
                 currentPlayerData.value?.let { playerData ->
-                    dataSource.builtinPlayerQueue.value.find { it.track.longId == id }?.id
+                    dataSource.builtinPlayerQueue.value
+                        .find { it.track.longId == id }
+                        ?.id
                         ?.let { queueItemId ->
                             dataSource.queueAction(
                                 QueueAction.PlayQueueItem(
-                                    playerData.queue?.id ?: playerData.player.id, queueItemId
-                                )
-
+                                    playerData.queue?.id ?: playerData.player.id,
+                                    queueItemId,
+                                ),
                             )
                         }
                 }
@@ -137,30 +149,41 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
                 }
             }
 
-            override fun onCustomAction(action: String, extras: Bundle?) {
+            override fun onCustomAction(
+                action: String,
+                extras: Bundle?,
+            ) {
                 when (action) {
-                    "ACTION_TOGGLE_SHUFFLE" -> currentPlayerData.value?.let { playerData ->
-                        playerData.queue?.let {
-                            dataSource.playerAction(
-                                playerData,
-                                PlayerAction.ToggleShuffle(current = it.shuffleEnabled)
-                            )
+                    "ACTION_TOGGLE_SHUFFLE" -> {
+                        currentPlayerData.value?.let { playerData ->
+                            playerData.queue?.let {
+                                dataSource.playerAction(
+                                    playerData,
+                                    PlayerAction.ToggleShuffle(current = it.shuffleEnabled),
+                                )
+                            }
                         }
                     }
 
-                    "ACTION_TOGGLE_REPEAT" -> currentPlayerData.value?.let { playerData ->
-                        playerData.queue?.repeatMode?.let { repeatMode ->
-                            dataSource.playerAction(
-                                playerData,
-                                PlayerAction.ToggleRepeatMode(current = repeatMode)
-                            )
+                    "ACTION_TOGGLE_REPEAT" -> {
+                        currentPlayerData.value?.let { playerData ->
+                            playerData.queue?.repeatMode?.let { repeatMode ->
+                                dataSource.playerAction(
+                                    playerData,
+                                    PlayerAction.ToggleRepeatMode(current = repeatMode),
+                                )
+                            }
                         }
                     }
                 }
             }
         }
 
-    override fun onGetRoot(packageName: String, uID: Int, hints: Bundle?): BrowserRoot {
+    override fun onGetRoot(
+        packageName: String,
+        uID: Int,
+        hints: Bundle?,
+    ): BrowserRoot {
         val extras = Bundle()
         extras.putBoolean(MediaConstants.BROWSER_SERVICE_EXTRAS_KEY_SEARCH_SUPPORTED, true)
         return BrowserRoot(MediaIds.ROOT, extras)
@@ -168,14 +191,13 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
 
     override fun onLoadChildren(
         parentId: String,
-        result: Result<List<MediaBrowserCompat.MediaItem>>
+        result: Result<List<MediaBrowserCompat.MediaItem>>,
     ) = library.getItems(parentId, result)
-
 
     override fun onSearch(
         query: String,
         extras: Bundle?,
-        result: Result<List<MediaBrowserCompat.MediaItem>>
+        result: Result<List<MediaBrowserCompat.MediaItem>>,
     ) = library.search(query, result)
 
     override fun onDestroy() {
@@ -186,13 +208,18 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
     private suspend fun updatePlaybackState(data: MediaNotificationData) {
         val bitmap =
             data.imageUrl?.let {
-                ((imageLoader.execute(
-                    ImageRequest.Builder(this@AndroidAutoPlaybackService)
-                        .data(it)
-                        .memoryCachePolicy(CachePolicy.ENABLED)
-                        .memoryCacheKey(it)
-                        .build()
-                ) as? SuccessResult)?.image as? BitmapImage)?.bitmap
+                (
+                    (
+                        imageLoader.execute(
+                            ImageRequest
+                                .Builder(this@AndroidAutoPlaybackService)
+                                .data(it)
+                                .memoryCachePolicy(CachePolicy.ENABLED)
+                                .memoryCacheKey(it)
+                                .build(),
+                        ) as? SuccessResult
+                    )?.image as? BitmapImage
+                )?.bitmap
             }
         mediaSessionHelper.updatePlaybackState(data, bitmap)
     }

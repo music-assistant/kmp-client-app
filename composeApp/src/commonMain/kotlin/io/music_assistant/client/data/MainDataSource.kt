@@ -71,8 +71,8 @@ class MainDataSource(
     private val settings: SettingsRepository,
     val apiClient: ServiceClient,
     private val localPlayerController: MediaPlayerController,
-) : CoroutineScope, MediaPlayerListener {
-
+) : CoroutineScope,
+    MediaPlayerListener {
     private val log = Logger.withTag("MainDataSource")
     private val localPlayerId = settings.getLocalPlayerId()
     private var localPlayerUpdateInterval = 20000L
@@ -92,28 +92,34 @@ class MainDataSource(
                         ?: Int.MAX_VALUE
                 }
             } ?: filtered.sortedBy { player ->
-                if (player.isBuiltin)
+                if (player.isBuiltin) {
                     "A" // putting it first
-                else player.name
+                } else {
+                    player.name
+                }
             }
         }
 
-    val playersData = combine(
-        _players.debounce(500L),
-        _queues.debounce(500L)
-    ) { players, queues ->
-        players.map { player ->
-            PlayerData(
-                player,
-                queues.find { it.id == player.queueId })
-        }
-    }.stateIn(this, SharingStarted.Eagerly, emptyList())
+    val playersData =
+        combine(
+            _players.debounce(500L),
+            _queues.debounce(500L),
+        ) { players, queues ->
+            players.map { player ->
+                PlayerData(
+                    player,
+                    queues.find { it.id == player.queueId },
+                )
+            }
+        }.stateIn(this, SharingStarted.Eagerly, emptyList())
 
     val isAnythingPlaying =
-        playersData.map { it.any { data -> data.player.isPlaying } }
+        playersData
+            .map { it.any { data -> data.player.isPlaying } }
             .stateIn(this, SharingStarted.Eagerly, false)
     val doesAnythingHavePlayableItem =
-        playersData.map { it.any { data -> data.queue?.currentItem != null } }
+        playersData
+            .map { it.any { data -> data.queue?.currentItem != null } }
             .stateIn(this, SharingStarted.Eagerly, false)
 
     private val _selectedPlayerData = MutableStateFlow<SelectedPlayerData?>(null)
@@ -160,28 +166,30 @@ class MainDataSource(
             }
         }
         launch {
-            playersData.filter { it.isNotEmpty() }.first {
-                it.first().player.id == localPlayerId && _selectedPlayerData.value == null
-            }.let { selectPlayer(it.first().player) }
+            playersData
+                .filter { it.isNotEmpty() }
+                .first {
+                    it.first().player.id == localPlayerId && _selectedPlayerData.value == null
+                }.let { selectPlayer(it.first().player) }
         }
     }
 
     private fun initBuiltinPlayer() {
         updateJob?.cancel()
-        updateJob = launch {
-            apiClient.sendRequest(
-                registerBuiltInPlayerRequest(
-                    Player.LOCAL_PLAYER_NAME,
-                    localPlayerId
+        updateJob =
+            launch {
+                apiClient.sendRequest(
+                    registerBuiltInPlayerRequest(
+                        Player.LOCAL_PLAYER_NAME,
+                        localPlayerId,
+                    ),
                 )
-            )
-            while (isActive) {
-                updateLocalPlayerState()
-                delay(localPlayerUpdateInterval)
+                while (isActive) {
+                    updateLocalPlayerState()
+                    delay(localPlayerUpdateInterval)
+                }
             }
-        }
     }
-
 
     fun selectPlayer(player: Player) {
         _selectedPlayerData.update { SelectedPlayerData(player.id) }
@@ -192,10 +200,11 @@ class MainDataSource(
         _selectedPlayerData.update {
             it?.copy(
                 chosenItemsIds =
-                    if (it.chosenItemsIds.contains(id))
+                    if (it.chosenItemsIds.contains(id)) {
                         it.chosenItemsIds - id
-                    else
+                    } else {
                         it.chosenItemsIds + id
+                    },
             )
         }
     }
@@ -203,29 +212,32 @@ class MainDataSource(
     fun onChosenItemsClear() {
         _selectedPlayerData.update {
             it?.copy(
-                chosenItemsIds = emptySet()
+                chosenItemsIds = emptySet(),
             )
         }
     }
 
-    fun playerAction(data: PlayerData, action: PlayerAction) {
+    fun playerAction(
+        data: PlayerData,
+        action: PlayerAction,
+    ) {
         launch {
             when (action) {
                 PlayerAction.TogglePlayPause -> {
                     apiClient.sendRequest(
-                        simplePlayerRequest(playerId = data.player.id, command = "play_pause")
+                        simplePlayerRequest(playerId = data.player.id, command = "play_pause"),
                     )
                 }
 
                 PlayerAction.Next -> {
                     apiClient.sendRequest(
-                        simplePlayerRequest(playerId = data.player.id, command = "next")
+                        simplePlayerRequest(playerId = data.player.id, command = "next"),
                     )
                 }
 
                 PlayerAction.Previous -> {
                     apiClient.sendRequest(
-                        simplePlayerRequest(playerId = data.player.id, command = "previous")
+                        simplePlayerRequest(playerId = data.player.id, command = "previous"),
                     )
                 }
 
@@ -233,36 +245,45 @@ class MainDataSource(
                     apiClient.sendRequest(
                         playerQueueSeekRequest(
                             queueId = data.queue?.id ?: return@launch,
-                            position = action.pos
-                        )
+                            position = action.pos,
+                        ),
                     )
                 }
 
-                is PlayerAction.ToggleRepeatMode -> apiClient.sendRequest(
-                    playerQueueSetRepeatModeRequest(
-                        queueId = data.queue?.id ?: return@launch,
-                        repeatMode = when (action.current) {
-                            RepeatMode.OFF -> RepeatMode.ALL
-                            RepeatMode.ALL -> RepeatMode.ONE
-                            RepeatMode.ONE -> RepeatMode.OFF
-                        }
+                is PlayerAction.ToggleRepeatMode -> {
+                    apiClient.sendRequest(
+                        playerQueueSetRepeatModeRequest(
+                            queueId = data.queue?.id ?: return@launch,
+                            repeatMode =
+                                when (action.current) {
+                                    RepeatMode.OFF -> RepeatMode.ALL
+                                    RepeatMode.ALL -> RepeatMode.ONE
+                                    RepeatMode.ONE -> RepeatMode.OFF
+                                },
+                        ),
                     )
-                )
+                }
 
-                is PlayerAction.ToggleShuffle -> apiClient.sendRequest(
-                    playerQueueSetShuffleRequest(
-                        queueId = data.queue?.id ?: return@launch,
-                        enabled = !action.current
+                is PlayerAction.ToggleShuffle -> {
+                    apiClient.sendRequest(
+                        playerQueueSetShuffleRequest(
+                            queueId = data.queue?.id ?: return@launch,
+                            enabled = !action.current,
+                        ),
                     )
-                )
+                }
 
-                PlayerAction.VolumeDown -> apiClient.sendRequest(
-                    simplePlayerRequest(playerId = data.player.id, command = "volume_down")
-                )
+                PlayerAction.VolumeDown -> {
+                    apiClient.sendRequest(
+                        simplePlayerRequest(playerId = data.player.id, command = "volume_down"),
+                    )
+                }
 
-                PlayerAction.VolumeUp -> apiClient.sendRequest(
-                    simplePlayerRequest(playerId = data.player.id, command = "volume_up")
-                )
+                PlayerAction.VolumeUp -> {
+                    apiClient.sendRequest(
+                        simplePlayerRequest(playerId = data.player.id, command = "volume_up"),
+                    )
+                }
             }
         }
     }
@@ -274,8 +295,8 @@ class MainDataSource(
                     apiClient.sendRequest(
                         playerQueuePlayIndexRequest(
                             queueId = action.queueId,
-                            queueItemId = action.queueItemId
-                        )
+                            queueItemId = action.queueItemId,
+                        ),
                     )
                 }
 
@@ -283,7 +304,7 @@ class MainDataSource(
                     apiClient.sendRequest(
                         playerQueueClearRequest(
                             queueId = action.queueId,
-                        )
+                        ),
                     )
                 }
 
@@ -292,8 +313,8 @@ class MainDataSource(
                         apiClient.sendRequest(
                             playerQueueRemoveItemRequest(
                                 queueId = action.queueId,
-                                queueItemId = it
-                            )
+                                queueItemId = it,
+                            ),
                         )
                     }
                 }
@@ -306,8 +327,8 @@ class MainDataSource(
                                 playerQueueMoveItemRequest(
                                     queueId = action.queueId,
                                     queueItemId = action.queueItemId,
-                                    positionShift = action.to - action.from
-                                )
+                                    positionShift = action.to - action.from,
+                                ),
                             )
                         }
                 }
@@ -317,8 +338,8 @@ class MainDataSource(
                         playerQueueTransferRequest(
                             sourceId = action.sourceId,
                             targetId = action.targetId,
-                            autoplay = action.autoplay
-                        )
+                            autoplay = action.autoplay,
+                        ),
                     )
                 }
             }
@@ -352,10 +373,10 @@ class MainDataSource(
 
                         is QueueItemsUpdatedEvent -> {
                             val data = event.queue()
-                            _serverPlayers.value.firstOrNull {
-                                it.queueId == event.data.queueId
-                            }
-                                ?.takeIf { it.id == _selectedPlayerData.value?.playerId || it.isBuiltin }
+                            _serverPlayers.value
+                                .firstOrNull {
+                                    it.queueId == event.data.queueId
+                                }?.takeIf { it.id == _selectedPlayerData.value?.playerId || it.isBuiltin }
                                 ?.let { updatePlayerQueueItems(it) }
                             _queues.update { value ->
                                 value.map {
@@ -376,13 +397,15 @@ class MainDataSource(
                             (event.data.toAppMediaItem() as? AppMediaItem.Track)
                                 ?.let { newItem ->
                                     _selectedPlayerData.value?.queueItems?.let { items ->
-                                        items.firstOrNull { it.id == newItem.itemId }
+                                        items
+                                            .firstOrNull { it.id == newItem.itemId }
                                             ?.let { oldItem ->
                                                 _selectedPlayerData.update { current ->
                                                     current?.copy(
-                                                        queueItems = current.queueItems?.map { qt ->
-                                                            if (qt == oldItem) qt.copy(track = newItem) else qt
-                                                        }
+                                                        queueItems =
+                                                            current.queueItems?.map { qt ->
+                                                                if (qt == oldItem) qt.copy(track = newItem) else qt
+                                                            },
                                                     )
                                                 }
                                             }
@@ -394,13 +417,15 @@ class MainDataSource(
                             (event.data.toAppMediaItem() as? AppMediaItem.Track)
                                 ?.let { newItem ->
                                     _selectedPlayerData.value?.queueItems?.let { items ->
-                                        items.firstOrNull { it.id == newItem.itemId }
+                                        items
+                                            .firstOrNull { it.id == newItem.itemId }
                                             ?.let { oldItem ->
                                                 _selectedPlayerData.update { current ->
                                                     current?.copy(
-                                                        queueItems = current.queueItems?.map { qt ->
-                                                            if (qt == oldItem) qt.copy(track = newItem) else qt
-                                                        }
+                                                        queueItems =
+                                                            current.queueItems?.map { qt ->
+                                                                if (qt == oldItem) qt.copy(track = newItem) else qt
+                                                            },
                                                     )
                                                 }
                                             }
@@ -412,11 +437,12 @@ class MainDataSource(
                             (event.data.toAppMediaItem() as? AppMediaItem.Track)
                                 ?.let { deletedItem ->
                                     _selectedPlayerData.value?.queueItems?.let { items ->
-                                        items.firstOrNull { it.id == deletedItem.itemId }
+                                        items
+                                            .firstOrNull { it.id == deletedItem.itemId }
                                             ?.let { oldItem ->
                                                 _selectedPlayerData.update { current ->
                                                     current?.copy(
-                                                        queueItems = current.queueItems?.let { it - oldItem }
+                                                        queueItems = current.queueItems?.let { it - oldItem },
                                                     )
                                                 }
                                             }
@@ -433,8 +459,8 @@ class MainDataSource(
                                         event.data.mediaUrl?.let { media ->
                                             withContext(Dispatchers.Main) {
                                                 localPlayerController.prepare(
-                                                    "$url/${media}",
-                                                    this@MainDataSource
+                                                    "$url/$media",
+                                                    this@MainDataSource,
                                                 )
                                             }
                                             updateLocalPlayerState(false)
@@ -442,7 +468,8 @@ class MainDataSource(
                                     }
 
                                     BuiltinPlayerEventType.PLAY,
-                                    BuiltinPlayerEventType.RESUME -> {
+                                    BuiltinPlayerEventType.RESUME,
+                                    -> {
                                         withContext(Dispatchers.Main) {
                                             localPlayerController.start()
                                         }
@@ -463,20 +490,25 @@ class MainDataSource(
                                         updateLocalPlayerState(false)
                                     }
 
-                                    BuiltinPlayerEventType.TIMEOUT -> updateLocalPlayerState()
+                                    BuiltinPlayerEventType.TIMEOUT -> {
+                                        updateLocalPlayerState()
+                                    }
 
                                     BuiltinPlayerEventType.MUTE,
                                     BuiltinPlayerEventType.UNMUTE,
                                     BuiltinPlayerEventType.SET_VOLUME,
                                     BuiltinPlayerEventType.POWER_OFF,
-                                    BuiltinPlayerEventType.POWER_ON -> {
+                                    BuiltinPlayerEventType.POWER_ON,
+                                    -> {
                                         log.i { "Builtin player event unhandled" }
                                     }
                                 }
                             }
                         }
 
-                        else -> log.i { "Unhandled event: $event" }
+                        else -> {
+                            log.i { "Unhandled event: $event" }
+                        }
                     }
                 }
         }
@@ -484,15 +516,20 @@ class MainDataSource(
     private fun updatePlayersAndQueues() {
         log.i { "Updating players" }
         launch {
-            apiClient.sendCommand("players/all")
-                ?.resultAs<List<ServerPlayer>>()?.map { it.toPlayer() }
+            apiClient
+                .sendCommand("players/all")
+                ?.resultAs<List<ServerPlayer>>()
+                ?.map { it.toPlayer() }
                 ?.let { list ->
                     _serverPlayers.update {
                         list.filter { it.shouldBeShown }
                     }
                 }
-            apiClient.sendCommand("player_queues/all")
-                ?.resultAs<List<ServerQueue>>()?.map { it.toQueue() }?.let { list ->
+            apiClient
+                .sendCommand("player_queues/all")
+                ?.resultAs<List<ServerQueue>>()
+                ?.map { it.toQueue() }
+                ?.let { list ->
                     _queues.update { list }
                 }
         }
@@ -503,8 +540,10 @@ class MainDataSource(
             player.queueId
                 ?.takeIf { player.id == _selectedPlayerData.value?.playerId }
                 ?.let { queueId ->
-                    apiClient.sendRequest(playerQueueItemsRequest(queueId))
-                        ?.resultAs<List<ServerQueueItem>>()?.mapNotNull { it.toQueueTrack() }
+                    apiClient
+                        .sendRequest(playerQueueItemsRequest(queueId))
+                        ?.resultAs<List<ServerQueueItem>>()
+                        ?.mapNotNull { it.toQueueTrack() }
                         ?.let { list ->
                             _selectedPlayerData.update {
                                 SelectedPlayerData(player.id, list)
@@ -514,17 +553,19 @@ class MainDataSource(
                             }
                         }
                 }
-
         }
     }
 
     private suspend fun updateLocalPlayerState(isPlaying: Boolean? = null) {
         log.i { "Updating local player state" }
         val isPlayerPlaying = withContext(Dispatchers.Main) { localPlayerController.isPlaying() }
-        val position = withContext(Dispatchers.Main) {
-            (localPlayerController.getCurrentPosition()
-                ?: 0).toDouble() / 1000
-        }
+        val position =
+            withContext(Dispatchers.Main) {
+                (
+                    localPlayerController.getCurrentPosition()
+                        ?: 0
+                ).toDouble() / 1000
+            }
         val playing = isPlaying ?: isPlayerPlaying
         apiClient.sendRequest(
             updateBuiltInPlayerStateRequest(
@@ -535,9 +576,9 @@ class MainDataSource(
                     paused = !playing,
                     position = position,
                     volume = 100.0,
-                    muted = false
-                )
-            )
+                    muted = false,
+                ),
+            ),
         )
         val newUpdateInterval = if (playing) 5000L else 20000L
         if (newUpdateInterval != localPlayerUpdateInterval) {
@@ -558,5 +599,4 @@ class MainDataSource(
         log.i(error ?: Exception("Unknown")) { "Media player error $error" }
         launch { updateLocalPlayerState(false) }
     }
-
 }

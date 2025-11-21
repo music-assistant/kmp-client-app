@@ -10,7 +10,7 @@ sealed interface AppRoutes {
     @Serializable
     data class LibraryArgs(
         val name: String,
-        val queueOrPlayerId: String
+        val queueOrPlayerId: String,
     ) : AppRoutes
 
     @Serializable

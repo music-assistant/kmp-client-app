@@ -15,29 +15,64 @@ data class MediaNotificationData(
     val imageUrl: String?,
     val elapsedTime: Long?,
     val playerName: String,
-    val duration: Long?
+    val duration: Long?,
 ) {
-
     companion object {
-        fun from(serverUrl: String?, playerData: PlayerData, multiplePlayers: Boolean) =
-            MediaNotificationData(
-                multiplePlayers = multiplePlayers,
-                longItemId = playerData.queue?.currentItem?.track?.longId,
-                name = playerData.queue?.currentItem?.track?.name,
-                artist = playerData.queue?.currentItem?.track?.subtitle,
-                album = playerData.queue?.currentItem?.track?.album?.name,
-                repeatMode = playerData.queue?.repeatMode,
-                shuffleEnabled = playerData.queue?.shuffleEnabled,
-                isPlaying = playerData.player.isPlaying,
-                imageUrl = playerData.queue?.currentItem?.track?.imageInfo?.url(serverUrl),
-                elapsedTime = playerData.queue?.elapsedTime?.toLong()?.let { it * 1000 },
-                playerName = playerData.player.name,
-                duration = playerData.queue?.currentItem?.track?.duration?.toLong()
-                    ?.let { it * 1000 }
-            )
+        fun from(
+            serverUrl: String?,
+            playerData: PlayerData,
+            multiplePlayers: Boolean,
+        ) = MediaNotificationData(
+            multiplePlayers = multiplePlayers,
+            longItemId =
+                playerData.queue
+                    ?.currentItem
+                    ?.track
+                    ?.longId,
+            name =
+                playerData.queue
+                    ?.currentItem
+                    ?.track
+                    ?.name,
+            artist =
+                playerData.queue
+                    ?.currentItem
+                    ?.track
+                    ?.subtitle,
+            album =
+                playerData.queue
+                    ?.currentItem
+                    ?.track
+                    ?.album
+                    ?.name,
+            repeatMode = playerData.queue?.repeatMode,
+            shuffleEnabled = playerData.queue?.shuffleEnabled,
+            isPlaying = playerData.player.isPlaying,
+            imageUrl =
+                playerData.queue
+                    ?.currentItem
+                    ?.track
+                    ?.imageInfo
+                    ?.url(serverUrl),
+            elapsedTime =
+                playerData.queue
+                    ?.elapsedTime
+                    ?.toLong()
+                    ?.let { it * 1000 },
+            playerName = playerData.player.name,
+            duration =
+                playerData.queue
+                    ?.currentItem
+                    ?.track
+                    ?.duration
+                    ?.toLong()
+                    ?.let { it * 1000 },
+        )
 
-
-        fun areTooSimilarToUpdate(old: MediaNotificationData, new: MediaNotificationData): Boolean {
+        fun areTooSimilarToUpdate(
+            old: MediaNotificationData,
+            new: MediaNotificationData,
+        ): Boolean {
             if (old.copy(elapsedTime = null) != new.copy(elapsedTime = null)) {
                 return false
             }

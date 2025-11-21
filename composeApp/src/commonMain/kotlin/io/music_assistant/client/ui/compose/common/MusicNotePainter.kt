@@ -9,9 +9,8 @@ import androidx.compose.ui.graphics.painter.Painter
 
 class MusicNotePainter(
     private val backgroundColor: Color = Color(0xFFE8E8E8),
-    private val iconColor: Color = Color(0xFF9E9E9E)
+    private val iconColor: Color = Color(0xFF9E9E9E),
 ) : Painter() {
-
     override val intrinsicSize: Size = Size.Unspecified
 
     override fun DrawScope.onDraw() {
@@ -21,7 +20,7 @@ class MusicNotePainter(
         // Draw background
         drawRect(
             color = backgroundColor,
-            size = Size(canvasWidth, canvasHeight)
+            size = Size(canvasWidth, canvasHeight),
         )
 
         // Draw music note
@@ -37,7 +36,7 @@ class MusicNotePainter(
         drawCircle(
             color = iconColor,
             radius = noteHeadRadius,
-            center = Offset(noteHeadX, noteHeadY)
+            center = Offset(noteHeadX, noteHeadY),
         )
 
         // Note stem (vertical line)
@@ -49,26 +48,31 @@ class MusicNotePainter(
         drawRect(
             color = iconColor,
             topLeft = Offset(stemX, stemTop),
-            size = Size(stemWidth, stemHeight)
+            size = Size(stemWidth, stemHeight),
         )
 
         // Note flag (curved shape)
-        val flagPath = Path().apply {
-            moveTo(stemX + stemWidth, stemTop)
-            quadraticTo(
-                stemX + noteSize * 0.3f, stemTop + noteSize * 0.1f,
-                stemX + noteSize * 0.25f, stemTop + noteSize * 0.25f
-            )
-            quadraticTo(
-                stemX + noteSize * 0.15f, stemTop + noteSize * 0.35f,
-                stemX + stemWidth, stemTop + noteSize * 0.3f
-            )
-            close()
-        }
+        val flagPath =
+            Path().apply {
+                moveTo(stemX + stemWidth, stemTop)
+                quadraticTo(
+                    stemX + noteSize * 0.3f,
+                    stemTop + noteSize * 0.1f,
+                    stemX + noteSize * 0.25f,
+                    stemTop + noteSize * 0.25f,
+                )
+                quadraticTo(
+                    stemX + noteSize * 0.15f,
+                    stemTop + noteSize * 0.35f,
+                    stemX + stemWidth,
+                    stemTop + noteSize * 0.3f,
+                )
+                close()
+            }
 
         drawPath(
             path = flagPath,
-            color = iconColor
+            color = iconColor,
         )
     }
 }

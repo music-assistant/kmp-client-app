@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
 data class BuiltinPlayerEvent(
     @SerialName("event") override val event: EventType,
     @SerialName("object_id") override val objectId: String,
-    @SerialName("data") override val data: BuiltinPlayerEventData
+    @SerialName("data") override val data: BuiltinPlayerEventData,
 ) : Event<BuiltinPlayerEventData>
 
 @Serializable

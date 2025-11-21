@@ -14,34 +14,43 @@ import io.music_assistant.client.services.MainMediaPlaybackService.Companion.ACT
 
 class MediaNotificationManager(
     private val context: Context,
-    private val mediaSessionHelper: MediaSessionHelper
+    private val mediaSessionHelper: MediaSessionHelper,
 ) {
-
     fun createNotification(bitmap: Bitmap?): Notification {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-        }
+        val intent =
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
 
-        val pendingIntent = PendingIntent.getActivity(
-            context, 0, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val pendingIntent =
+            PendingIntent.getActivity(
+                context,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
 
-        val dismissIntent = Intent(ACTION_NOTIFICATION_DISMISSED).apply {
-            setPackage("io.music_assistant.client")
-        }
-        val dismissPendingIntent = PendingIntent.getBroadcast(
-            context, 0, dismissIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        return NotificationCompat.Builder(context, CHANNEL_ID)
+        val dismissIntent =
+            Intent(ACTION_NOTIFICATION_DISMISSED).apply {
+                setPackage("io.music_assistant.client")
+            }
+        val dismissPendingIntent =
+            PendingIntent.getBroadcast(
+                context,
+                0,
+                dismissIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        return NotificationCompat
+            .Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_ma_logo)
             .setLargeIcon(bitmap)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setStyle(
-                androidx.media.app.NotificationCompat.MediaStyle()
-                    .setMediaSession(mediaSessionHelper.getSessionToken())
-            )
-            .setPriority(NotificationManager.IMPORTANCE_HIGH)
+                androidx.media.app.NotificationCompat
+                    .MediaStyle()
+                    .setMediaSession(mediaSessionHelper.getSessionToken()),
+            ).setPriority(NotificationManager.IMPORTANCE_HIGH)
             .setOngoing(true)
             .setAutoCancel(false)
             .setContentIntent(pendingIntent)
@@ -49,8 +58,7 @@ class MediaNotificationManager(
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     builder.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
                 }
-            }
-            .setDeleteIntent(dismissPendingIntent)
+            }.setDeleteIntent(dismissPendingIntent)
             .build()
     }
 

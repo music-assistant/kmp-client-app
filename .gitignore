@@ -47,3 +47,6 @@ output.json
 #NDK
 obj/
 .externalNativeBuild
+code-review.md
+missing-tests.md
+output.txt

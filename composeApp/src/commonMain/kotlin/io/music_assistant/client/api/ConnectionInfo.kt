@@ -8,9 +8,10 @@ data class ConnectionInfo(
     val port: Int,
     val isTls: Boolean,
 ) {
-    val webUrl = URLBuilder(
-        protocol = if (isTls) URLProtocol.HTTPS else URLProtocol.HTTP,
-        host = host,
-        port = port,
-    ).buildString()
+    val webUrl =
+        URLBuilder(
+            protocol = if (isTls) URLProtocol.HTTPS else URLProtocol.HTTP,
+            host = host,
+            port = port,
+        ).buildString()
 }

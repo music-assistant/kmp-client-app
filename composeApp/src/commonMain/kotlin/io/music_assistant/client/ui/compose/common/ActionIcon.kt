@@ -19,16 +19,16 @@ fun ActionIcon(
     size: Dp = 24.dp,
     tint: Color = MaterialTheme.colors.primary,
     enabled: Boolean = true,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
-
     Icon(
-        modifier = Modifier
-            .padding(horizontal = 8.dp)
-            .clickable(enabled = enabled) { onClick() }
-            .alpha(if (enabled) 1F else 0.5f)
-            .size(size)
-            .padding(all = 2.dp),
+        modifier =
+            Modifier
+                .padding(horizontal = 8.dp)
+                .clickable(enabled = enabled) { onClick() }
+                .alpha(if (enabled) 1F else 0.5f)
+                .size(size)
+                .padding(all = 2.dp),
         imageVector = icon,
         contentDescription = null,
         tint = tint,

@@ -20,15 +20,16 @@ data class Player(
         const val LOCAL_PLAYER_NAME = "This device"
         private const val BUILTIN_PLAYER = "builtin_player"
 
-        fun ServerPlayer.toPlayer() = Player(
-            id = playerId,
-            name = displayName,
-            shouldBeShown = available && enabled && (hidden != true),
-            canSetVolume = supportedFeatures.contains(PlayerFeature.VOLUME_SET) && provider != BUILTIN_PLAYER,
-            queueId = currentMedia?.queueId ?: activeSource,
-            isPlaying = state == PlayerState.PLAYING,
-            isAnnouncing = announcementInProgress == true,
-            isBuiltin = provider == BUILTIN_PLAYER
-        )
+        fun ServerPlayer.toPlayer() =
+            Player(
+                id = playerId,
+                name = displayName,
+                shouldBeShown = available && enabled && (hidden != true),
+                canSetVolume = supportedFeatures.contains(PlayerFeature.VOLUME_SET) && provider != BUILTIN_PLAYER,
+                queueId = currentMedia?.queueId ?: activeSource,
+                isPlaying = state == PlayerState.PLAYING,
+                isAnnouncing = announcementInProgress == true,
+                isBuiltin = provider == BUILTIN_PLAYER,
+            )
     }
 }

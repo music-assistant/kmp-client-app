@@ -2,8 +2,13 @@
 
 package io.music_assistant.client.player
 
-expect class MediaPlayerController(platformContext: PlatformContext) {
-    fun prepare(pathSource: String, listener: MediaPlayerListener)
+expect class MediaPlayerController(
+    platformContext: PlatformContext,
+) {
+    fun prepare(
+        pathSource: String,
+        listener: MediaPlayerListener,
+    )
 
     fun start()
 

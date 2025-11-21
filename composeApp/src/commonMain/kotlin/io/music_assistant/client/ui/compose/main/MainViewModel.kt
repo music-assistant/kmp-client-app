@@ -24,7 +24,6 @@ class MainViewModel(
     private val dataSource: MainDataSource,
     private val settings: SettingsRepository,
 ) : ViewModel() {
-
     private val _state = MutableStateFlow<State>(State.Loading)
     val state = _state.asStateFlow()
 
@@ -53,7 +52,8 @@ class MainViewModel(
                         when (it) {
                             is SessionState.Disconnected.Error,
                             SessionState.Disconnected.Initial,
-                            SessionState.Disconnected.ByUser -> {
+                            SessionState.Disconnected.ByUser,
+                            -> {
                                 _state.update { State.Disconnected }
                                 stopJobs()
                             }
@@ -63,7 +63,6 @@ class MainViewModel(
                                 stopJobs()
                             }
                         }
-
                     }
                 }
             }
@@ -75,54 +74,73 @@ class MainViewModel(
         jobs.clear()
     }
 
-    private fun watchPlayersData(): Job = viewModelScope.launch {
-        dataSource.playersData.collect { playerData ->
-            if (playerData.isNotEmpty() || _state.value is State.Data)
-                _state.update {
-                    State.Data(
-                        playerData,
-                        dataSource.selectedPlayerData.value
-                    )
+    private fun watchPlayersData(): Job =
+        viewModelScope.launch {
+            dataSource.playersData.collect { playerData ->
+                if (playerData.isNotEmpty() || _state.value is State.Data) {
+                    _state.update {
+                        State.Data(
+                            playerData,
+                            dataSource.selectedPlayerData.value,
+                        )
+                    }
                 }
-        }
-    }
-
-    private fun watchSelectedPlayerData(): Job = viewModelScope.launch {
-        dataSource.selectedPlayerData.filterNotNull().collect { selectedPlayer ->
-            val dataState = _state.value as? State.Data
-            dataState?.let { state ->
-                _state.update { state.copy(selectedPlayerData = selectedPlayer) }
             }
         }
-    }
+
+    private fun watchSelectedPlayerData(): Job =
+        viewModelScope.launch {
+            dataSource.selectedPlayerData.filterNotNull().collect { selectedPlayer ->
+                val dataState = _state.value as? State.Data
+                dataState?.let { state ->
+                    _state.update { state.copy(selectedPlayerData = selectedPlayer) }
+                }
+            }
+        }
 
     fun selectPlayer(player: Player) = dataSource.selectPlayer(player)
-    fun playerAction(data: PlayerData, action: PlayerAction) = dataSource.playerAction(data, action)
-    fun queueAction(action: QueueAction) = dataSource.queueAction(action)
-    fun onItemChosenChanged(id: String) = dataSource.onItemChosenChanged(id)
-    fun onChosenItemsClear() = dataSource.onChosenItemsClear()
-    fun onPlayersSortChanged(newSort: List<String>) = dataSource.onPlayersSortChanged(newSort)
-    fun openPlayerSettings(id: String) = settings.connectionInfo.value?.webUrl?.let { url ->
-        onOpenExternalLink("$url/#/settings/editplayer/$id")
-    }
 
-    fun openPlayerDspSettings(id: String) = settings.connectionInfo.value?.webUrl?.let { url ->
-        onOpenExternalLink("$url/#/settings/editplayer/$id/dsp")
-    }
+    fun playerAction(
+        data: PlayerData,
+        action: PlayerAction,
+    ) = dataSource.playerAction(data, action)
+
+    fun queueAction(action: QueueAction) = dataSource.queueAction(action)
+
+    fun onItemChosenChanged(id: String) = dataSource.onItemChosenChanged(id)
+
+    fun onChosenItemsClear() = dataSource.onChosenItemsClear()
+
+    fun onPlayersSortChanged(newSort: List<String>) = dataSource.onPlayersSortChanged(newSort)
+
+    fun openPlayerSettings(id: String) =
+        settings.connectionInfo.value?.webUrl?.let { url ->
+            onOpenExternalLink("$url/#/settings/editplayer/$id")
+        }
+
+    fun openPlayerDspSettings(id: String) =
+        settings.connectionInfo.value?.webUrl?.let { url ->
+            onOpenExternalLink("$url/#/settings/editplayer/$id/dsp")
+        }
 
     private fun onOpenExternalLink(url: String) = viewModelScope.launch { _links.emit(url) }
 
     sealed class State {
         data object Loading : State()
+
         data object Disconnected : State()
+
         data object NoServer : State()
+
         data class Data(
             val playerData: List<PlayerData>,
-            val selectedPlayerData: SelectedPlayerData? = null
+            val selectedPlayerData: SelectedPlayerData? = null,
         ) : State() {
             val selectedPlayer: PlayerData?
-                get() = selectedPlayerData?.playerId
-                    ?.let { selected -> playerData.firstOrNull { it.player.id == selected } }
+                get() =
+                    selectedPlayerData
+                        ?.playerId
+                        ?.let { selected -> playerData.firstOrNull { it.player.id == selected } }
         }
     }
 }

@@ -54,15 +54,15 @@ jobs:
           name: "🚀 Debug Build ${{ steps.vars.outputs.timestamp }}"
           body: |
             ## Debug APK Release
-            
+
             ### What's New
             ${{ github.event.head_commit.message }}
-            
+
             ### Important Notes
             - This is a **debug build** — not intended for production use
             - Contains debug symbols and logging
             - Performance may be slower than release builds
-            
+
             ### Installation
             Download the APK below and install on your Android device.
           files: composeApp/build/outputs/apk/debug/composeApp-debug.apk

@@ -26,27 +26,28 @@ import io.music_assistant.client.ui.theme.ThemeSetting
 fun ThemeChooser(
     modifier: Modifier = Modifier,
     currentTheme: ThemeSetting,
-    onThemeChange: (ThemeSetting) -> Unit
+    onThemeChange: (ThemeSetting) -> Unit,
 ) {
     Row(
-        modifier = modifier
-            .background(MaterialTheme.colors.onSecondary, RoundedCornerShape(6.dp)),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            modifier
+                .background(MaterialTheme.colors.onSecondary, RoundedCornerShape(6.dp)),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         ThemeToggleButton(
             icon = FontAwesomeIcons.Solid.Sun,
             selected = currentTheme == ThemeSetting.Light,
-            onClick = { onThemeChange(ThemeSetting.Light) }
+            onClick = { onThemeChange(ThemeSetting.Light) },
         )
         ThemeToggleButton(
             icon = FontAwesomeIcons.Brands.Adn,
             selected = currentTheme == ThemeSetting.FollowSystem,
-            onClick = { onThemeChange(ThemeSetting.FollowSystem) }
+            onClick = { onThemeChange(ThemeSetting.FollowSystem) },
         )
         ThemeToggleButton(
             icon = FontAwesomeIcons.Solid.Moon,
             selected = currentTheme == ThemeSetting.Dark,
-            onClick = { onThemeChange(ThemeSetting.Dark) }
+            onClick = { onThemeChange(ThemeSetting.Dark) },
         )
     }
 }
@@ -55,17 +56,17 @@ fun ThemeChooser(
 fun ThemeToggleButton(
     icon: ImageVector,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Icon(
-        modifier = Modifier
-            .size(24.dp)
-            .clickable { onClick() }
-            .background(
-                if (selected) MaterialTheme.colors.secondary else Color.Transparent,
-                RoundedCornerShape(12.dp)
-            )
-            .padding(4.dp),
+        modifier =
+            Modifier
+                .size(24.dp)
+                .clickable { onClick() }
+                .background(
+                    if (selected) MaterialTheme.colors.secondary else Color.Transparent,
+                    RoundedCornerShape(12.dp),
+                ).padding(4.dp),
         imageVector = icon,
         contentDescription = null,
         tint = if (selected) MaterialTheme.colors.onSecondary else MaterialTheme.colors.secondary,
