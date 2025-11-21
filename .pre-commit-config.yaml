@@ -1,0 +1,29 @@
+repos:
+  # Generic hygiene hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+
+  # Kotlin formatter / linter (requires ktlint on PATH)
+  - repo: local
+    hooks:
+      - id: ktlint
+        name: ktlint (Kotlin + KTS)
+        entry: ktlint --format
+        language: system
+        types: [kotlin]
+        # Optionally restrict to src/ if you want:
+        # files: '^composeApp/src/'
+
+      # Run Gradle checks on commit/push (no per-file args)
+      - id: gradle-kotlin-check
+        name: Gradle Kotlin check
+        entry: ./gradlew :composeApp:check
+        language: system
+        pass_filenames: false
+        stages: [push]
