@@ -260,14 +260,22 @@ class MainViewModelTest : RobolectricTest() {
     @Test
     fun openPlayerSettings_withoutConnectionInfo_shouldNotEmit() =
         runTest {
-            // Given - no webUrl set
+            // Given - Create a separate setup without connection info
+            val emptySettings = FakeSettings()
+            emptySettings.putString("localPlayerId", "test-local-player")
+            val emptySettingsRepo = SettingsRepository(emptySettings)
+            val emptyServiceClient = ServiceClient(emptySettingsRepo)
+            val emptyMediaPlayerController = createTestMediaPlayerController()
+            val emptyMainDataSource = MainDataSource(emptySettingsRepo, emptyServiceClient, emptyMediaPlayerController)
+            val emptyViewModel = MainViewModel(emptyServiceClient, emptyMainDataSource, emptySettingsRepo)
+
             val playerId = "test-player-1"
 
             // When
-            viewModel.links.test {
-                viewModel.openPlayerSettings(playerId)
+            emptyViewModel.links.test {
+                emptyViewModel.openPlayerSettings(playerId)
 
-                // Then
+                // Then - no connection info, so no link should be emitted
                 expectNoEvents()
             }
         }
@@ -295,14 +303,22 @@ class MainViewModelTest : RobolectricTest() {
     @Test
     fun openPlayerDspSettings_withoutConnectionInfo_shouldNotEmit() =
         runTest {
-            // Given - no webUrl set
+            // Given - Create a separate setup without connection info
+            val emptySettings = FakeSettings()
+            emptySettings.putString("localPlayerId", "test-local-player")
+            val emptySettingsRepo = SettingsRepository(emptySettings)
+            val emptyServiceClient = ServiceClient(emptySettingsRepo)
+            val emptyMediaPlayerController = createTestMediaPlayerController()
+            val emptyMainDataSource = MainDataSource(emptySettingsRepo, emptyServiceClient, emptyMediaPlayerController)
+            val emptyViewModel = MainViewModel(emptyServiceClient, emptyMainDataSource, emptySettingsRepo)
+
             val playerId = "test-player-1"
 
             // When
-            viewModel.links.test {
-                viewModel.openPlayerDspSettings(playerId)
+            emptyViewModel.links.test {
+                emptyViewModel.openPlayerDspSettings(playerId)
 
-                // Then
+                // Then - no connection info, so no link should be emitted
                 expectNoEvents()
             }
         }

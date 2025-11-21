@@ -178,6 +178,8 @@ class ServiceClientTest {
                 val connectingState = awaitItem()
                 assertIs<SessionState.Connecting>(connectingState)
                 assertEquals(connectionInfo, connectingState.connectionInfo)
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 

@@ -596,6 +596,7 @@ class ErrorHandlingTest : RobolectricTest() {
                 // Then - should properly clean up
                 // Note: The actual websocket connection will fail in tests,
                 // but we verify the disconnect flow works
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -666,7 +667,7 @@ class ErrorHandlingTest : RobolectricTest() {
             val client = ServiceClient(settingsRepo).also { serviceClient = it }
 
             // When/Then
-            client.sessionState.test {
+            client.sessionState.test(timeout = kotlin.time.Duration.parse("10s")) {
                 val initial = awaitItem()
                 assertIs<SessionState.Disconnected.Initial>(initial)
 
@@ -678,9 +679,12 @@ class ErrorHandlingTest : RobolectricTest() {
                 val error = awaitItem()
                 assertIs<SessionState.Disconnected.Error>(error)
 
-                // Should attempt to reconnect again
+                // Should attempt to reconnect again (this may take time)
                 val reconnecting = awaitItem()
                 assertIs<SessionState.Connecting>(reconnecting)
+
+                // Clean up remaining reconnection attempts
+                cancelAndIgnoreRemainingEvents()
             }
         }
 

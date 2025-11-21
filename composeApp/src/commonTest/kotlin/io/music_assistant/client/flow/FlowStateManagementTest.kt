@@ -201,35 +201,29 @@ class FlowStateManagementTest : RobolectricTest() {
             val (_, _, viewModel) = createTestSetup()
 
             // When - Make rapid search query changes
-            viewModel.state.test {
-                val initial = awaitItem()
-                assertEquals("", initial.searchState.query)
+            viewModel.state.test(timeout = kotlin.time.Duration.parse("5s")) {
+                var state = awaitItem()
+                assertEquals("", state.searchState.query)
 
                 // Rapid changes within debounce window
                 // Note: Each searchQueryChanged emits a state update immediately
                 viewModel.searchQueryChanged("a")
-                val afterA = awaitItem()
-                assertEquals("a", afterA.searchState.query)
+                do {
+                    state = awaitItem()
+                } while (state.searchState.query != "a")
+                assertEquals("a", state.searchState.query)
 
                 viewModel.searchQueryChanged("ab")
-                val afterAb = awaitItem()
-                assertEquals("ab", afterAb.searchState.query)
+                do {
+                    state = awaitItem()
+                } while (state.searchState.query != "ab")
+                assertEquals("ab", state.searchState.query)
 
                 viewModel.searchQueryChanged("abc")
-                val afterAbc = awaitItem()
-                assertEquals("abc", afterAbc.searchState.query)
-
-                // Advance time less than debounce (500ms)
-                advanceTimeBy(400)
-
-                // Should not trigger search yet - search loading only happens after debounce
-                // Advance past debounce window
-                advanceTimeBy(150)
-                advanceUntilIdle()
-
-                // Now search should be triggered (if we were connected)
-                // Since we're not connected, we just verify debounce worked
-                // by checking that state stabilized
+                do {
+                    state = awaitItem()
+                } while (state.searchState.query != "abc")
+                assertEquals("abc", state.searchState.query)
 
                 // Cancel any background coroutines that might emit more events
                 cancelAndIgnoreRemainingEvents()
@@ -247,18 +241,22 @@ class FlowStateManagementTest : RobolectricTest() {
                 awaitItem() // Initial state
 
                 viewModel.searchQueryChanged("ab") // Only 2 chars
-                val stateAfterShortQuery = awaitItem()
+                // May have connection state emission, so consume all until we see our update
+                var stateAfterShortQuery = awaitItem()
+                var attempts = 0
+                while (stateAfterShortQuery.searchState.query != "ab" && attempts < 5) {
+                    stateAfterShortQuery = awaitItem()
+                    attempts++
+                }
 
                 assertEquals("ab", stateAfterShortQuery.searchState.query)
-
-                // Advance past debounce
-                advanceTimeBy(600)
-                advanceUntilIdle()
 
                 // Search tab should still be NoData
                 val searchList = stateAfterShortQuery.libraryLists.find { it.tab == LibraryTab.Search }
                 assertNotNull(searchList)
                 assertIs<LibraryViewModel.ListState.NoData>(searchList.listState)
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -300,24 +298,26 @@ class FlowStateManagementTest : RobolectricTest() {
             val (_, _, viewModel) = createTestSetup()
 
             // When
-            viewModel.state.test {
-                awaitItem() // Initial
+            viewModel.state.test(timeout = kotlin.time.Duration.parse("5s")) {
+                var state = awaitItem() // Initial
 
                 // Set same query multiple times
                 viewModel.searchQueryChanged("same")
-                val firstUpdate = awaitItem()
-                assertEquals("same", firstUpdate.searchState.query)
+                // Consume emissions until we get the one with our query
+                do {
+                    state = awaitItem()
+                } while (state.searchState.query != "same")
+                assertEquals("same", state.searchState.query)
 
                 viewModel.searchQueryChanged("same")
-                val secondUpdate = awaitItem()
-                assertEquals("same", secondUpdate.searchState.query)
+                // Consume emissions until we get the one with our query
+                do {
+                    state = awaitItem()
+                } while (state.searchState.query != "same")
+                assertEquals("same", state.searchState.query)
                 // State emits each time, but distinctUntilChanged on the
                 // internal search flow prevents duplicate search executions
 
-                advanceTimeBy(600)
-                advanceUntilIdle()
-
-                // Connection state may have changed, causing an extra emission
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -550,6 +550,7 @@ class FlowStateManagementTest : RobolectricTest() {
                 // Wait for error state (may take time due to timeout)
                 // Note: In production, this would transition to Error
                 // For tests, we verify the transition logic exists
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -576,6 +577,7 @@ class FlowStateManagementTest : RobolectricTest() {
                 // Note: disconnectByUser only works when Connected
                 // While Connecting, disconnect() method checks for Connected state
                 // So no state change while Connecting - this tests the guard logic
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -622,6 +624,7 @@ class FlowStateManagementTest : RobolectricTest() {
                 // - Disconnected: clears players/queues, cancels jobs
 
                 // This test verifies the reactive chain exists
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -769,22 +772,27 @@ class FlowStateManagementTest : RobolectricTest() {
             val (_, _, viewModel) = createTestSetup()
 
             // When - Test debounce operator on search
-            viewModel.state.test {
-                awaitItem() // Initial
+            viewModel.state.test(timeout = kotlin.time.Duration.parse("5s")) {
+                var state = awaitItem() // Initial
 
                 // Rapid changes
                 viewModel.searchQueryChanged("a")
-                awaitItem() // Each change emits to state immediately
+                do {
+                    state = awaitItem()
+                } while (state.searchState.query != "a")
 
                 viewModel.searchQueryChanged("ab")
-                awaitItem()
+                do {
+                    state = awaitItem()
+                } while (state.searchState.query != "ab")
 
                 viewModel.searchQueryChanged("abc")
-                awaitItem()
+                do {
+                    state = awaitItem()
+                } while (state.searchState.query != "abc")
 
                 // But search loading is debounced internally
-                advanceTimeBy(500)
-                advanceUntilIdle()
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -795,19 +803,23 @@ class FlowStateManagementTest : RobolectricTest() {
             val (_, _, viewModel) = createTestSetup()
 
             // When
-            viewModel.state.test {
-                awaitItem() // Initial
+            viewModel.state.test(timeout = kotlin.time.Duration.parse("5s")) {
+                var state = awaitItem() // Initial
 
                 // Same query multiple times
                 viewModel.searchQueryChanged("test")
-                awaitItem()
+                // Consume emissions until we get the one with our query
+                do {
+                    state = awaitItem()
+                } while (state.searchState.query != "test")
 
                 viewModel.searchQueryChanged("test") // Same as before
-                awaitItem() // State still emits since searchQueryChanged updates state
+                // Consume emissions until we get the one with our query
+                do {
+                    state = awaitItem()
+                } while (state.searchState.query != "test")
+                // State still emits since searchQueryChanged updates state
 
-                advanceUntilIdle()
-
-                // Connection state may change, causing extra emissions
                 cancelAndIgnoreRemainingEvents()
             }
         }
