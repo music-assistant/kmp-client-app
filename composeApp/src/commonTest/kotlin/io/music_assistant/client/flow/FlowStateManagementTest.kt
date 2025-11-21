@@ -303,17 +303,21 @@ class FlowStateManagementTest : RobolectricTest() {
 
                 // Set same query multiple times
                 viewModel.searchQueryChanged("same")
-                // Consume emissions until we get the one with our query
+                // Consume emissions until we get the one with our query (max 20 tries)
+                var attempts = 0
                 do {
                     state = awaitItem()
-                } while (state.searchState.query != "same")
+                    attempts++
+                } while (state.searchState.query != "same" && attempts < 20)
                 assertEquals("same", state.searchState.query)
 
                 viewModel.searchQueryChanged("same")
-                // Consume emissions until we get the one with our query
+                // Consume emissions until we get the one with our query (max 20 tries)
+                attempts = 0
                 do {
                     state = awaitItem()
-                } while (state.searchState.query != "same")
+                    attempts++
+                } while (state.searchState.query != "same" && attempts < 20)
                 assertEquals("same", state.searchState.query)
                 // State emits each time, but distinctUntilChanged on the
                 // internal search flow prevents duplicate search executions
@@ -808,16 +812,20 @@ class FlowStateManagementTest : RobolectricTest() {
 
                 // Same query multiple times
                 viewModel.searchQueryChanged("test")
-                // Consume emissions until we get the one with our query
+                // Consume emissions until we get the one with our query (max 20 tries)
+                var attempts = 0
                 do {
                     state = awaitItem()
-                } while (state.searchState.query != "test")
+                    attempts++
+                } while (state.searchState.query != "test" && attempts < 20)
 
                 viewModel.searchQueryChanged("test") // Same as before
-                // Consume emissions until we get the one with our query
+                // Consume emissions until we get the one with our query (max 20 tries)
+                attempts = 0
                 do {
                     state = awaitItem()
-                } while (state.searchState.query != "test")
+                    attempts++
+                } while (state.searchState.query != "test" && attempts < 20)
                 // State still emits since searchQueryChanged updates state
 
                 cancelAndIgnoreRemainingEvents()

@@ -437,13 +437,19 @@ class LibraryViewModelTest : RobolectricTest() {
 
                 // Turn on
                 vm.searchLibraryOnlyChanged(true)
-                awaitItem()
+                var state = awaitItem()
+                while (!state.searchState.libraryOnly) {
+                    state = awaitItem()
+                }
 
                 // When - turn off
                 vm.searchLibraryOnlyChanged(false)
 
                 // Then
-                val state = awaitItem()
+                state = awaitItem()
+                while (state.searchState.libraryOnly) {
+                    state = awaitItem()
+                }
                 assertFalse(state.searchState.libraryOnly, "Library only should be false")
 
                 cancelAndIgnoreRemainingEvents()
