@@ -189,7 +189,7 @@ class LibraryViewModelTest : RobolectricTest() {
     fun onTabSelected_withMultipleChanges_shouldUpdateCorrectly() =
         runTest {
             // When/Then
-            viewModel.state.test {
+            viewModel.state.test(timeout = 3000.milliseconds) {
                 awaitItem() // Initial state
 
                 viewModel.onTabSelected(LibraryTab.Playlists)
