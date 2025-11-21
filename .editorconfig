@@ -1,0 +1,9 @@
+root = true
+
+[*.{kt,kts}]
+ktlint_standard_package-name = disabled
+
+[*Test.kt]
+ktlint_standard_package-name = disabled
+ktlint_standard_no-wildcard-imports = disabled
+ktlint_standard_max-line-length = disabled
