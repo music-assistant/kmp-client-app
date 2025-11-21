@@ -4,6 +4,7 @@ package io.music_assistant.client.data
 
 import app.cash.turbine.test
 import com.russhwolf.settings.Settings
+import io.music_assistant.client.RobolectricTest
 import io.music_assistant.client.api.ConnectionInfo
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.player.MediaPlayerController
@@ -29,8 +30,10 @@ expect fun createTestMediaPlayerController(): MediaPlayerController
  * and behavior of MainDataSource that doesn't require network connectivity.
  *
  * For full integration tests with event handling, see integration test suite.
+ *
+ * Extends RobolectricTest to enable Robolectric on Android for MediaPlayerController creation.
  */
-class MainDataSourceTest {
+class MainDataSourceTest : RobolectricTest() {
     /**
      * Fake Settings implementation for testing
      */

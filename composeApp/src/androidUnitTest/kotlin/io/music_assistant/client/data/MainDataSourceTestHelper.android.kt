@@ -1,10 +1,12 @@
 package io.music_assistant.client.data
 
-import androidx.test.core.app.ApplicationProvider
 import io.music_assistant.client.player.MediaPlayerController
 import io.music_assistant.client.player.PlatformContext
+import org.robolectric.RuntimeEnvironment
 
 actual fun createTestMediaPlayerController(): MediaPlayerController {
-    val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+    // Robolectric is initialized via MainDataSourceTest extending RobolectricTest
+    // which has @RunWith(RobolectricTestRunner::class) on Android
+    val context = RuntimeEnvironment.getApplication()
     return MediaPlayerController(PlatformContext(context))
 }
