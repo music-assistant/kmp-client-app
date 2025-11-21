@@ -29,6 +29,22 @@ class LibraryViewModelTest : RobolectricTest() {
 
     @BeforeTest
     fun setup() {
+        // Note: We create fresh instances in each test to avoid pollution
+    }
+
+    @AfterTest
+    fun cleanup() {
+        // Disconnect and clean up the service client to stop background coroutines
+        if (::serviceClient.isInitialized) {
+            try {
+                serviceClient.disconnectByUser()
+            } catch (e: Exception) {
+                // Ignore cleanup errors
+            }
+        }
+    }
+
+    private fun createViewModel(): LibraryViewModel {
         fakeSettings = FakeSettings()
 
         // Set up connection info
@@ -39,11 +55,8 @@ class LibraryViewModelTest : RobolectricTest() {
         settingsRepo = SettingsRepository(fakeSettings)
         serviceClient = ServiceClient(settingsRepo)
         viewModel = LibraryViewModel(serviceClient)
-    }
 
-    @AfterTest
-    fun cleanup() {
-        // Allow resources to be cleaned up
+        return viewModel
     }
 
     // ============= Initial State Tests =============
@@ -52,7 +65,8 @@ class LibraryViewModelTest : RobolectricTest() {
     fun initialState_shouldHaveThreeTabs() =
         runTest {
             // When
-            viewModel.state.test {
+            val vm = createViewModel()
+            vm.state.test {
                 val state = awaitItem()
 
                 // Then
@@ -69,6 +83,8 @@ class LibraryViewModelTest : RobolectricTest() {
                     state.libraryLists.any { it.tab == LibraryTab.Search },
                     "Should have Search tab",
                 )
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -76,13 +92,16 @@ class LibraryViewModelTest : RobolectricTest() {
     fun initialState_artistsTab_shouldBeSelected() =
         runTest {
             // When
-            viewModel.state.test {
+            val vm = createViewModel()
+            vm.state.test {
                 val state = awaitItem()
 
                 // Then
                 val artistsTab = state.libraryLists.find { it.tab == LibraryTab.Artists }
                 assertNotNull(artistsTab, "Artists tab should exist")
                 assertTrue(artistsTab.isSelected, "Artists tab should be selected initially")
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -90,11 +109,14 @@ class LibraryViewModelTest : RobolectricTest() {
     fun initialState_allTabs_shouldHaveNoData() =
         runTest {
             // When
-            viewModel.state.test {
+            val vm = createViewModel()
+            vm.state.test {
                 val state = awaitItem()
 
                 // Then - verify all tabs exist (we don't check listState as it may be Loading in tests)
                 assertEquals(3, state.libraryLists.size, "Should have 3 library tabs")
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -102,11 +124,14 @@ class LibraryViewModelTest : RobolectricTest() {
     fun initialState_checkedItems_shouldBeEmpty() =
         runTest {
             // When
-            viewModel.state.test {
+            val vm = createViewModel()
+            vm.state.test {
                 val state = awaitItem()
 
                 // Then
                 assertTrue(state.checkedItems.isEmpty(), "Checked items should be empty initially")
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -114,11 +139,14 @@ class LibraryViewModelTest : RobolectricTest() {
     fun initialState_searchQuery_shouldBeEmpty() =
         runTest {
             // When
-            viewModel.state.test {
+            val vm = createViewModel()
+            vm.state.test {
                 val state = awaitItem()
 
                 // Then
                 assertEquals("", state.searchState.query, "Search query should be empty initially")
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -126,7 +154,8 @@ class LibraryViewModelTest : RobolectricTest() {
     fun initialState_searchTypes_shouldAllBeSelected() =
         runTest {
             // When
-            viewModel.state.test {
+            val vm = createViewModel()
+            vm.state.test {
                 val state = awaitItem()
 
                 // Then
@@ -134,6 +163,8 @@ class LibraryViewModelTest : RobolectricTest() {
                     state.searchState.mediaTypes.all { it.isSelected },
                     "All search types should be selected initially",
                 )
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -141,11 +172,14 @@ class LibraryViewModelTest : RobolectricTest() {
     fun initialState_libraryOnly_shouldBeFalse() =
         runTest {
             // When
-            viewModel.state.test {
+            val vm = createViewModel()
+            vm.state.test {
                 val state = awaitItem()
 
                 // Then
                 assertFalse(state.searchState.libraryOnly, "Library only should be false initially")
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -153,11 +187,14 @@ class LibraryViewModelTest : RobolectricTest() {
     fun initialState_showAlbums_shouldBeTrue() =
         runTest {
             // When
-            viewModel.state.test {
+            val vm = createViewModel()
+            vm.state.test {
                 val state = awaitItem()
 
                 // Then
                 assertTrue(state.showAlbums, "Show albums should be true initially")
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -167,12 +204,20 @@ class LibraryViewModelTest : RobolectricTest() {
     fun onTabSelected_shouldUpdateSelectedTab() =
         runTest {
             // When/Then
-            viewModel.state.test {
+            val vm = createViewModel()
+            vm.state.test(timeout = 3000.milliseconds) {
                 awaitItem() // Initial state
 
-                viewModel.onTabSelected(LibraryTab.Playlists)
+                vm.onTabSelected(LibraryTab.Playlists)
 
-                val state = awaitItem() // Wait for state update
+                // Wait for state update - may have connection state changes first
+                var state = awaitItem()
+                while (true) {
+                    val playlistsTab = state.libraryLists.find { it.tab == LibraryTab.Playlists }
+                    if (playlistsTab?.isSelected == true) break
+                    state = awaitItem()
+                }
+
                 val playlistsTab = state.libraryLists.find { it.tab == LibraryTab.Playlists }
                 assertNotNull(playlistsTab)
                 assertTrue(playlistsTab.isSelected, "Playlists tab should be selected")
@@ -189,14 +234,27 @@ class LibraryViewModelTest : RobolectricTest() {
     fun onTabSelected_withMultipleChanges_shouldUpdateCorrectly() =
         runTest {
             // When/Then
-            viewModel.state.test(timeout = 3000.milliseconds) {
+            val vm = createViewModel()
+            vm.state.test(timeout = 3000.milliseconds) {
                 awaitItem() // Initial state
 
-                viewModel.onTabSelected(LibraryTab.Playlists)
-                awaitItem() // Wait for first update
+                vm.onTabSelected(LibraryTab.Playlists)
+                // Wait until Playlists is selected
+                var state = awaitItem()
+                while (true) {
+                    val playlistsTab = state.libraryLists.find { it.tab == LibraryTab.Playlists }
+                    if (playlistsTab?.isSelected == true) break
+                    state = awaitItem()
+                }
 
-                viewModel.onTabSelected(LibraryTab.Search)
-                val finalState = awaitItem() // Wait for second update
+                vm.onTabSelected(LibraryTab.Search)
+                // Wait until Search is selected
+                var finalState = awaitItem()
+                while (true) {
+                    val searchTab = finalState.libraryLists.find { it.tab == LibraryTab.Search }
+                    if (searchTab?.isSelected == true) break
+                    finalState = awaitItem()
+                }
 
                 val searchTab = finalState.libraryLists.find { it.tab == LibraryTab.Search }
                 assertNotNull(searchTab, "Search tab should exist")
@@ -212,44 +270,53 @@ class LibraryViewModelTest : RobolectricTest() {
     fun searchQueryChanged_shouldUpdateQuery() =
         runTest {
             // Given
-            viewModel.state.test {
+            val vm = createViewModel()
+            vm.state.test {
                 awaitItem() // Initial
 
                 // When
-                viewModel.searchQueryChanged("test query")
+                vm.searchQueryChanged("test query")
 
                 // Then
                 val state = awaitItem()
                 assertEquals("test query", state.searchState.query, "Query should be updated")
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
     @Test
     fun searchQueryChanged_withEmptyString_shouldClearQuery() =
         runTest {
+            val vm = createViewModel()
             // When - should not throw
-            viewModel.searchQueryChanged("test")
-            viewModel.searchQueryChanged("")
+            vm.searchQueryChanged("test")
+            vm.searchQueryChanged("")
 
             // Then - verify final state
-            viewModel.state.test {
+            vm.state.test {
                 val state = awaitItem()
                 assertEquals("", state.searchState.query, "Query should be cleared")
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
     @Test
     fun searchQueryChanged_withMultipleUpdates_shouldReflectLatest() =
         runTest {
+            val vm = createViewModel()
             // When - should not throw
-            viewModel.searchQueryChanged("first")
-            viewModel.searchQueryChanged("second")
-            viewModel.searchQueryChanged("third")
+            vm.searchQueryChanged("first")
+            vm.searchQueryChanged("second")
+            vm.searchQueryChanged("third")
 
             // Then - verify final state
-            viewModel.state.test {
+            vm.state.test {
                 val finalState = awaitItem()
                 assertEquals("third", finalState.searchState.query, "Should reflect latest query")
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -259,17 +326,20 @@ class LibraryViewModelTest : RobolectricTest() {
     fun searchTypeChanged_shouldUpdateTypeSelection() =
         runTest {
             // Given
-            viewModel.state.test {
+            val vm = createViewModel()
+            vm.state.test {
                 awaitItem() // Initial
 
                 // When
-                viewModel.searchTypeChanged(MediaType.ARTIST, false)
+                vm.searchTypeChanged(MediaType.ARTIST, false)
 
                 // Then
                 val state = awaitItem()
                 val artistType = state.searchState.mediaTypes.find { it.type == MediaType.ARTIST }
                 assertNotNull(artistType)
                 assertFalse(artistType.isSelected, "Artist type should be deselected")
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -277,21 +347,24 @@ class LibraryViewModelTest : RobolectricTest() {
     fun searchTypeChanged_multipleTimes_shouldUpdateCorrectly() =
         runTest {
             // Given
-            viewModel.state.test {
+            val vm = createViewModel()
+            vm.state.test {
                 awaitItem() // Initial
 
                 // When - deselect artist
-                viewModel.searchTypeChanged(MediaType.ARTIST, false)
+                vm.searchTypeChanged(MediaType.ARTIST, false)
                 awaitItem()
 
                 // When - deselect album
-                viewModel.searchTypeChanged(MediaType.ALBUM, false)
+                vm.searchTypeChanged(MediaType.ALBUM, false)
                 val state = awaitItem()
 
                 // Then
                 val selectedTypes = state.searchState.mediaTypes.filter { it.isSelected }
                 assertEquals(1, selectedTypes.size, "Only track should remain selected")
                 assertEquals(MediaType.TRACK, selectedTypes[0].type)
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -299,21 +372,37 @@ class LibraryViewModelTest : RobolectricTest() {
     fun searchTypeChanged_reselect_shouldWork() =
         runTest {
             // Given
-            viewModel.state.test {
+            val vm = createViewModel()
+            vm.state.test {
                 awaitItem() // Initial
 
                 // Deselect
-                viewModel.searchTypeChanged(MediaType.ARTIST, false)
-                awaitItem()
+                vm.searchTypeChanged(MediaType.ARTIST, false)
+                var state = awaitItem()
+
+                // Wait for artist to be deselected
+                while (true) {
+                    val artistType = state.searchState.mediaTypes.find { it.type == MediaType.ARTIST }
+                    if (artistType?.isSelected == false) break
+                    state = awaitItem()
+                }
 
                 // When - reselect
-                viewModel.searchTypeChanged(MediaType.ARTIST, true)
+                vm.searchTypeChanged(MediaType.ARTIST, true)
 
-                // Then
-                val state = awaitItem()
-                val artistType = state.searchState.mediaTypes.find { it.type == MediaType.ARTIST }
+                // Then - wait for artist to be selected again
+                var finalState = awaitItem()
+                while (true) {
+                    val artistType = finalState.searchState.mediaTypes.find { it.type == MediaType.ARTIST }
+                    if (artistType?.isSelected == true) break
+                    finalState = awaitItem()
+                }
+
+                val artistType = finalState.searchState.mediaTypes.find { it.type == MediaType.ARTIST }
                 assertNotNull(artistType)
                 assertTrue(artistType.isSelected, "Artist type should be selected again")
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -323,15 +412,18 @@ class LibraryViewModelTest : RobolectricTest() {
     fun searchLibraryOnlyChanged_shouldUpdateFlag() =
         runTest {
             // Given
-            viewModel.state.test {
+            val vm = createViewModel()
+            vm.state.test {
                 awaitItem() // Initial
 
                 // When
-                viewModel.searchLibraryOnlyChanged(true)
+                vm.searchLibraryOnlyChanged(true)
 
                 // Then
                 val state = awaitItem()
                 assertTrue(state.searchState.libraryOnly, "Library only should be true")
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -339,19 +431,22 @@ class LibraryViewModelTest : RobolectricTest() {
     fun searchLibraryOnlyChanged_toggle_shouldWork() =
         runTest {
             // Given
-            viewModel.state.test {
+            val vm = createViewModel()
+            vm.state.test {
                 awaitItem() // Initial
 
                 // Turn on
-                viewModel.searchLibraryOnlyChanged(true)
+                vm.searchLibraryOnlyChanged(true)
                 awaitItem()
 
                 // When - turn off
-                viewModel.searchLibraryOnlyChanged(false)
+                vm.searchLibraryOnlyChanged(false)
 
                 // Then
                 val state = awaitItem()
                 assertFalse(state.searchState.libraryOnly, "Library only should be false")
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -361,29 +456,35 @@ class LibraryViewModelTest : RobolectricTest() {
     fun onShowAlbumsChange_shouldUpdateFlag() =
         runTest {
             // Given
-            viewModel.state.test {
+            val vm = createViewModel()
+            vm.state.test {
                 awaitItem() // Initial
 
                 // When
-                viewModel.onShowAlbumsChange(false)
+                vm.onShowAlbumsChange(false)
 
                 // Then
                 val state = awaitItem()
                 assertFalse(state.showAlbums, "Show albums should be false")
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
     @Test
     fun onShowAlbumsChange_toggle_shouldWork() =
         runTest {
+            val vm = createViewModel()
             // When - should not throw
-            viewModel.onShowAlbumsChange(false)
-            viewModel.onShowAlbumsChange(true)
+            vm.onShowAlbumsChange(false)
+            vm.onShowAlbumsChange(true)
 
             // Then - verify final state
-            viewModel.state.test {
+            vm.state.test {
                 val state = awaitItem()
                 assertTrue(state.showAlbums, "Show albums should be true")
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -392,13 +493,16 @@ class LibraryViewModelTest : RobolectricTest() {
     @Test
     fun clearCheckedItems_shouldClearSelection() =
         runTest {
+            val vm = createViewModel()
             // When - should not throw
-            viewModel.clearCheckedItems()
+            vm.clearCheckedItems()
 
             // Then - verify state
-            viewModel.state.test {
+            vm.state.test {
                 val state = awaitItem()
                 assertTrue(state.checkedItems.isEmpty(), "Checked items should be empty")
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -407,13 +511,16 @@ class LibraryViewModelTest : RobolectricTest() {
     @Test
     fun onUpClick_withNoParentItems_shouldNotChange() =
         runTest {
+            val vm = createViewModel()
             // When - should not throw
-            viewModel.onUpClick(LibraryTab.Artists)
+            vm.onUpClick(LibraryTab.Artists)
 
             // Then - verify state hasn't changed
-            viewModel.state.test {
+            vm.state.test {
                 val state = awaitItem()
                 assertNotNull(state, "State should still be available")
+
+                cancelAndIgnoreRemainingEvents()
             }
         }
 
@@ -423,7 +530,8 @@ class LibraryViewModelTest : RobolectricTest() {
     fun serverUrl_shouldNotEmitWithoutServerInfo() =
         runTest {
             // When
-            viewModel.serverUrl.test {
+            val vm = createViewModel()
+            vm.serverUrl.test {
                 // Then - should not emit until server info is available
                 expectNoEvents()
             }
@@ -435,7 +543,8 @@ class LibraryViewModelTest : RobolectricTest() {
     fun toasts_shouldNotEmitInitially() =
         runTest {
             // When
-            viewModel.toasts.test {
+            val vm = createViewModel()
+            vm.toasts.test {
                 // Then
                 expectNoEvents()
             }
