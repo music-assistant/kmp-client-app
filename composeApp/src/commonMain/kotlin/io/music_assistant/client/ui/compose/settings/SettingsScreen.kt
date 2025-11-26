@@ -29,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavController
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.ArrowLeft
@@ -43,7 +42,7 @@ import io.music_assistant.client.utils.isValidHost
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun SettingsScreen(navController: NavController) {
+fun SettingsScreen(onBack: () -> Unit) {
     val themeViewModel = koinViewModel<ThemeViewModel>()
     val theme = themeViewModel.theme.collectAsStateWithLifecycle(ThemeSetting.FollowSystem)
     val viewModel = koinViewModel<SettingsViewModel>()
@@ -59,11 +58,11 @@ fun SettingsScreen(navController: NavController) {
         )
     }
     if (sessionState is SessionState.Connected && shouldPopOnConnected) {
-        navController.popBackStack()
+        onBack()
     }
     BackHandler(enabled = true) {
         if (sessionState is SessionState.Connected) {
-            navController.popBackStack()
+            onBack()
         }
     }
     Scaffold(
@@ -87,7 +86,7 @@ fun SettingsScreen(navController: NavController) {
                     ActionIcon(
                         icon = FontAwesomeIcons.Solid.ArrowLeft,
                     ) {
-                        navController.popBackStack()
+                        onBack()
                     }
                 }
                 Spacer(modifier = Modifier.weight(1f))

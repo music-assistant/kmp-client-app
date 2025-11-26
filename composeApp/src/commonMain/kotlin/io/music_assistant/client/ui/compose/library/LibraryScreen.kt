@@ -66,7 +66,6 @@ import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import compose.icons.FontAwesomeIcons
 import compose.icons.TablerIcons
@@ -107,7 +106,7 @@ import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun LibraryScreen(navController: NavController, args: AppRoutes.LibraryArgs) {
+fun LibraryScreen(args: AppRoutes.LibraryArgs, onBack: () -> Unit) {
     val toastState = rememberToastState()
     val viewModel = koinViewModel<LibraryViewModel>()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
@@ -123,7 +122,7 @@ fun LibraryScreen(navController: NavController, args: AppRoutes.LibraryArgs) {
                 return@BackHandler
             }
         }
-        navController.popBackStack()
+        onBack()
     }
     LaunchedEffect(Unit) { viewModel.toasts.collect { t -> toastState.showToast(t) } }
     Library(
@@ -132,7 +131,7 @@ fun LibraryScreen(navController: NavController, args: AppRoutes.LibraryArgs) {
         args = args,
         state = state,
         selectedList = selectedList,
-        navController = navController,
+        onBack = onBack,
         onListSelected = viewModel::onTabSelected,
         onItemClicked = viewModel::onItemClicked,
         onCheckChanged = viewModel::onItemCheckChanged,
@@ -146,7 +145,7 @@ fun LibraryScreen(navController: NavController, args: AppRoutes.LibraryArgs) {
         onShowAlbumsChange = viewModel::onShowAlbumsChange,
         onPlaySelectedItems = { option ->
             viewModel.playSelectedItems(args.queueOrPlayerId, option)
-            navController.popBackStack()
+            onBack()
         },
         onCreatePlaylist = viewModel::createPlaylist,
         onAddToPlaylist = viewModel::addTrackToPlaylist
@@ -161,7 +160,7 @@ private fun Library(
     args: AppRoutes.LibraryArgs,
     state: LibraryViewModel.State,
     selectedList: LibraryViewModel.LibraryList?,
-    navController: NavController,
+    onBack: () -> Unit,
     onListSelected: (LibraryViewModel.LibraryTab) -> Unit,
     onItemClicked: (LibraryViewModel.LibraryTab, AppMediaItem) -> Unit,
     onCheckChanged: (AppMediaItem) -> Unit,
@@ -236,7 +235,7 @@ private fun Library(
             ) {
                 ActionIcon(
                     icon = FontAwesomeIcons.Solid.ArrowLeft,
-                ) { navController.popBackStack() }
+                ) { onBack() }
                 if (state.checkedItems.isEmpty()) {
                     Text(
                         modifier = Modifier.padding(start = 16.dp),

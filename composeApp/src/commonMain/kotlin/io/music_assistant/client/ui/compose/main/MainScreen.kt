@@ -40,17 +40,16 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavController
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.Cog
 import io.music_assistant.client.ui.compose.common.VerticalHidingContainer
-import io.music_assistant.client.ui.compose.nav.AppRoutes
+import io.music_assistant.client.utils.NavScreen
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun MainScreen(navController: NavController) {
+fun MainScreen(navigateTo: (NavScreen) -> Unit) {
     val viewModel = koinViewModel<MainViewModel>()
     val uriHandler = LocalUriHandler.current
 
@@ -91,7 +90,7 @@ fun MainScreen(navController: NavController) {
                             onClick = {
                                 (state as? MainViewModel.State.Data)?.selectedPlayer
                                     ?.let { selected ->
-                                        navController.navigate(selected.libraryArgs)
+                                        navigateTo(NavScreen.Library(selected.libraryArgs))
                                     }
                             },
                             text = {
@@ -104,7 +103,7 @@ fun MainScreen(navController: NavController) {
                     }
                     FloatingActionButton(
                         modifier = Modifier.size(48.dp),
-                        onClick = { navController.navigate(AppRoutes.Settings) },
+                        onClick = { navigateTo(NavScreen.Settings) },
                     ) {
                         Icon(
                             modifier = Modifier.size(24.dp),
@@ -121,7 +120,7 @@ fun MainScreen(navController: NavController) {
         var lastDataState by remember { mutableStateOf<MainViewModel.State.Data?>(null) }
         LaunchedEffect(state) {
             if (state is MainViewModel.State.NoServer) {
-                navController.navigate(AppRoutes.Settings)
+                navigateTo(NavScreen.Settings)
             }
             if (state is MainViewModel.State.Data) {
                 lastDataState = state as MainViewModel.State.Data
