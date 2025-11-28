@@ -55,7 +55,7 @@ import compose.icons.tablericons.GripVertical
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.client.Queue
 import io.music_assistant.client.data.model.client.QueueTrack
-import io.music_assistant.client.ui.compose.common.MusicNotePainter
+import io.music_assistant.client.ui.compose.common.painters.MusicNotePainter
 import io.music_assistant.client.utils.conditional
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem

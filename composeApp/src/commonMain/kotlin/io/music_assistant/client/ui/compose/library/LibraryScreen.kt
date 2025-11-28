@@ -94,7 +94,7 @@ import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.ui.compose.common.ActionIcon
 import io.music_assistant.client.ui.compose.common.ListState
-import io.music_assistant.client.ui.compose.common.MusicNotePainter
+import io.music_assistant.client.ui.compose.common.painters.MusicNotePainter
 import io.music_assistant.client.ui.compose.common.ToastHost
 import io.music_assistant.client.ui.compose.common.ToastState
 import io.music_assistant.client.ui.compose.common.VerticalHidingContainer

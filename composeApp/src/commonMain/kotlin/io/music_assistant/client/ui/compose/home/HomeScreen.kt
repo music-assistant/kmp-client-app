@@ -6,16 +6,34 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Headset
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.*
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -43,9 +61,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.ui.compose.common.ListState
-import io.music_assistant.client.ui.compose.common.MusicNotePainter
+import io.music_assistant.client.ui.compose.common.painters.MusicMicrophonePainter
 import io.music_assistant.client.utils.SessionState
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.exp
+import kotlin.math.sin
 
 @Composable
 fun HomeScreen(
@@ -72,7 +94,14 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxSize().padding(paddingValues),
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
-                items(items = listState.items) { row ->
+                items(items = listState.items.filter {
+                    it.items?.filter { item ->
+                        item is AppMediaItem.Track
+                                || item is AppMediaItem.Artist
+                                || item is AppMediaItem.Album
+                                || item is AppMediaItem.Playlist
+                    }.orEmpty().isNotEmpty()
+                }) { row ->
                     CategoryRow(
                         serverUrl = serverUrl,
                         title = row.name,
@@ -117,14 +146,14 @@ fun CategoryRow(
         }
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             items(items = mediaItems) { item ->
                 when (item) {
-                    is AppMediaItem.Track -> TrackItem(item, serverUrl)
-                    is AppMediaItem.Artist -> ArtistItem(item, serverUrl)
-                    is AppMediaItem.Album -> AlbumItem(item, serverUrl)
-                    is AppMediaItem.Playlist -> PlaylistItem(item, serverUrl)
+                    is AppMediaItem.Track -> TrackItem(96.dp, item, serverUrl)
+                    is AppMediaItem.Artist -> ArtistItem(96.dp, item, serverUrl)
+                    is AppMediaItem.Album -> AlbumItem(96.dp, item, serverUrl)
+                    is AppMediaItem.Playlist -> PlaylistItem(96.dp, item, serverUrl)
                     else -> {}
                 }
             }
@@ -135,59 +164,85 @@ fun CategoryRow(
 // --- Specific Item Composables ---
 
 @Composable
-fun TrackItem(track: AppMediaItem.Track, serverUrl: String?) {
+fun TrackItem(itemSize: Dp, track: AppMediaItem.Track, serverUrl: String?) {
+
+    val waveformPainter = WaveformPainter(
+        waveColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        thickness = 3f
+    )
+
     Column(
         modifier = Modifier
-            .width(100.dp) // Define item width
+            .wrapContentSize()
+            .clip(RoundedCornerShape(8.dp))
             .clickable { /* Handle click */ }
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
-                .size(100.dp)
+                .size(itemSize)
                 .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer) // Placeholder image
+                .background(MaterialTheme.colorScheme.primaryContainer)
         ) {
-            Icon(
-                Icons.Default.Headset,
-                contentDescription = null,
-                Modifier.size(50.dp).align(Alignment.Center)
+            AsyncImage(
+                model = track.imageInfo?.url(serverUrl),
+                contentDescription = "Artwork for ${track.name}",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
             )
+
+            // Draw waveform overlay at the bottom
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(20.dp)
+                    .align(Alignment.BottomCenter)
+            ) {
+                with(waveformPainter) {
+                    draw(size)
+                }
+            }
         }
         Spacer(Modifier.height(4.dp))
         Text(
             text = track.name,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.width(itemSize)
         )
         Text(
             text = track.subtitle.orEmpty(),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.width(itemSize)
         )
     }
 }
 
 @Composable
-fun ArtistItem(artist: AppMediaItem.Artist, serverUrl: String?) {
+fun ArtistItem(itemSize: Dp, artist: AppMediaItem.Artist, serverUrl: String?) {
     Column(
         modifier = Modifier
-            .width(80.dp) // Define item width
-            .clickable { /* Handle click */ },
+            .wrapContentSize()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { /* Handle click */ }
+            .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
-                .size(80.dp)
+                .size(itemSize)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.tertiaryContainer)
+                .background(MaterialTheme.colorScheme.primaryContainer)
         ) {
             val placeholder =
-                MusicNotePainter(
-                    backgroundColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
-                    iconColor = MaterialTheme.colorScheme.secondary
+                MusicMicrophonePainter(
+                    backgroundColor = MaterialTheme.colorScheme.primaryContainer,
+                    iconColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             AsyncImage(
                 placeholder = placeholder,
@@ -200,6 +255,7 @@ fun ArtistItem(artist: AppMediaItem.Artist, serverUrl: String?) {
         }
         Spacer(Modifier.height(4.dp))
         Text(
+            modifier = Modifier.width(itemSize),
             text = artist.name,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
@@ -209,25 +265,27 @@ fun ArtistItem(artist: AppMediaItem.Artist, serverUrl: String?) {
 }
 
 @Composable
-fun AlbumItem(album: AppMediaItem.Album, serverUrl: String?) {
-    val albumSize = 80.dp
+fun AlbumItem(itemSize: Dp, album: AppMediaItem.Album, serverUrl: String?) {
     val stripWidth = 10.dp
     val holeRadius = 10.dp
 
     Column(
         modifier = Modifier
-            .width(albumSize)
+            .wrapContentSize()
+            .clip(RoundedCornerShape(8.dp))
             .clickable { /* Handle click */ }
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
-                .size(albumSize)
+                .size(itemSize)
                 .clip(RoundedCornerShape(8.dp))
         ) {
 
             val vinylRecord = VinylRecordPainter(
                 recordColor = Color(0xFF202020),
-                labelColor = Color(0xFFFF5722),
+                labelColor = MaterialTheme.colorScheme.primaryContainer,
                 holeColor = MaterialTheme.colorScheme.background
             )
 
@@ -249,7 +307,7 @@ fun AlbumItem(album: AppMediaItem.Album, serverUrl: String?) {
                     .clip(HoleShape(holeRadius))
             )
 
-            Canvas(modifier = Modifier.size(albumSize)) {
+            Canvas(modifier = Modifier.size(itemSize)) {
                 val center = size.width / 2f
                 val radiusPx = holeRadius.toPx()
                 drawCircle(
@@ -262,12 +320,14 @@ fun AlbumItem(album: AppMediaItem.Album, serverUrl: String?) {
         }
         Spacer(Modifier.height(4.dp))
         Text(
+            modifier = Modifier.width(itemSize),
             text = album.name,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
         Text(
+            modifier = Modifier.width(itemSize),
             text = album.subtitle.orEmpty(),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -278,31 +338,33 @@ fun AlbumItem(album: AppMediaItem.Album, serverUrl: String?) {
 }
 
 @Composable
-fun PlaylistItem(playlist: AppMediaItem.Playlist, serverUrl: String?) {
+fun PlaylistItem(itemSize: Dp, playlist: AppMediaItem.Playlist, serverUrl: String?) {
     Column(
         modifier = Modifier
-            .width(80.dp)
-            .clickable { /* Handle click */ },
+            .wrapContentSize()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { /* Handle click */ }
+            .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
-                .size(80.dp)
+                .size(itemSize)
                 .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.errorContainer) // Placeholder background
+                .background(MaterialTheme.colorScheme.primaryContainer) // Placeholder background
                 .padding(8.dp),
             contentAlignment = Alignment.Center
         ) {
-            // Using a simple Material Icon for the "Wavy star-like icon"
             Icon(
-                imageVector = Icons.Default.Star,
+                imageVector = Icons.AutoMirrored.Filled.List,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onErrorContainer,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(50.dp)
             )
         }
         Spacer(Modifier.height(4.dp))
         Text(
+            modifier = Modifier.width(itemSize),
             text = playlist.name,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
@@ -368,20 +430,22 @@ class HoleShape(private val holeRadius: Dp) : Shape {
 }
 
 class VinylRecordPainter(
-    private val recordColor: Color = Color(0xFF202020),
-    private val labelColor: Color = Color(0xFFFF5722),
-    private val holeColor: Color = Color.Black,
-    private val holeRadius: Dp = 2.dp
+    private val recordColor: Color = Color(0xFF202020), // Dark grey/black for vinyl
+    private val labelColor: Color = Color(0xFFFF5722), // Bright orange/red for label
+    private val holeColor: Color = Color.Black, // Color for the center spindle hole
+    private val holeRadius: Dp = 3.dp, // Color for the center spindle hole
+    private val grooveColor: Color = labelColor.copy(alpha = 0.4f), // Subtle white for grooves
+    private val grooveCount: Int = 6 // Number of grooves to draw
 ) : Painter() {
 
-    override val intrinsicSize: Size = Size.Unspecified // Let the caller define the size
+    override val intrinsicSize: Size = Size.Unspecified
 
     override fun DrawScope.onDraw() {
-        val diameter = size.minDimension // Use minDimension for perfect square aspect ratio
+        val diameter = size.minDimension
         val radius = diameter / 2f
         val center = Offset(size.width / 2f, size.height / 2f)
 
-        // 1. Draw the main record body (dark circle)
+        // Draw the main record body (dark circle)
         drawCircle(
             color = recordColor,
             radius = radius,
@@ -389,8 +453,8 @@ class VinylRecordPainter(
             style = Fill
         )
 
-        // 2. Draw the record label (smaller colored circle)
-        val labelRadius = radius * 0.45f // 45% of the record radius
+        // Draw the record label (smaller colored circle)
+        val labelRadius = radius * 0.45f
         drawCircle(
             color = labelColor,
             radius = labelRadius,
@@ -398,9 +462,8 @@ class VinylRecordPainter(
             style = Fill
         )
 
-        // 3. Draw the center spindle hole (tiny black circle)
-        val holeRadius =
-            with(Density(density)) { holeRadius.toPx() } // Use the same constant as in item
+        // Draw the center spindle hole (tiny black circle)
+        val holeRadius = with(Density(density)) { holeRadius.toPx() }
         drawCircle(
             color = holeColor,
             radius = holeRadius,
@@ -408,13 +471,92 @@ class VinylRecordPainter(
             style = Fill
         )
 
-        // Optional: Add a subtle inner ring for more realism
-        val innerRingRadius = labelRadius * 0.9f
-        drawCircle(
-            color = Color.White.copy(alpha = 0.1f),
-            radius = innerRingRadius,
-            center = center,
-            style = Stroke(width = 0.5.dp.toPx())
-        )
+        // Start grooves from just outside the label, extending to the edge of the record
+        val grooveStartRadius = labelRadius + (1.dp.toPx()) // Start slightly after the label
+        val grooveEndRadius = radius - (1.dp.toPx()) // End slightly before the outer edge
+
+        if (grooveEndRadius > grooveStartRadius) {
+            val grooveSpacing = (grooveEndRadius - grooveStartRadius) / grooveCount
+            for (i in 0 until grooveCount) {
+                val currentGrooveRadius = grooveStartRadius + (i * grooveSpacing)
+                drawCircle(
+                    color = grooveColor,
+                    radius = currentGrooveRadius,
+                    center = center,
+                    style = Stroke(width = 0.5.dp.toPx()) // Very thin stroke for grooves
+                )
+            }
+        }
+    }
+}
+
+
+class WaveformPainter(
+    private val waveColor: Color,
+    private val thickness: Float = 4f,
+    private val baseFrequency: Float = 16f,
+    private val baseAmplitudeFactor: Float = 0.8f,
+    private val verticalOffset: Float = 0.3f
+) : Painter() {
+
+    override val intrinsicSize: Size = Size.Unspecified
+
+    override fun DrawScope.onDraw() {
+        if (size.width <= 0f || size.height <= 0f) return
+
+        val centerLine = size.height * (0.5f + verticalOffset) // Shift the center line down
+
+        var phase = 0f
+        var prevX = 0f
+        var prevY = centerLine
+
+        // Draw the wave with variable amplitude and frequency
+        for (x in 0..size.width.toInt()) {
+            val normalizedX = x.toFloat() / size.width
+
+            // Create an envelope that peaks only at the exact center
+            val distanceFromCenter = abs(normalizedX - 0.5f) * 2f // 0 at center, 1 at edges
+            // Using Gaussian-like curve for sharp peak at center
+            val envelopeCurve = exp(-distanceFromCenter * distanceFromCenter * 8f)
+            // Scale from 0.2 to 1.0 instead of 0 to 1.0
+            val envelope = 0.1f + envelopeCurve * 0.9f
+
+            // Vary amplitude based on position
+            val amplitude = size.height * baseAmplitudeFactor * envelope
+
+            // Vary frequency based on position (higher frequency in the center)
+            val frequency = baseFrequency * (0.5f + envelope * 0.5f)
+
+            // Accumulate phase for smooth transitions
+            if (x > 0) {
+                phase += frequency * 2 * PI.toFloat() / size.width
+            }
+
+            // Calculate y using accumulated phase, centered on the shifted center line
+            val y = centerLine + amplitude * sin(phase)
+
+            // Interpolate color based on envelope (amplitude)
+            // envelope ranges from 0.1 to 1.0, we map it to color interpolation
+            val colorT = 1 - ((envelope - 0.1f) / 0.9f) // Normalize to 1..0
+            val segmentColor = Color(
+                red = 1f - (1f - waveColor.red) * colorT,
+                green = 1f - (1f - waveColor.green) * colorT,
+                blue = 1f - (1f - waveColor.blue) * colorT,
+                alpha = waveColor.alpha
+            )
+
+            // Draw line segment with current color
+            if (x > 0) {
+                drawLine(
+                    color = segmentColor,
+                    start = Offset(prevX, prevY),
+                    end = Offset(x.toFloat(), y),
+                    strokeWidth = thickness
+                )
+            }
+
+            prevX = x.toFloat()
+            prevY = y
+        }
     }
 }
