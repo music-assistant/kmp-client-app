@@ -9,11 +9,13 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.scene.DialogSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
+import io.music_assistant.client.ui.compose.home.HomeScreen
+import io.music_assistant.client.ui.compose.library.LibraryArgs
 import io.music_assistant.client.ui.compose.library.LibraryScreen
 import io.music_assistant.client.ui.compose.main.MainScreen
-import io.music_assistant.client.ui.compose.nav.AppRoutes
 import io.music_assistant.client.ui.compose.settings.SettingsScreen
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.modules.SerializersModule
@@ -24,10 +26,13 @@ sealed class NavScreen : NavKey {
     data object Main : NavScreen()
 
     @Serializable
+    data object Home : NavScreen()
+
+    @Serializable
     data object Settings : NavScreen()
 
     @Serializable
-    data class Library(val args: AppRoutes.LibraryArgs) : NavScreen()
+    data class Library(val args: LibraryArgs) : NavScreen()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,21 +45,23 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
                 serializersModule = SerializersModule {
                     polymorphic(NavKey::class) {
                         subclass(NavScreen.Main::class, NavScreen.Main.serializer())
+                        subclass(NavScreen.Home::class, NavScreen.Home.serializer())
                         subclass(NavScreen.Settings::class, NavScreen.Settings.serializer())
                         subclass(NavScreen.Library::class, NavScreen.Library.serializer())
                     }
                 }
             }
         ),
-        NavScreen.Main
+        NavScreen.Home
     )
     val bottomSheetStrategy = remember { BottomSheetSceneStrategy<NavKey>() }
+    val dialogStrategy = remember { DialogSceneStrategy<NavKey>() }
 
     NavDisplay(
         modifier = modifier,
         backStack = backStack,
         onBack = { backStack.removeLastOrNull() },
-        sceneStrategy = bottomSheetStrategy,
+        sceneStrategy = bottomSheetStrategy.then(dialogStrategy),
         entryDecorators = listOf(
             rememberSaveableStateHolderNavEntryDecorator(
                 rememberSaveableStateHolder()
@@ -63,11 +70,16 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
         entryProvider = { key ->
             when (key) {
                 is NavScreen.Main -> NavEntry(key) { MainScreen { screen -> backStack.add(screen) } }
-                is NavScreen.Settings -> NavEntry(key) { SettingsScreen { backStack.removeLastOrNull() } }
+                is NavScreen.Home -> NavEntry(key) { HomeScreen() }
+                is NavScreen.Settings -> NavEntry(
+                    key = key,
+                ) { SettingsScreen { backStack.removeLastOrNull() } }
+
                 is NavScreen.Library -> NavEntry(
                     key = key,
                     metadata = BottomSheetSceneStrategy.bottomSheet()
                 ) { LibraryScreen(key.args) { backStack.removeLastOrNull() } }
+
                 else -> throw RuntimeException("Unknown NavScreen: $key")
             }
 

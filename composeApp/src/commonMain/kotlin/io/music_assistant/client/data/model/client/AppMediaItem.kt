@@ -89,6 +89,34 @@ abstract class AppMediaItem(
                 }
     }
 
+    class RecommendationFolder(
+        itemId: String,
+        provider: String,
+        name: String,
+        providerMappings: List<ProviderMapping>?,
+//        mediaType: MediaType,
+        //sortName: String?,
+        uri: String?,
+//        isPlayable: Boolean?,
+//        timestampAdded: Long?,
+//        timestampModified: Long?,
+//        val musicbrainzId: String?,
+        val items: List<AppMediaItem>? = null,
+    ) : AppMediaItem(
+        itemId,
+        provider,
+        name,
+        null,
+        null,
+        null,
+        MediaType.ARTIST,
+        //sortName,
+        uri,
+        //isPlayable,
+        //timestampAdded,
+        //timestampModified,
+    )
+
     class Artist(
         itemId: String,
         provider: String,
@@ -150,7 +178,7 @@ abstract class AppMediaItem(
         //timestampAdded,
         //timestampModified,
     ) {
-        override val subtitle = "Album - ${artists?.joinToString(separator = ", ") { it.name }}"
+        override val subtitle = artists?.joinToString(separator = ", ") { it.name }
     }
 
     class Track(
@@ -307,12 +335,19 @@ abstract class AppMediaItem(
 //                    owner = owner,
                     isEditable = isEditable,
                 )
+                MediaType.FOLDER -> RecommendationFolder(
+                    itemId = itemId,
+                    provider = provider,
+                    name = name,
+                    providerMappings = providerMappings,
+                    uri = uri,
+                    items = items?.toAppMediaItemList()
+                    )
 
                 MediaType.RADIO,
                 MediaType.AUDIOBOOK,
                 MediaType.PODCAST,
                 MediaType.PODCAST_EPISODE,
-                MediaType.FOLDER,
                 MediaType.FLOW_STREAM,
                 MediaType.ANNOUNCEMENT,
                 MediaType.UNKNOWN -> null

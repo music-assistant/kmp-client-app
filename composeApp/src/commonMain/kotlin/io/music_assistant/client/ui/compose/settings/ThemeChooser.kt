@@ -6,8 +6,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,7 +30,7 @@ fun ThemeChooser(
 ) {
     Row(
         modifier = modifier
-            .background(MaterialTheme.colors.onSecondary, RoundedCornerShape(6.dp)),
+            .background(MaterialTheme.colorScheme.onSecondary, RoundedCornerShape(6.dp)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         ThemeToggleButton(
@@ -62,12 +62,12 @@ fun ThemeToggleButton(
             .size(24.dp)
             .clickable { onClick() }
             .background(
-                if (selected) MaterialTheme.colors.secondary else Color.Transparent,
+                if (selected) MaterialTheme.colorScheme.secondary else Color.Transparent,
                 RoundedCornerShape(12.dp)
             )
             .padding(4.dp),
         imageVector = icon,
         contentDescription = null,
-        tint = if (selected) MaterialTheme.colors.onSecondary else MaterialTheme.colors.secondary,
+        tint = if (selected) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.secondary,
     )
 }

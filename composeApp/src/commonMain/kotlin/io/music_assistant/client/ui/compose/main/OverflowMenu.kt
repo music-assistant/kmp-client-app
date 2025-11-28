@@ -4,12 +4,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.material.DropdownMenu
-import androidx.compose.material.DropdownMenuItem
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,7 +39,7 @@ fun OverflowMenuThreeDots(
                 modifier = Modifier.size(16.dp),
                 imageVector = FontAwesomeIcons.Solid.EllipsisV,
                 contentDescription = "Menu",
-                tint = MaterialTheme.colors.onPrimary,
+                tint = MaterialTheme.colorScheme.onPrimary,
             )
         }
         DropdownMenu(
@@ -51,10 +51,11 @@ fun OverflowMenuThreeDots(
                     onClick = {
                         option.onClick()
                         expanded = false
+                    },
+                    text = {
+                        Text(modifier = Modifier.padding(all = 4.dp), text = option.title)
                     }
-                ) {
-                    Text(modifier = Modifier.padding(all = 4.dp), text = option.title)
-                }
+                )
             }
         }
     }
@@ -88,10 +89,11 @@ fun OverflowMenu(
                     onClick = {
                         option.onClick()
                         expanded = false
+                    },
+                    text = {
+                        Text(modifier = Modifier.padding(all = 4.dp), text = option.title)
                     }
-                ) {
-                    Text(modifier = Modifier.padding(all = 4.dp), text = option.title)
-                }
+                )
             }
         }
     }

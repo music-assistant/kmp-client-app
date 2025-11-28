@@ -6,19 +6,6 @@ import co.touchlab.kermit.Logger
 import io.music_assistant.client.api.Answer
 import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
-import io.music_assistant.client.api.addMediaItemToLibraryRequest
-import io.music_assistant.client.api.addTracksToPlaylistRequest
-import io.music_assistant.client.api.createPlaylistRequest
-import io.music_assistant.client.api.favouriteMediaItemRequest
-import io.music_assistant.client.api.getAlbumTracksRequest
-import io.music_assistant.client.api.getArtistAlbumsRequest
-import io.music_assistant.client.api.getArtistTracksRequest
-import io.music_assistant.client.api.getArtistsRequest
-import io.music_assistant.client.api.getPlaylistTracksRequest
-import io.music_assistant.client.api.getPlaylistsRequest
-import io.music_assistant.client.api.playMediaRequest
-import io.music_assistant.client.api.searchRequest
-import io.music_assistant.client.api.unfavouriteMediaItemRequest
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItemList
@@ -29,6 +16,7 @@ import io.music_assistant.client.data.model.server.ServerMediaItem
 import io.music_assistant.client.data.model.server.events.MediaItemAddedEvent
 import io.music_assistant.client.data.model.server.events.MediaItemDeletedEvent
 import io.music_assistant.client.data.model.server.events.MediaItemUpdatedEvent
+import io.music_assistant.client.ui.compose.common.ListState
 import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -62,7 +50,7 @@ class LibraryViewModel(
                 LibraryList(
                     tab = it,
                     parentItems = emptyList(),
-                    listState = ListState.NoData,
+                    listState = ListState.NoData(),
                     isSelected = it == LibraryTab.Artists,
                 )
             },
@@ -110,7 +98,7 @@ class LibraryViewModel(
                                     if (list.tab == LibraryTab.Search) {
                                         list.copy(
                                             parentItems = emptyList(),
-                                            listState = ListState.NoData
+                                            listState = ListState.NoData()
                                         )
                                     } else list
                                 }
@@ -235,11 +223,11 @@ class LibraryViewModel(
         viewModelScope.launch {
             mediaItem.favorite?.takeIf { it }?.let {
                 apiClient.sendRequest(
-                    unfavouriteMediaItemRequest(mediaItem.itemId, mediaItem.mediaType)
+                    Request.Library.removeFavourite(mediaItem.itemId, mediaItem.mediaType)
                 )
             } ?: run {
                 mediaItem.uri?.let {
-                    apiClient.sendRequest(favouriteMediaItemRequest(it))
+                    apiClient.sendRequest(Request.Library.addFavourite(it))
                 }
             }
         }
@@ -250,7 +238,7 @@ class LibraryViewModel(
         viewModelScope.launch {
             mediaItem.uri?.let {
                 addToOngoing(mediaItem)
-                apiClient.sendRequest(addMediaItemToLibraryRequest(it))
+                apiClient.sendRequest(Request.Library.add(it))
             }
         }
     }
@@ -329,7 +317,7 @@ class LibraryViewModel(
     fun playSelectedItems(queueOrPlayerId: String, option: QueueOption) {
         viewModelScope.launch {
             apiClient.sendRequest(
-                playMediaRequest(
+                Request.Library.play(
                     media = _state.value.checkedItems.mapNotNull { it.uri },
                     queueOrPlayerId = queueOrPlayerId,
                     option = option,
@@ -341,14 +329,14 @@ class LibraryViewModel(
 
     fun createPlaylist(name: String) {
         viewModelScope.launch {
-            apiClient.sendRequest(createPlaylistRequest(name))
+            apiClient.sendRequest(Request.Playlist.create(name))
         }
     }
 
     fun addTrackToPlaylist(track: AppMediaItem.Track, playlist: AppMediaItem.Playlist) {
         viewModelScope.launch {
             apiClient.sendRequest(
-                addTracksToPlaylistRequest(
+                Request.Playlist.addTracks(
                     playlistId = playlist.itemId,
                     trackUris = track.uri?.let { listOf(it) } ?: return@launch,
                 )
@@ -389,19 +377,19 @@ class LibraryViewModel(
     }
 
     private suspend fun loadArtists() {
-        refreshSimpleList(LibraryTab.Artists, getArtistsRequest()) { it is AppMediaItem.Artist }
+        refreshSimpleList(LibraryTab.Artists, Request.Artist.list()) { it is AppMediaItem.Artist }
     }
 
     private suspend fun loadPlaylists() {
         refreshSimpleList(
             LibraryTab.Playlists,
-            getPlaylistsRequest()
+            Request.Playlist.list()
         ) { it is AppMediaItem.Playlist }
     }
 
     private suspend fun loadAlbums(tab: LibraryTab) {
         currentParentForTab(tab)?.let { item ->
-            refreshSimpleList(tab, getArtistAlbumsRequest(item.itemId, item.provider)) {
+            refreshSimpleList(tab, Request.Artist.getAlbums(item.itemId, item.provider)) {
                 it is AppMediaItem.Album
             }
         }
@@ -412,9 +400,9 @@ class LibraryViewModel(
             refreshSimpleList(
                 tab,
                 when (item) {
-                    is AppMediaItem.Artist -> getArtistTracksRequest(item.itemId, item.provider)
-                    is AppMediaItem.Album -> getAlbumTracksRequest(item.itemId, item.provider)
-                    is AppMediaItem.Playlist -> getPlaylistTracksRequest(item.itemId, item.provider)
+                    is AppMediaItem.Artist -> Request.Artist.getTracks(item.itemId, item.provider)
+                    is AppMediaItem.Album -> Request.Album.getTracks(item.itemId, item.provider)
+                    is AppMediaItem.Playlist -> Request.Playlist.getTracks(item.itemId, item.provider)
 
                     else -> return
                 }
@@ -434,7 +422,7 @@ class LibraryViewModel(
         }
         refreshList(
             LibraryTab.Search,
-            searchRequest(
+            Request.Library.search(
                 query = searchState.query,
                 mediaTypes = searchState.selectedMediaTypes,
                 limit = 50,
@@ -465,7 +453,7 @@ class LibraryViewModel(
             s.copy(
                 libraryLists = s.libraryLists.map {
                     if (it.tab == tab) {
-                        it.copy(listState = ListState.Loading)
+                        it.copy(listState = ListState.Loading())
                     } else {
                         it
                     }
@@ -496,7 +484,7 @@ class LibraryViewModel(
                 s.copy(
                     libraryLists = s.libraryLists.map {
                         if (it.tab == tab) {
-                            it.copy(listState = ListState.Error)
+                            it.copy(listState = ListState.Error())
                         } else {
                             it
                         }
@@ -512,7 +500,7 @@ class LibraryViewModel(
     data class LibraryList(
         val tab: LibraryTab,
         val parentItems: List<AppMediaItem>,
-        val listState: ListState,
+        val listState: ListState<AppMediaItem>,
         val isSelected: Boolean,
     )
 
@@ -530,13 +518,6 @@ class LibraryViewModel(
                 MediaType.ARTIST, MediaType.ALBUM, MediaType.TRACK
             )
         }
-    }
-
-    sealed class ListState {
-        data object NoData : ListState()
-        data object Loading : ListState()
-        data object Error : ListState()
-        data class Data(val items: List<AppMediaItem>) : ListState()
     }
 
     data class State(

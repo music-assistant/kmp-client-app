@@ -30,17 +30,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
-import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.ExtendedFloatingActionButton
-import androidx.compose.material.FabPosition
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Tab
-import androidx.compose.material.TabRow
-import androidx.compose.material.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FabPosition
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -93,6 +93,7 @@ import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.ui.compose.common.ActionIcon
+import io.music_assistant.client.ui.compose.common.ListState
 import io.music_assistant.client.ui.compose.common.MusicNotePainter
 import io.music_assistant.client.ui.compose.common.ToastHost
 import io.music_assistant.client.ui.compose.common.ToastState
@@ -100,13 +101,12 @@ import io.music_assistant.client.ui.compose.common.VerticalHidingContainer
 import io.music_assistant.client.ui.compose.common.rememberToastState
 import io.music_assistant.client.ui.compose.main.OverflowMenu
 import io.music_assistant.client.ui.compose.main.OverflowMenuOption
-import io.music_assistant.client.ui.compose.nav.AppRoutes
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun LibraryScreen(args: AppRoutes.LibraryArgs, onBack: () -> Unit) {
+fun LibraryScreen(args: LibraryArgs, onBack: () -> Unit) {
     val toastState = rememberToastState()
     val viewModel = koinViewModel<LibraryViewModel>()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
@@ -157,7 +157,7 @@ private fun Library(
     modifier: Modifier = Modifier,
     toastState: ToastState,
     serverUrl: String?,
-    args: AppRoutes.LibraryArgs,
+    args: LibraryArgs,
     state: LibraryViewModel.State,
     selectedList: LibraryViewModel.LibraryList?,
     onBack: () -> Unit,
@@ -193,10 +193,10 @@ private fun Library(
         }
     }
     Scaffold(
-        backgroundColor = MaterialTheme.colors.background,
+        containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
             if (
-                selectedList?.listState is LibraryViewModel.ListState.Data
+                selectedList?.listState is ListState.Data
                 && selectedList.parentItems.lastOrNull()?.mediaType == MediaType.ARTIST
             ) {
                 VerticalHidingContainer(
@@ -208,8 +208,11 @@ private fun Library(
                         text = {
                             Text(
                                 text = if (state.showAlbums) "Tracks" else "Albums",
-                                style = MaterialTheme.typography.button
+                                style = MaterialTheme.typography.labelMedium
                             )
+                        },
+                        icon = {
+
                         }
                     )
                 }
@@ -220,7 +223,7 @@ private fun Library(
     ) { scaffoldPadding ->
         Column(
             modifier = modifier
-                .background(color = MaterialTheme.colors.background)
+                .background(color = MaterialTheme.colorScheme.background)
                 .fillMaxSize()
                 .padding(scaffoldPadding)
                 .consumeWindowInsets(scaffoldPadding)
@@ -240,7 +243,7 @@ private fun Library(
                     Text(
                         modifier = Modifier.padding(start = 16.dp),
                         text = "Media",
-                        style = MaterialTheme.typography.h6
+                        style = MaterialTheme.typography.labelMedium
                     )
                 } else {
                     val artists =
@@ -285,7 +288,7 @@ private fun Library(
                     ) { onPlaySelectedItems(QueueOption.REPLACE) }
                 }
             }
-            TabRow(selectedTabIndex = state.libraryLists.indexOf(selectedList)) {
+            PrimaryTabRow(selectedTabIndex = state.libraryLists.indexOf(selectedList)) {
                 state.libraryLists.forEach { list ->
                     Tab(
                         selected = list == selectedList,
@@ -316,7 +319,7 @@ private fun Library(
                         if (list.parentItems.isEmpty()) {
                             NewPlaylistArea(
                                 modifier = Modifier.padding(4.dp),
-                                existingNames = (list.listState as? LibraryViewModel.ListState.Data)
+                                existingNames = (list.listState as? ListState.Data)
                                     ?.items
                                     ?.map { it.name.trim() }
                                     ?.toSet()
@@ -417,11 +420,11 @@ private fun ItemsListArea(
             .fillMaxSize(),
     ) {
         when (list.listState) {
-            LibraryViewModel.ListState.Loading -> {
+            is ListState.Loading -> {
                 Text(modifier = Modifier.align(Alignment.Center), text = "Loading...")
             }
 
-            LibraryViewModel.ListState.Error -> {
+            is ListState.Error -> {
                 Column(
                     modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = CenterHorizontally
@@ -438,11 +441,11 @@ private fun ItemsListArea(
                 }
             }
 
-            LibraryViewModel.ListState.NoData -> {
+            is ListState.NoData -> {
                 Text(modifier = Modifier.align(Alignment.Center), text = "Nothing to show")
             }
 
-            is LibraryViewModel.ListState.Data -> {
+            is ListState.Data -> {
                 if (list.listState.items.isEmpty()) {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
@@ -514,7 +517,7 @@ fun SearchArea(
                     Text(
                         text = mediaType.type.name.lowercase().capitalize(Locale.current),
                         modifier = Modifier.padding(end = 4.dp),
-                        style = MaterialTheme.typography.body2
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
@@ -537,7 +540,7 @@ fun SearchArea(
                 Text(
                     text = "In library",
                     modifier = Modifier.padding(end = 6.dp),
-                    style = MaterialTheme.typography.body2
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
         }
@@ -580,7 +583,7 @@ private fun ItemsList(
     LazyColumn(
         modifier = modifier.fillMaxSize()
             .clip(shape = RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colors.onSecondary)
+            .background(MaterialTheme.colorScheme.onSecondary)
             .nestedScroll(nestedScrollConnection)
             .draggable(
                 orientation = Orientation.Vertical,
@@ -604,7 +607,7 @@ private fun ItemsList(
                     .fillMaxWidth()
                     .clip(shape = RoundedCornerShape(16.dp))
                     .background(
-                        if (isChecked) MaterialTheme.colors.primary
+                        if (isChecked) MaterialTheme.colorScheme.primary
                         else Color.Transparent
                     )
                     .clickable(
@@ -630,8 +633,8 @@ private fun ItemsList(
                 ) {
                     val placeholder =
                         MusicNotePainter(
-                            backgroundColor = MaterialTheme.colors.background,
-                            iconColor = MaterialTheme.colors.secondary
+                            backgroundColor = MaterialTheme.colorScheme.background,
+                            iconColor = MaterialTheme.colorScheme.secondary
                         )
 
                     AsyncImage(
@@ -656,8 +659,8 @@ private fun ItemsList(
                             .border(
                                 width = 1.dp,
                                 color =
-                                    if (isChecked) MaterialTheme.colors.onPrimary
-                                    else MaterialTheme.colors.primary,
+                                    if (isChecked) MaterialTheme.colorScheme.onPrimary
+                                    else MaterialTheme.colorScheme.primary,
                                 shape = CircleShape
                             ),
                         contentAlignment = Alignment.Center
@@ -684,9 +687,9 @@ private fun ItemsList(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         color =
-                            if (isChecked) MaterialTheme.colors.onPrimary
-                            else MaterialTheme.colors.secondary,
-                        style = MaterialTheme.typography.body1,
+                            if (isChecked) MaterialTheme.colorScheme.onPrimary
+                            else MaterialTheme.colorScheme.secondary,
+                        style = MaterialTheme.typography.bodyLarge,
                         fontWeight =
                             if (item == parentItem || isChecked) FontWeight.Bold
                             else FontWeight.Normal
@@ -698,9 +701,9 @@ private fun ItemsList(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             color =
-                                if (isChecked) MaterialTheme.colors.onPrimary
-                                else MaterialTheme.colors.secondary,
-                            style = MaterialTheme.typography.body1,
+                                if (isChecked) MaterialTheme.colorScheme.onPrimary
+                                else MaterialTheme.colorScheme.secondary,
+                            style = MaterialTheme.typography.bodyLarge,
                             fontWeight =
                                 if (item == parentItem || isChecked) FontWeight.Bold
                                 else FontWeight.Normal
@@ -722,7 +725,7 @@ private fun ItemsList(
                                     .size(18.dp)
                                     .align(alignment = Alignment.CenterVertically),
                                 icon = TablerIcons.Playlist,
-                                iconTint = MaterialTheme.colors.secondary,
+                                iconTint = MaterialTheme.colorScheme.secondary,
                                 options = playlists.map { playlist ->
                                     OverflowMenuOption(
                                         title = playlist.name,
@@ -755,7 +758,7 @@ private fun ItemsList(
                                 contentDescription = "Favorite item",
                                 tint =
                                     if (item.favorite == true) Color(0xFFEF7BC4)
-                                    else MaterialTheme.colors.secondary,
+                                    else MaterialTheme.colorScheme.secondary,
                             )
                         } else {
                             Icon(
@@ -768,7 +771,7 @@ private fun ItemsList(
                                     ) { onAddToLibrary(item) },
                                 imageVector = FontAwesomeIcons.Regular.Bookmark,
                                 contentDescription = "Favorite item",
-                                tint = MaterialTheme.colors.secondary,
+                                tint = MaterialTheme.colorScheme.secondary,
                             )
                         }
                     }
@@ -784,7 +787,7 @@ private fun ItemsList(
                             ) { onCheckChanged(item) },
                         imageVector = if (isChecked) TablerIcons.SquareCheck else TablerIcons.Square,
                         contentDescription = "Select item",
-                        tint = if (isChecked) MaterialTheme.colors.onPrimary else MaterialTheme.colors.secondary,
+                        tint = if (isChecked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.secondary,
                     )
                 } else {
                     Spacer(

@@ -1,19 +1,8 @@
 package io.music_assistant.client.data
 
 import co.touchlab.kermit.Logger
+import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
-import io.music_assistant.client.api.playerQueueClearRequest
-import io.music_assistant.client.api.playerQueueItemsRequest
-import io.music_assistant.client.api.playerQueueMoveItemRequest
-import io.music_assistant.client.api.playerQueuePlayIndexRequest
-import io.music_assistant.client.api.playerQueueRemoveItemRequest
-import io.music_assistant.client.api.playerQueueSeekRequest
-import io.music_assistant.client.api.playerQueueSetRepeatModeRequest
-import io.music_assistant.client.api.playerQueueSetShuffleRequest
-import io.music_assistant.client.api.playerQueueTransferRequest
-import io.music_assistant.client.api.registerBuiltInPlayerRequest
-import io.music_assistant.client.api.simplePlayerRequest
-import io.music_assistant.client.api.updateBuiltInPlayerStateRequest
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItem
 import io.music_assistant.client.data.model.client.Player
@@ -170,7 +159,7 @@ class MainDataSource(
         updateJob?.cancel()
         updateJob = launch {
             apiClient.sendRequest(
-                registerBuiltInPlayerRequest(
+                Request.Player.registerBuiltIn(
                     Player.LOCAL_PLAYER_NAME,
                     localPlayerId
                 )
@@ -213,25 +202,25 @@ class MainDataSource(
             when (action) {
                 PlayerAction.TogglePlayPause -> {
                     apiClient.sendRequest(
-                        simplePlayerRequest(playerId = data.player.id, command = "play_pause")
+                        Request.Player.command(playerId = data.player.id, command = "play_pause")
                     )
                 }
 
                 PlayerAction.Next -> {
                     apiClient.sendRequest(
-                        simplePlayerRequest(playerId = data.player.id, command = "next")
+                        Request.Player.command(playerId = data.player.id, command = "next")
                     )
                 }
 
                 PlayerAction.Previous -> {
                     apiClient.sendRequest(
-                        simplePlayerRequest(playerId = data.player.id, command = "previous")
+                        Request.Player.command(playerId = data.player.id, command = "previous")
                     )
                 }
 
                 is PlayerAction.SeekTo -> {
                     apiClient.sendRequest(
-                        playerQueueSeekRequest(
+                        Request.Queue.seek(
                             queueId = data.queue?.id ?: return@launch,
                             position = action.pos
                         )
@@ -239,7 +228,7 @@ class MainDataSource(
                 }
 
                 is PlayerAction.ToggleRepeatMode -> apiClient.sendRequest(
-                    playerQueueSetRepeatModeRequest(
+                    Request.Queue.setRepeatMode(
                         queueId = data.queue?.id ?: return@launch,
                         repeatMode = when (action.current) {
                             RepeatMode.OFF -> RepeatMode.ALL
@@ -250,18 +239,18 @@ class MainDataSource(
                 )
 
                 is PlayerAction.ToggleShuffle -> apiClient.sendRequest(
-                    playerQueueSetShuffleRequest(
+                    Request.Queue.setShuffle(
                         queueId = data.queue?.id ?: return@launch,
                         enabled = !action.current
                     )
                 )
 
                 PlayerAction.VolumeDown -> apiClient.sendRequest(
-                    simplePlayerRequest(playerId = data.player.id, command = "volume_down")
+                    Request.Player.command(playerId = data.player.id, command = "volume_down")
                 )
 
                 PlayerAction.VolumeUp -> apiClient.sendRequest(
-                    simplePlayerRequest(playerId = data.player.id, command = "volume_up")
+                    Request.Player.command(playerId = data.player.id, command = "volume_up")
                 )
             }
         }
@@ -272,7 +261,7 @@ class MainDataSource(
             when (action) {
                 is QueueAction.PlayQueueItem -> {
                     apiClient.sendRequest(
-                        playerQueuePlayIndexRequest(
+                        Request.Queue.playIndex(
                             queueId = action.queueId,
                             queueItemId = action.queueItemId
                         )
@@ -281,7 +270,7 @@ class MainDataSource(
 
                 is QueueAction.ClearQueue -> {
                     apiClient.sendRequest(
-                        playerQueueClearRequest(
+                        Request.Queue.clear(
                             queueId = action.queueId,
                         )
                     )
@@ -290,7 +279,7 @@ class MainDataSource(
                 is QueueAction.RemoveItems -> {
                     action.items.forEach {
                         apiClient.sendRequest(
-                            playerQueueRemoveItemRequest(
+                            Request.Queue.removeItem(
                                 queueId = action.queueId,
                                 queueItemId = it
                             )
@@ -303,7 +292,7 @@ class MainDataSource(
                         .takeIf { it != 0 }
                         ?.let {
                             apiClient.sendRequest(
-                                playerQueueMoveItemRequest(
+                                Request.Queue.moveItem(
                                     queueId = action.queueId,
                                     queueItemId = action.queueItemId,
                                     positionShift = action.to - action.from
@@ -314,7 +303,7 @@ class MainDataSource(
 
                 is QueueAction.Transfer -> {
                     apiClient.sendRequest(
-                        playerQueueTransferRequest(
+                        Request.Queue.transfer(
                             sourceId = action.sourceId,
                             targetId = action.targetId,
                             autoplay = action.autoplay
@@ -503,7 +492,7 @@ class MainDataSource(
             player.queueId
                 ?.takeIf { player.id == _selectedPlayerData.value?.playerId }
                 ?.let { queueId ->
-                    apiClient.sendRequest(playerQueueItemsRequest(queueId))
+                    apiClient.sendRequest(Request.Queue.items(queueId))
                         ?.resultAs<List<ServerQueueItem>>()?.mapNotNull { it.toQueueTrack() }
                         ?.let { list ->
                             _selectedPlayerData.update {
@@ -527,7 +516,7 @@ class MainDataSource(
         }
         val playing = isPlaying ?: isPlayerPlaying
         apiClient.sendRequest(
-            updateBuiltInPlayerStateRequest(
+            Request.Player.updateBuiltInState(
                 localPlayerId,
                 BuiltinPlayerState(
                     powered = true,

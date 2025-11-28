@@ -23,7 +23,6 @@ fun App() {
     }
     SystemAppearance(isDarkTheme = darkTheme)
     AppTheme(darkTheme = darkTheme) {
-        // OldNavigationRoot()
         NavigationRoot()
     }
 }

@@ -17,14 +17,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.ExtendedFloatingActionButton
-import androidx.compose.material.FabPosition
-import androidx.compose.material.FloatingActionButton
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Text
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FabPosition
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -75,7 +75,7 @@ fun MainScreen(navigateTo: (NavScreen) -> Unit) {
         }
     }
     Scaffold(
-        backgroundColor = MaterialTheme.colors.background,
+        containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
             VerticalHidingContainer(
                 isVisible = isFabVisible,
@@ -96,8 +96,11 @@ fun MainScreen(navigateTo: (NavScreen) -> Unit) {
                             text = {
                                 Text(
                                     text = "Media",
-                                    style = MaterialTheme.typography.button
+                                    style = MaterialTheme.typography.labelMedium
                                 )
+                            },
+                            icon = {
+
                             }
                         )
                     }
@@ -132,7 +135,7 @@ fun MainScreen(navigateTo: (NavScreen) -> Unit) {
                 .padding(scaffoldPadding)
                 .consumeWindowInsets(scaffoldPadding)
                 .systemBarsPadding()
-                .background(color = MaterialTheme.colors.background)
+                .background(color = MaterialTheme.colorScheme.background)
         ) {
             lastDataState?.let {
                 BoxWithConstraints {
@@ -175,7 +178,7 @@ private fun ServiceLayout(
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
-            .background(color = MaterialTheme.colors.background.copy(alpha = 0.9f))
+            .background(color = MaterialTheme.colorScheme.background.copy(alpha = 0.9f))
             .clickable { /* Absorb interaction*/ },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -189,8 +192,8 @@ private fun ServiceLayout(
                 MainViewModel.State.Loading -> "Connecting to server"
                 MainViewModel.State.NoServer -> "Please setup server connection"
             },
-            style = MaterialTheme.typography.h5,
-            color = MaterialTheme.colors.onBackground,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onBackground,
         )
         CircularProgressIndicator()
     }

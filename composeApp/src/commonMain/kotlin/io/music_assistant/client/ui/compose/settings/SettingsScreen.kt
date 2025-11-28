@@ -11,13 +11,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.material.Button
-import androidx.compose.material.Checkbox
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Text
-import androidx.compose.material.TextField
-import androidx.compose.material.TextFieldDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -66,12 +66,12 @@ fun SettingsScreen(onBack: () -> Unit) {
         }
     }
     Scaffold(
-        backgroundColor = MaterialTheme.colors.background,
+        containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { scaffoldPadding ->
         Column(
             modifier = Modifier
-                .background(color = MaterialTheme.colors.background)
+                .background(color = MaterialTheme.colorScheme.background)
                 .fillMaxSize()
                 .padding(scaffoldPadding)
                 .consumeWindowInsets(scaffoldPadding)
@@ -114,8 +114,8 @@ fun SettingsScreen(onBack: () -> Unit) {
             Text(
                 modifier = Modifier.padding(bottom = 24.dp),
                 text = "Server settings",
-                color = MaterialTheme.colors.onBackground,
-                style = MaterialTheme.typography.h3,
+                color = MaterialTheme.colorScheme.onBackground,
+                style = MaterialTheme.typography.headlineLarge,
                 textAlign = TextAlign.Center
             )
             Text(
@@ -137,8 +137,8 @@ fun SettingsScreen(onBack: () -> Unit) {
                         }
                     }
                 },
-                color = MaterialTheme.colors.onBackground,
-                style = MaterialTheme.typography.h5,
+                color = MaterialTheme.colorScheme.onBackground,
+                style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center,
                 minLines = 2,
                 maxLines = 2,
@@ -152,9 +152,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     Text("IP address")
                 },
                 singleLine = true,
-                colors = TextFieldDefaults.textFieldColors(
-                    textColor = MaterialTheme.colors.onBackground,
-                )
+                colors = TextFieldDefaults.colors()
             )
             TextField(
                 modifier = Modifier.padding(bottom = 16.dp),
@@ -165,9 +163,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     Text("Port (8095 by default)")
                 },
                 singleLine = true,
-                colors = TextFieldDefaults.textFieldColors(
-                    textColor = MaterialTheme.colors.onBackground,
-                )
+                colors = TextFieldDefaults.colors()
             )
             Row(
                 modifier = Modifier.padding(bottom = 16.dp),

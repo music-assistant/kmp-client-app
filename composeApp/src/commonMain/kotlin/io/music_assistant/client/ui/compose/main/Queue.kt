@@ -22,9 +22,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -99,8 +99,8 @@ fun QueueSection(
                 Text(
                     text = "Nothing here...",
                     textAlign = TextAlign.Center,
-                    color = MaterialTheme.colors.onSurface,
-                    style = MaterialTheme.typography.body2,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -171,8 +171,8 @@ private fun QueueUI(
                 text = queueInfo,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colors.onSurface,
-                style = MaterialTheme.typography.body2,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold
             )
             queue?.let {
@@ -185,7 +185,7 @@ private fun QueueUI(
                         .align(alignment = Alignment.CenterVertically),
                     imageVector = TablerIcons.ClipboardX,
                     contentDescription = null,
-                    tint = MaterialTheme.colors.primary,
+                    tint = MaterialTheme.colorScheme.primary,
                 )
                 OverflowMenu(
                     modifier = Modifier
@@ -194,7 +194,7 @@ private fun QueueUI(
                         .padding(all = 2.dp)
                         .align(alignment = Alignment.CenterVertically),
                     icon = TablerIcons.ArrowBigRight,
-                    iconTint = MaterialTheme.colors.primary,
+                    iconTint = MaterialTheme.colorScheme.primary,
                     options = players.filter { p -> p.player.id != queue.id }.map { playerData ->
                         OverflowMenuOption(
                             title = playerData.player.name,
@@ -223,7 +223,7 @@ private fun QueueUI(
     LazyColumn(
         modifier = Modifier.fillMaxSize()
             .clip(shape = RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colors.onSecondary)
+            .background(MaterialTheme.colorScheme.onSecondary)
             .nestedScroll(nestedScrollConnection)
             .draggable(
                 orientation = Orientation.Vertical,
@@ -253,7 +253,7 @@ private fun QueueUI(
                         .clip(shape = RoundedCornerShape(16.dp))
                         .background(
                             when {
-                                isChosen -> MaterialTheme.colors.primary
+                                isChosen -> MaterialTheme.colorScheme.primary
                                 else -> Color.Transparent
                             }
                         )
@@ -297,10 +297,10 @@ private fun QueueUI(
                     horizontalArrangement = Arrangement.Start
                 ) {
                     val placeholder = MusicNotePainter(
-                        backgroundColor = MaterialTheme.colors.background,
+                        backgroundColor = MaterialTheme.colorScheme.background,
                         iconColor = when {
-                            isChosen -> MaterialTheme.colors.onPrimary
-                            else -> MaterialTheme.colors.secondary
+                            isChosen -> MaterialTheme.colorScheme.onPrimary
+                            else -> MaterialTheme.colorScheme.secondary
                         }
                     )
                     AsyncImage(
@@ -320,8 +320,8 @@ private fun QueueUI(
                             imageVector = FontAwesomeIcons.Solid.DotCircle,
                             contentDescription = null,
                             tint = when {
-                                isChosen -> MaterialTheme.colors.onPrimary
-                                else -> MaterialTheme.colors.secondary
+                                isChosen -> MaterialTheme.colorScheme.onPrimary
+                                else -> MaterialTheme.colorScheme.secondary
                             },
                         )
                     }
@@ -337,10 +337,10 @@ private fun QueueUI(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             color = when {
-                                isChosen -> MaterialTheme.colors.onPrimary
-                                else -> MaterialTheme.colors.secondary
+                                isChosen -> MaterialTheme.colorScheme.onPrimary
+                                else -> MaterialTheme.colorScheme.secondary
                             },
-                            style = MaterialTheme.typography.body2,
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                         Text(
                             modifier = Modifier.fillMaxWidth(),
@@ -348,10 +348,10 @@ private fun QueueUI(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             color = when {
-                                isChosen -> MaterialTheme.colors.onPrimary
-                                else -> MaterialTheme.colors.secondary
+                                isChosen -> MaterialTheme.colorScheme.onPrimary
+                                else -> MaterialTheme.colorScheme.secondary
                             },
-                            style = MaterialTheme.typography.body1,
+                            style = MaterialTheme.typography.bodyLarge,
                             fontWeight = when {
                                 isCurrent -> FontWeight.Bold
                                 else -> FontWeight.Normal
@@ -380,7 +380,7 @@ private fun QueueUI(
                                 .size(16.dp),
                             imageVector = TablerIcons.GripVertical,
                             contentDescription = null,
-                            tint = MaterialTheme.colors.secondary,
+                            tint = MaterialTheme.colorScheme.secondary,
                         )
                     }
                 }
