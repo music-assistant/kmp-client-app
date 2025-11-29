@@ -3,6 +3,7 @@ package io.music_assistant.client.data.model.client
 import io.ktor.http.URLBuilder
 import io.ktor.http.appendPathSegments
 import io.ktor.http.encodeURLQueryComponent
+import io.music_assistant.client.data.model.server.MediaItemImage
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.Metadata
 import io.music_assistant.client.data.model.server.ProviderMapping
@@ -19,6 +20,7 @@ abstract class AppMediaItem(
     val mediaType: MediaType,
     //val sortName: String?,
     val uri: String?,
+    val image: MediaItemImage?,
     //val isPlayable: Boolean?,
     //val timestampAdded: Long?,
     //val timestampModified: Long?,
@@ -57,7 +59,7 @@ abstract class AppMediaItem(
         return "AppMediaItem(itemId='$itemId', provider='$provider', name='$name', favorite=$favorite, mediaType=$mediaType, providerMappings=$providerMappings, uri=$uri)"
     }
 
-    val imageInfo: ImageInfo? = metadata?.images?.getOrNull(0)
+    val imageInfo: ImageInfo? = (image ?: metadata?.images?.getOrNull(0))
         ?.let { image ->
             ImageInfo(
                 image.path,
@@ -97,6 +99,7 @@ abstract class AppMediaItem(
 //        mediaType: MediaType,
         //sortName: String?,
         uri: String?,
+        image: MediaItemImage?,
 //        isPlayable: Boolean?,
 //        timestampAdded: Long?,
 //        timestampModified: Long?,
@@ -112,6 +115,7 @@ abstract class AppMediaItem(
         MediaType.ARTIST,
         //sortName,
         uri,
+        image,
         //isPlayable,
         //timestampAdded,
         //timestampModified,
@@ -127,6 +131,7 @@ abstract class AppMediaItem(
 //        mediaType: MediaType,
         //sortName: String?,
         uri: String?,
+        image: MediaItemImage?,
 //        isPlayable: Boolean?,
 //        timestampAdded: Long?,
 //        timestampModified: Long?,
@@ -141,6 +146,7 @@ abstract class AppMediaItem(
         MediaType.ARTIST,
         //sortName,
         uri,
+        image,
         //isPlayable,
         //timestampAdded,
         //timestampModified,
@@ -156,6 +162,7 @@ abstract class AppMediaItem(
 //        mediaType: MediaType,
 //        sortName: String?,
         uri: String?,
+        image: MediaItemImage?,
 //        isPlayable: Boolean?,
 //        timestampAdded: Long?,
 //        timestampModified: Long?,
@@ -174,6 +181,7 @@ abstract class AppMediaItem(
         MediaType.ALBUM,
         //sortName,
         uri,
+        image,
         //isPlayable,
         //timestampAdded,
         //timestampModified,
@@ -191,6 +199,7 @@ abstract class AppMediaItem(
 //        mediaType: MediaType,
 //        sortName: String?,
         uri: String?,
+        image: MediaItemImage?,
 //        isPlayable: Boolean?,
 //        timestampAdded: Long?,
 //        timestampModified: Long?,
@@ -215,6 +224,7 @@ abstract class AppMediaItem(
         MediaType.TRACK,
         //sortName,
         uri,
+        image,
         //isPlayable,
         //timestampAdded,
         //timestampModified,
@@ -234,6 +244,7 @@ abstract class AppMediaItem(
         //mediaType: MediaType,
         //sortName: String?,
         uri: String?,
+        image: MediaItemImage?,
         //isPlayable: Boolean?,
         //timestampAdded: Long?,
         //timestampModified: Long?,
@@ -249,6 +260,7 @@ abstract class AppMediaItem(
         MediaType.PLAYLIST,
         //sortName,
         uri,
+        image,
         //isPlayable,
         //timestampAdded,
         //timestampModified,
@@ -269,6 +281,7 @@ abstract class AppMediaItem(
 //                    mediaType = mediaType,
 //                    sortName = sortName,
                     uri = uri,
+                    image = image,
 //                    isPlayable = isPlayable,
 //                    timestampAdded = timestampAdded,
 //                    timestampModified = timestampModified,
@@ -285,6 +298,7 @@ abstract class AppMediaItem(
 //                    mediaType = mediaType,
 //                    sortName = sortName,
                     uri = uri,
+                    image = image,
 //                    isPlayable = isPlayable,
 //                    timestampAdded = timestampAdded,
 //                    timestampModified = timestampModified,
@@ -305,6 +319,7 @@ abstract class AppMediaItem(
 //                    mediaType = mediaType,
 //                    sortName = sortName,
                     uri = uri,
+                    image = image,
 //                    isPlayable = isPlayable,
 //                    timestampAdded = timestampAdded,
 //                    timestampModified = timestampModified,
@@ -329,20 +344,23 @@ abstract class AppMediaItem(
 //                    mediaType = mediaType,
 //                    sortName = sortName,
                     uri = uri,
+                    image = image,
                     //isPlayable = isPlayable,
 //                    timestampAdded = timestampAdded,
 //                    timestampModified = timestampModified,
 //                    owner = owner,
                     isEditable = isEditable,
                 )
+
                 MediaType.FOLDER -> RecommendationFolder(
                     itemId = itemId,
                     provider = provider,
                     name = name,
                     providerMappings = providerMappings,
                     uri = uri,
+                    image = image,
                     items = items?.toAppMediaItemList()
-                    )
+                )
 
                 MediaType.RADIO,
                 MediaType.AUDIOBOOK,

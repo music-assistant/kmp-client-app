@@ -5,10 +5,11 @@ package io.music_assistant.client.ui.compose.home
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -62,6 +63,7 @@ import coil3.compose.AsyncImage
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.ui.compose.common.ListState
 import io.music_assistant.client.ui.compose.common.painters.MusicMicrophonePainter
+import io.music_assistant.client.ui.compose.common.painters.MusicNotePainter
 import io.music_assistant.client.utils.SessionState
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.PI
@@ -106,7 +108,9 @@ fun HomeScreen(
                         serverUrl = serverUrl,
                         title = row.name,
                         buttonLabel = "All items",
-                        onClickAll = { viewModel.onRowButtonClicked(row.itemId) },
+                        onItemClick = viewModel::onItemClicked,
+                        onLongItemClick = { item ->  /*TODO*/ },
+                        onAllClick = { viewModel.onRowButtonClicked(row.itemId) },
                         mediaItems = row.items.orEmpty()
                     )
                 }
@@ -122,7 +126,9 @@ fun CategoryRow(
     serverUrl: String?,
     title: String,
     buttonLabel: String,
-    onClickAll: () -> Unit,
+    onItemClick: (AppMediaItem) -> Unit,
+    onLongItemClick: (AppMediaItem) -> Unit,
+    onAllClick: () -> Unit,
     mediaItems: List<AppMediaItem>
 ) {
     Column {
@@ -138,7 +144,7 @@ fun CategoryRow(
                 style = MaterialTheme.typography.titleLarge
             )
             TextButton(
-                onClick = onClickAll,
+                onClick = onAllClick,
                 contentPadding = PaddingValues(0.dp)
             ) {
                 Text(buttonLabel, style = MaterialTheme.typography.labelLarge)
@@ -150,10 +156,38 @@ fun CategoryRow(
         ) {
             items(items = mediaItems) { item ->
                 when (item) {
-                    is AppMediaItem.Track -> TrackItem(96.dp, item, serverUrl)
-                    is AppMediaItem.Artist -> ArtistItem(96.dp, item, serverUrl)
-                    is AppMediaItem.Album -> AlbumItem(96.dp, item, serverUrl)
-                    is AppMediaItem.Playlist -> PlaylistItem(96.dp, item, serverUrl)
+                    is AppMediaItem.Track -> TrackItem(
+                        item = item,
+                        itemSize = 96.dp,
+                        onClick = onItemClick,
+                        onLongClick = onLongItemClick,
+                        serverUrl = serverUrl
+                    )
+
+                    is AppMediaItem.Artist -> ArtistItem(
+                        item = item,
+                        itemSize = 96.dp,
+                        onClick = onItemClick,
+                        onLongClick = onLongItemClick,
+                        serverUrl = serverUrl
+                    )
+
+                    is AppMediaItem.Album -> AlbumItem(
+                        item = item,
+                        itemSize = 96.dp,
+                        onClick = onItemClick,
+                        onLongClick = onLongItemClick,
+                        serverUrl = serverUrl
+                    )
+
+                    is AppMediaItem.Playlist -> PlaylistItem(
+                        item = item,
+                        itemSize = 96.dp,
+                        onClick = onItemClick,
+                        onLongClick = onLongItemClick,
+                        serverUrl = serverUrl
+                    )
+
                     else -> {}
                 }
             }
@@ -162,37 +196,62 @@ fun CategoryRow(
 }
 
 // --- Specific Item Composables ---
-
 @Composable
-fun TrackItem(itemSize: Dp, track: AppMediaItem.Track, serverUrl: String?) {
-
-    val waveformPainter = WaveformPainter(
-        waveColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        thickness = 3f
-    )
-
+fun LibraryItem(
+    item: AppMediaItem,
+    onClick: (AppMediaItem) -> Unit,
+    onLongClick: (AppMediaItem) -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     Column(
         modifier = Modifier
             .wrapContentSize()
             .clip(RoundedCornerShape(8.dp))
-            .clickable { /* Handle click */ }
+            .combinedClickable(
+                onClick = { onClick(item) },
+                onLongClick = { onLongClick(item) }
+            )
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        content()
+    }
+}
+
+@Composable
+fun TrackItem(
+    item: AppMediaItem.Track,
+    itemSize: Dp,
+    onClick: (AppMediaItem) -> Unit,
+    onLongClick: (AppMediaItem) -> Unit,
+    serverUrl: String?,
+) {
+    LibraryItem(item, onClick, onLongClick) {
         Box(
             modifier = Modifier
                 .size(itemSize)
                 .clip(RoundedCornerShape(8.dp))
                 .background(MaterialTheme.colorScheme.primaryContainer)
         ) {
+            val placeholder =
+                MusicNotePainter(
+                    backgroundColor = MaterialTheme.colorScheme.primaryContainer,
+                    iconColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             AsyncImage(
-                model = track.imageInfo?.url(serverUrl),
-                contentDescription = "Artwork for ${track.name}",
+                placeholder = placeholder,
+                fallback = placeholder,
+                model = item.imageInfo?.url(serverUrl),
+                contentDescription = item.name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
 
             // Draw waveform overlay at the bottom
+            val waveformPainter = WaveformPainter(
+                waveColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                thickness = 3f
+            )
             Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -206,14 +265,14 @@ fun TrackItem(itemSize: Dp, track: AppMediaItem.Track, serverUrl: String?) {
         }
         Spacer(Modifier.height(4.dp))
         Text(
-            text = track.name,
+            text = item.name,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.width(itemSize)
         )
         Text(
-            text = track.subtitle.orEmpty(),
+            text = item.subtitle.orEmpty(),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
@@ -224,15 +283,14 @@ fun TrackItem(itemSize: Dp, track: AppMediaItem.Track, serverUrl: String?) {
 }
 
 @Composable
-fun ArtistItem(itemSize: Dp, artist: AppMediaItem.Artist, serverUrl: String?) {
-    Column(
-        modifier = Modifier
-            .wrapContentSize()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable { /* Handle click */ }
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+fun ArtistItem(
+    item: AppMediaItem.Artist,
+    itemSize: Dp,
+    onClick: (AppMediaItem) -> Unit,
+    onLongClick: (AppMediaItem) -> Unit,
+    serverUrl: String?,
+) {
+    LibraryItem(item, onClick, onLongClick) {
         Box(
             modifier = Modifier
                 .size(itemSize)
@@ -247,8 +305,8 @@ fun ArtistItem(itemSize: Dp, artist: AppMediaItem.Artist, serverUrl: String?) {
             AsyncImage(
                 placeholder = placeholder,
                 fallback = placeholder,
-                model = artist.imageInfo?.url(serverUrl),
-                contentDescription = artist.name,
+                model = item.imageInfo?.url(serverUrl),
+                contentDescription = item.name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
@@ -256,7 +314,7 @@ fun ArtistItem(itemSize: Dp, artist: AppMediaItem.Artist, serverUrl: String?) {
         Spacer(Modifier.height(4.dp))
         Text(
             modifier = Modifier.width(itemSize),
-            text = artist.name,
+            text = item.name,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -265,18 +323,14 @@ fun ArtistItem(itemSize: Dp, artist: AppMediaItem.Artist, serverUrl: String?) {
 }
 
 @Composable
-fun AlbumItem(itemSize: Dp, album: AppMediaItem.Album, serverUrl: String?) {
-    val stripWidth = 10.dp
-    val holeRadius = 10.dp
-
-    Column(
-        modifier = Modifier
-            .wrapContentSize()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable { /* Handle click */ }
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+fun AlbumItem(
+    item: AppMediaItem.Album,
+    itemSize: Dp,
+    onClick: (AppMediaItem) -> Unit,
+    onLongClick: (AppMediaItem) -> Unit,
+    serverUrl: String?,
+) {
+    LibraryItem(item, onClick, onLongClick) {
         Box(
             modifier = Modifier
                 .size(itemSize)
@@ -288,6 +342,8 @@ fun AlbumItem(itemSize: Dp, album: AppMediaItem.Album, serverUrl: String?) {
                 labelColor = MaterialTheme.colorScheme.primaryContainer,
                 holeColor = MaterialTheme.colorScheme.background
             )
+            val stripWidth = 10.dp
+            val holeRadius = 10.dp
 
             Image(
                 painter = vinylRecord,
@@ -298,8 +354,8 @@ fun AlbumItem(itemSize: Dp, album: AppMediaItem.Album, serverUrl: String?) {
             AsyncImage(
                 placeholder = vinylRecord,
                 fallback = vinylRecord,
-                model = album.imageInfo?.url(serverUrl),
-                contentDescription = album.name,
+                model = item.imageInfo?.url(serverUrl),
+                contentDescription = item.name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
@@ -321,14 +377,14 @@ fun AlbumItem(itemSize: Dp, album: AppMediaItem.Album, serverUrl: String?) {
         Spacer(Modifier.height(4.dp))
         Text(
             modifier = Modifier.width(itemSize),
-            text = album.name,
+            text = item.name,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
         Text(
             modifier = Modifier.width(itemSize),
-            text = album.subtitle.orEmpty(),
+            text = item.subtitle.orEmpty(),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
@@ -338,21 +394,19 @@ fun AlbumItem(itemSize: Dp, album: AppMediaItem.Album, serverUrl: String?) {
 }
 
 @Composable
-fun PlaylistItem(itemSize: Dp, playlist: AppMediaItem.Playlist, serverUrl: String?) {
-    Column(
-        modifier = Modifier
-            .wrapContentSize()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable { /* Handle click */ }
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+fun PlaylistItem(
+    item: AppMediaItem.Playlist,
+    itemSize: Dp,
+    onClick: (AppMediaItem) -> Unit,
+    onLongClick: (AppMediaItem) -> Unit,
+    serverUrl: String?,
+) {
+    LibraryItem(item, onClick, onLongClick) {
         Box(
             modifier = Modifier
                 .size(itemSize)
                 .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer) // Placeholder background
-                .padding(8.dp),
+                .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -361,11 +415,17 @@ fun PlaylistItem(itemSize: Dp, playlist: AppMediaItem.Playlist, serverUrl: Strin
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(50.dp)
             )
+            AsyncImage(
+                model = item.imageInfo?.url(serverUrl),
+                contentDescription = item.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
         }
         Spacer(Modifier.height(4.dp))
         Text(
             modifier = Modifier.width(itemSize),
-            text = playlist.name,
+            text = item.name,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
