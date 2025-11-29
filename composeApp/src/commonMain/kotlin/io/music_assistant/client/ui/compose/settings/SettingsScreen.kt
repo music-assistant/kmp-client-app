@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.Checkbox
 import androidx.compose.material.MaterialTheme
@@ -76,7 +78,8 @@ fun SettingsScreen(navController: NavController) {
                 .fillMaxSize()
                 .padding(scaffoldPadding)
                 .consumeWindowInsets(scaffoldPadding)
-                .systemBarsPadding(),
+                .systemBarsPadding()
+                .verticalScroll(rememberScrollState()),
         ) {
             Row(
                 modifier = Modifier
@@ -95,108 +98,109 @@ fun SettingsScreen(navController: NavController) {
                     themeViewModel.switchTheme(changedTheme)
                 }
             }
-        }
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            var ipAddress by remember { mutableStateOf("") }
-            var port by remember { mutableStateOf("8095") }
-            var isTls by remember { mutableStateOf(false) }
-            val inputFieldsEnabled = sessionState is SessionState.Disconnected
-            LaunchedEffect(connectionInfo) {
-                connectionInfo?.let {
-                    ipAddress = it.host
-                    port = it.port.toString()
-                    isTls = it.isTls
-                }
-            }
-            Text(
-                modifier = Modifier.padding(bottom = 24.dp),
-                text = "Server settings",
-                color = MaterialTheme.colors.onBackground,
-                style = MaterialTheme.typography.h3,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                modifier = Modifier.padding(bottom = 24.dp),
-                text = when (val state = sessionState) {
-                    is SessionState.Connected -> {
-                        "Connected to ${state.connectionInfo.host}:${state.connectionInfo.port}" +
-                                (serverInfo.value?.let { "\nServer version ${it.serverVersion}, schema ${it.schemaVersion}" }
-                                    ?: "")
-                    }
 
-                    is SessionState.Connecting -> "Connecting to $ipAddress:$port."
-                    is SessionState.Disconnected -> {
-                        when (state) {
-                            SessionState.Disconnected.ByUser -> ""
-                            is SessionState.Disconnected.Error -> "Disconnected${state.reason?.message?.let { ": $it" } ?: ""}"
-                            SessionState.Disconnected.Initial -> ""
-                            SessionState.Disconnected.NoServerData -> "Please provide server address and port."
-                        }
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                var ipAddress by remember { mutableStateOf("") }
+                var port by remember { mutableStateOf("8095") }
+                var isTls by remember { mutableStateOf(false) }
+                val inputFieldsEnabled = sessionState is SessionState.Disconnected
+                LaunchedEffect(connectionInfo) {
+                    connectionInfo?.let {
+                        ipAddress = it.host
+                        port = it.port.toString()
+                        isTls = it.isTls
                     }
-                },
-                color = MaterialTheme.colors.onBackground,
-                style = MaterialTheme.typography.h5,
-                textAlign = TextAlign.Center,
-                minLines = 2,
-                maxLines = 2,
-            )
-            TextField(
-                modifier = Modifier.padding(bottom = 16.dp),
-                enabled = inputFieldsEnabled,
-                value = ipAddress,
-                onValueChange = { ipAddress = it },
-                label = {
-                    Text("IP address")
-                },
-                singleLine = true,
-                colors = TextFieldDefaults.textFieldColors(
-                    textColor = MaterialTheme.colors.onBackground,
-                )
-            )
-            TextField(
-                modifier = Modifier.padding(bottom = 16.dp),
-                enabled = inputFieldsEnabled,
-                value = port,
-                onValueChange = { port = it },
-                label = {
-                    Text("Port (8095 by default)")
-                },
-                singleLine = true,
-                colors = TextFieldDefaults.textFieldColors(
-                    textColor = MaterialTheme.colors.onBackground,
-                )
-            )
-            Row(
-                modifier = Modifier.padding(bottom = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(
-                    modifier = Modifier.align(Alignment.CenterVertically),
-                    enabled = inputFieldsEnabled,
-                    checked = isTls,
-                    onCheckedChange = { isTls = it })
-                Text(modifier = Modifier.align(Alignment.CenterVertically), text = "Use TLS")
-            }
-            Button(
-                enabled = ipAddress.isValidHost() && port.isIpPort() && sessionState !is SessionState.Connecting,
-                onClick = {
-                    if (sessionState is SessionState.Connected)
-                        viewModel.disconnect()
-                    else
-                        shouldPopOnConnected = true
-                    viewModel.attemptConnection(ipAddress, port, isTls)
                 }
-            ) {
                 Text(
-                    text = if (sessionState is SessionState.Connected)
-                        "Disconnect"
-                    else
-                        "Connect"
+                    modifier = Modifier.padding(bottom = 24.dp),
+                    text = "Server settings",
+                    color = MaterialTheme.colors.onBackground,
+                    style = MaterialTheme.typography.h3,
+                    textAlign = TextAlign.Center
                 )
+                Text(
+                    modifier = Modifier.padding(bottom = 24.dp),
+                    text = when (val state = sessionState) {
+                        is SessionState.Connected -> {
+                            "Connected to ${state.connectionInfo.host}:${state.connectionInfo.port}" +
+                                    (serverInfo.value?.let { "\nServer version ${it.serverVersion}, schema ${it.schemaVersion}" }
+                                        ?: "")
+                        }
+
+                        is SessionState.Connecting -> "Connecting to $ipAddress:$port."
+                        is SessionState.Disconnected -> {
+                            when (state) {
+                                SessionState.Disconnected.ByUser -> ""
+                                is SessionState.Disconnected.Error -> "Disconnected${state.reason?.message?.let { ": $it" } ?: ""}"
+                                SessionState.Disconnected.Initial -> ""
+                                SessionState.Disconnected.NoServerData -> "Please provide server address and port."
+                            }
+                        }
+                    },
+                    color = MaterialTheme.colors.onBackground,
+                    style = MaterialTheme.typography.h5,
+                    textAlign = TextAlign.Center,
+                    minLines = 2,
+                    maxLines = 2,
+                )
+                TextField(
+                    modifier = Modifier.padding(bottom = 16.dp),
+                    enabled = inputFieldsEnabled,
+                    value = ipAddress,
+                    onValueChange = { ipAddress = it },
+                    label = {
+                        Text("IP address")
+                    },
+                    singleLine = true,
+                    colors = TextFieldDefaults.textFieldColors(
+                        textColor = MaterialTheme.colors.onBackground,
+                    )
+                )
+                TextField(
+                    modifier = Modifier.padding(bottom = 16.dp),
+                    enabled = inputFieldsEnabled,
+                    value = port,
+                    onValueChange = { port = it },
+                    label = {
+                        Text("Port (8095 by default)")
+                    },
+                    singleLine = true,
+                    colors = TextFieldDefaults.textFieldColors(
+                        textColor = MaterialTheme.colors.onBackground,
+                    )
+                )
+                Row(
+                    modifier = Modifier.padding(bottom = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        modifier = Modifier.align(Alignment.CenterVertically),
+                        enabled = inputFieldsEnabled,
+                        checked = isTls,
+                        onCheckedChange = { isTls = it })
+                    Text(modifier = Modifier.align(Alignment.CenterVertically), text = "Use TLS")
+                }
+                Button(
+                    enabled = ipAddress.isValidHost() && port.isIpPort() && sessionState !is SessionState.Connecting,
+                    onClick = {
+                        if (sessionState is SessionState.Connected)
+                            viewModel.disconnect()
+                        else
+                            shouldPopOnConnected = true
+                        viewModel.attemptConnection(ipAddress, port, isTls)
+                    }
+                ) {
+                    Text(
+                        text = if (sessionState is SessionState.Connected)
+                            "Disconnect"
+                        else
+                            "Connect"
+                    )
+                }
             }
         }
     }
