@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.music_assistant.client.api.AuthState
 import io.music_assistant.client.api.ConnectionInfo
+import io.music_assistant.client.api.OAuthConfig
+import io.music_assistant.client.api.OAuthHandler
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.api.User
 import io.music_assistant.client.settings.SettingsRepository
@@ -26,6 +28,8 @@ class SettingsViewModel(
 
     private val _isLoggingIn = MutableStateFlow(false)
     val isLoggingIn = _isLoggingIn.asStateFlow()
+
+    private val oauthHandler = OAuthHandler()
 
     fun attemptConnection(host: String, port: String, isTls: Boolean) =
         apiClient.connect(connection = ConnectionInfo(host, port.toInt(), isTls))
@@ -88,4 +92,21 @@ class SettingsViewModel(
      * Get stored username for display.
      */
     fun getStoredUsername(): String? = settings.getStoredUsername()
+
+    /**
+     * Start OAuth login flow by opening the browser.
+     * The callback will be handled by MainActivity on Android.
+     */
+    fun startOAuthLogin() {
+        val connInfo = connectionInfo.value ?: return
+        val protocol = if (connInfo.isTls) "https" else "http"
+        val serverUrl = "$protocol://${connInfo.host}:${connInfo.port}"
+        val loginUrl = OAuthConfig.buildLoginUrl(serverUrl)
+        oauthHandler.openLoginUrl(loginUrl)
+    }
+
+    /**
+     * Check if OAuth login is supported on this platform.
+     */
+    fun isOAuthSupported(): Boolean = oauthHandler.isSupported()
 }

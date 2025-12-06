@@ -43,10 +43,14 @@ kotlin {
             implementation(libs.koin.androidx.compose)
 
             implementation(libs.androidx.media)
+            implementation(libs.androidx.browser)
 
             implementation(libs.coil)
 
             implementation(libs.androidx.media3.exoplayer)
+
+            // WebRTC for remote access
+            implementation(libs.webrtc.android)
         }
         commonMain.dependencies {
             implementation(compose.runtime)

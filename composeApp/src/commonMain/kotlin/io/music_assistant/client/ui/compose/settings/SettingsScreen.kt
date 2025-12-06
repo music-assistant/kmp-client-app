@@ -147,12 +147,14 @@ fun SettingsScreen(navController: NavController) {
                         loginError = loginError,
                         isLoggingIn = isLoggingIn,
                         storedUsername = viewModel.getStoredUsername(),
+                        isOAuthSupported = viewModel.isOAuthSupported(),
                         onAuthenticateWithToken = { token ->
                             viewModel.authenticateWithToken(token)
                         },
                         onLoginWithCredentials = { username, password ->
                             viewModel.loginWithCredentials(username, password)
                         },
+                        onOAuthLogin = { viewModel.startOAuthLogin() },
                         onLogout = { viewModel.logout() },
                         onClearError = { viewModel.clearLoginError() }
                     )
@@ -279,8 +281,10 @@ private fun AuthenticationSection(
     loginError: String?,
     isLoggingIn: Boolean,
     storedUsername: String?,
+    isOAuthSupported: Boolean,
     onAuthenticateWithToken: (String) -> Unit,
     onLoginWithCredentials: (String, String) -> Unit,
+    onOAuthLogin: () -> Unit,
     onLogout: () -> Unit,
     onClearError: () -> Unit
 ) {
@@ -306,8 +310,10 @@ private fun AuthenticationSection(
                 authState = authState,
                 loginError = loginError,
                 isLoggingIn = isLoggingIn,
+                isOAuthSupported = isOAuthSupported,
                 onAuthenticateWithToken = onAuthenticateWithToken,
                 onLoginWithCredentials = onLoginWithCredentials,
+                onOAuthLogin = onOAuthLogin,
                 onClearError = onClearError
             )
         }
@@ -374,12 +380,14 @@ private fun AuthenticationForm(
     authState: AuthState,
     loginError: String?,
     isLoggingIn: Boolean,
+    isOAuthSupported: Boolean,
     onAuthenticateWithToken: (String) -> Unit,
     onLoginWithCredentials: (String, String) -> Unit,
+    onOAuthLogin: () -> Unit,
     onClearError: () -> Unit
 ) {
     var selectedTabIndex by remember { mutableStateOf(0) }
-    val tabs = listOf("Token", "Login")
+    val tabs = listOf("Browser", "Token", "Login")
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -432,13 +440,53 @@ private fun AuthenticationForm(
         Spacer(modifier = Modifier.height(16.dp))
 
         when (selectedTabIndex) {
-            0 -> TokenAuthForm(
+            0 -> BrowserAuthForm(
+                isOAuthSupported = isOAuthSupported,
+                onOAuthLogin = onOAuthLogin
+            )
+            1 -> TokenAuthForm(
                 isLoggingIn = isLoggingIn,
                 onAuthenticate = onAuthenticateWithToken
             )
-            1 -> CredentialsAuthForm(
+            2 -> CredentialsAuthForm(
                 isLoggingIn = isLoggingIn,
                 onLogin = onLoginWithCredentials
+            )
+        }
+    }
+}
+
+@Composable
+private fun BrowserAuthForm(
+    isOAuthSupported: Boolean,
+    onOAuthLogin: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(horizontal = 16.dp)
+    ) {
+        Text(
+            text = "Login via your browser.\nThis will open the Music Assistant login page where you can sign in securely.",
+            color = MaterialTheme.colors.onBackground.copy(alpha = 0.7f),
+            style = MaterialTheme.typography.body2,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        Button(
+            enabled = isOAuthSupported,
+            onClick = onOAuthLogin
+        ) {
+            Text("Open Login Page")
+        }
+
+        if (!isOAuthSupported) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Browser login is not supported on this platform.",
+                color = MaterialTheme.colors.error.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.caption,
+                textAlign = TextAlign.Center
             )
         }
     }

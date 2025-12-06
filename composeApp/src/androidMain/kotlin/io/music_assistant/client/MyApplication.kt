@@ -10,8 +10,15 @@ import io.music_assistant.client.services.MediaNotificationManager
 import org.koin.android.ext.koin.androidContext
 
 class MyApplication : Application() {
+
+    companion object {
+        lateinit var appContext: Context
+            private set
+    }
+
     override fun onCreate() {
         super.onCreate()
+        appContext = applicationContext
         initKoin(androidModule()) {
             androidContext(this@MyApplication)
         }

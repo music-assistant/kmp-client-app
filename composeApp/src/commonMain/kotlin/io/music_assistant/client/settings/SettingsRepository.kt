@@ -11,6 +11,7 @@ import kotlin.uuid.Uuid
 
 private const val KEY_AUTH_TOKEN = "auth_token"
 private const val KEY_AUTH_USERNAME = "auth_username"
+private const val KEY_REMOTE_ID = "remote_id"
 
 class SettingsRepository(
     private val settings: Settings
@@ -105,4 +106,25 @@ class SettingsRepository(
      * Check if we have stored authentication credentials.
      */
     fun hasStoredAuth(): Boolean = settings.getStringOrNull(KEY_AUTH_TOKEN) != null
+
+    // Remote connection management
+
+    /**
+     * Get the stored remote ID for WebRTC connections.
+     */
+    fun getRemoteId(): String? = settings.getStringOrNull(KEY_REMOTE_ID)
+
+    /**
+     * Store a remote ID for WebRTC connections.
+     */
+    fun setRemoteId(remoteId: String) {
+        settings.putString(KEY_REMOTE_ID, remoteId)
+    }
+
+    /**
+     * Clear the stored remote ID.
+     */
+    fun clearRemoteId() {
+        settings.remove(KEY_REMOTE_ID)
+    }
 }
