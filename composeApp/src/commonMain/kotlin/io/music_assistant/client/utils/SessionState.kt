@@ -15,6 +15,8 @@ sealed class SessionState {
         data object Initial : Disconnected()
         data object ByUser : Disconnected()
         data object NoServerData : Disconnected()
+        /** Disconnected because authentication is required but not provided */
+        data object AuthRequired : Disconnected()
         data class Error(val reason: Exception?) : Disconnected()
     }
 

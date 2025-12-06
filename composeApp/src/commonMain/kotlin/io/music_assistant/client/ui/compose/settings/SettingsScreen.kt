@@ -9,14 +9,20 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.Checkbox
+import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Scaffold
+import androidx.compose.material.Tab
+import androidx.compose.material.TabRow
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.material.TextFieldDefaults
@@ -28,6 +34,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -35,6 +43,7 @@ import androidx.navigation.NavController
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.ArrowLeft
+import io.music_assistant.client.api.AuthState
 import io.music_assistant.client.ui.compose.common.ActionIcon
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import io.music_assistant.client.ui.theme.ThemeSetting
@@ -54,20 +63,31 @@ fun SettingsScreen(navController: NavController) {
         SessionState.Disconnected.Initial
     )
     val serverInfo = viewModel.serverInfo.collectAsStateWithLifecycle(null)
+    val authState by viewModel.authState.collectAsStateWithLifecycle(AuthState.NotConnected)
+    val loginError by viewModel.loginError.collectAsStateWithLifecycle(null)
+    val isLoggingIn by viewModel.isLoggingIn.collectAsStateWithLifecycle(false)
+
     var shouldPopOnConnected by remember {
         mutableStateOf(
             sessionState !is SessionState.Connected
                     && sessionState != SessionState.Disconnected.Initial
         )
     }
-    if (sessionState is SessionState.Connected && shouldPopOnConnected) {
+
+    // Only pop back when connected AND authenticated (or auth not required)
+    val isFullyConnected = sessionState is SessionState.Connected &&
+            (authState is AuthState.Authenticated || authState is AuthState.NotRequired)
+
+    if (isFullyConnected && shouldPopOnConnected) {
         navController.popBackStack()
     }
+
     BackHandler(enabled = true) {
-        if (sessionState is SessionState.Connected) {
+        if (isFullyConnected) {
             navController.popBackStack()
         }
     }
+
     Scaffold(
         backgroundColor = MaterialTheme.colors.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -86,7 +106,7 @@ fun SettingsScreen(navController: NavController) {
                     .fillMaxWidth()
                     .padding(all = 16.dp),
             ) {
-                if (sessionState is SessionState.Connected) {
+                if (isFullyConnected) {
                     ActionIcon(
                         icon = FontAwesomeIcons.Solid.ArrowLeft,
                     ) {
@@ -104,103 +124,436 @@ fun SettingsScreen(navController: NavController) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                var ipAddress by remember { mutableStateOf("") }
-                var port by remember { mutableStateOf("8095") }
-                var isTls by remember { mutableStateOf(false) }
-                val inputFieldsEnabled = sessionState is SessionState.Disconnected
-                LaunchedEffect(connectionInfo) {
-                    connectionInfo?.let {
-                        ipAddress = it.host
-                        port = it.port.toString()
-                        isTls = it.isTls
-                    }
-                }
-                Text(
-                    modifier = Modifier.padding(bottom = 24.dp),
-                    text = "Server settings",
-                    color = MaterialTheme.colors.onBackground,
-                    style = MaterialTheme.typography.h3,
-                    textAlign = TextAlign.Center
+                // Connection settings
+                ConnectionSettings(
+                    sessionState = sessionState,
+                    serverInfo = serverInfo.value,
+                    connectionInfo = connectionInfo,
+                    onConnect = { host, port, isTls ->
+                        shouldPopOnConnected = true
+                        viewModel.attemptConnection(host, port, isTls)
+                    },
+                    onDisconnect = { viewModel.disconnect() }
                 )
-                Text(
-                    modifier = Modifier.padding(bottom = 24.dp),
-                    text = when (val state = sessionState) {
-                        is SessionState.Connected -> {
-                            "Connected to ${state.connectionInfo.host}:${state.connectionInfo.port}" +
-                                    (serverInfo.value?.let { "\nServer version ${it.serverVersion}, schema ${it.schemaVersion}" }
-                                        ?: "")
-                        }
 
-                        is SessionState.Connecting -> "Connecting to $ipAddress:$port."
-                        is SessionState.Disconnected -> {
-                            when (state) {
-                                SessionState.Disconnected.ByUser -> ""
-                                is SessionState.Disconnected.Error -> "Disconnected${state.reason?.message?.let { ": $it" } ?: ""}"
-                                SessionState.Disconnected.Initial -> ""
-                                SessionState.Disconnected.NoServerData -> "Please provide server address and port."
-                            }
-                        }
-                    },
+                // Show authentication section when connected but auth is required
+                if (sessionState is SessionState.Connected) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Divider(modifier = Modifier.padding(horizontal = 32.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    AuthenticationSection(
+                        authState = authState,
+                        loginError = loginError,
+                        isLoggingIn = isLoggingIn,
+                        storedUsername = viewModel.getStoredUsername(),
+                        onAuthenticateWithToken = { token ->
+                            viewModel.authenticateWithToken(token)
+                        },
+                        onLoginWithCredentials = { username, password ->
+                            viewModel.loginWithCredentials(username, password)
+                        },
+                        onLogout = { viewModel.logout() },
+                        onClearError = { viewModel.clearLoginError() }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConnectionSettings(
+    sessionState: SessionState,
+    serverInfo: io.music_assistant.client.data.model.server.ServerInfo?,
+    connectionInfo: io.music_assistant.client.api.ConnectionInfo?,
+    onConnect: (String, String, Boolean) -> Unit,
+    onDisconnect: () -> Unit
+) {
+    var ipAddress by remember { mutableStateOf("") }
+    var port by remember { mutableStateOf("8095") }
+    var isTls by remember { mutableStateOf(false) }
+    val inputFieldsEnabled = sessionState is SessionState.Disconnected
+
+    LaunchedEffect(connectionInfo) {
+        connectionInfo?.let {
+            ipAddress = it.host
+            port = it.port.toString()
+            isTls = it.isTls
+        }
+    }
+
+    Text(
+        modifier = Modifier.padding(bottom = 24.dp),
+        text = "Server settings",
+        color = MaterialTheme.colors.onBackground,
+        style = MaterialTheme.typography.h3,
+        textAlign = TextAlign.Center
+    )
+
+    Text(
+        modifier = Modifier.padding(bottom = 24.dp),
+        text = when (val state = sessionState) {
+            is SessionState.Connected -> {
+                "Connected to ${state.connectionInfo.host}:${state.connectionInfo.port}" +
+                        (serverInfo?.let { "\nServer version ${it.serverVersion}, schema ${it.schemaVersion}" }
+                            ?: "")
+            }
+
+            is SessionState.Connecting -> "Connecting to $ipAddress:$port."
+            is SessionState.Disconnected -> {
+                when (state) {
+                    SessionState.Disconnected.ByUser -> ""
+                    is SessionState.Disconnected.Error -> "Disconnected${state.reason?.message?.let { ": $it" } ?: ""}"
+                    SessionState.Disconnected.Initial -> ""
+                    SessionState.Disconnected.NoServerData -> "Please provide server address and port."
+                    SessionState.Disconnected.AuthRequired -> "Authentication required."
+                }
+            }
+        },
+        color = MaterialTheme.colors.onBackground,
+        style = MaterialTheme.typography.h5,
+        textAlign = TextAlign.Center,
+        minLines = 2,
+        maxLines = 2,
+    )
+
+    TextField(
+        modifier = Modifier.padding(bottom = 16.dp),
+        enabled = inputFieldsEnabled,
+        value = ipAddress,
+        onValueChange = { ipAddress = it },
+        label = { Text("IP address") },
+        singleLine = true,
+        colors = TextFieldDefaults.textFieldColors(
+            textColor = MaterialTheme.colors.onBackground,
+        )
+    )
+
+    TextField(
+        modifier = Modifier.padding(bottom = 16.dp),
+        enabled = inputFieldsEnabled,
+        value = port,
+        onValueChange = { port = it },
+        label = { Text("Port (8095 by default)") },
+        singleLine = true,
+        colors = TextFieldDefaults.textFieldColors(
+            textColor = MaterialTheme.colors.onBackground,
+        )
+    )
+
+    Row(
+        modifier = Modifier.padding(bottom = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            modifier = Modifier.align(Alignment.CenterVertically),
+            enabled = inputFieldsEnabled,
+            checked = isTls,
+            onCheckedChange = { isTls = it }
+        )
+        Text(modifier = Modifier.align(Alignment.CenterVertically), text = "Use TLS")
+    }
+
+    Button(
+        enabled = ipAddress.isValidHost() && port.isIpPort() && sessionState !is SessionState.Connecting,
+        onClick = {
+            if (sessionState is SessionState.Connected)
+                onDisconnect()
+            else
+                onConnect(ipAddress, port, isTls)
+        }
+    ) {
+        Text(
+            text = if (sessionState is SessionState.Connected)
+                "Disconnect"
+            else
+                "Connect"
+        )
+    }
+}
+
+@Composable
+private fun AuthenticationSection(
+    authState: AuthState,
+    loginError: String?,
+    isLoggingIn: Boolean,
+    storedUsername: String?,
+    onAuthenticateWithToken: (String) -> Unit,
+    onLoginWithCredentials: (String, String) -> Unit,
+    onLogout: () -> Unit,
+    onClearError: () -> Unit
+) {
+    when (authState) {
+        is AuthState.NotRequired -> {
+            Text(
+                text = "Authentication not required",
+                color = MaterialTheme.colors.onBackground.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.body1
+            )
+        }
+
+        is AuthState.Authenticated -> {
+            AuthenticatedView(
+                user = authState.user,
+                storedUsername = storedUsername,
+                onLogout = onLogout
+            )
+        }
+
+        is AuthState.Required, is AuthState.Failed -> {
+            AuthenticationForm(
+                authState = authState,
+                loginError = loginError,
+                isLoggingIn = isLoggingIn,
+                onAuthenticateWithToken = onAuthenticateWithToken,
+                onLoginWithCredentials = onLoginWithCredentials,
+                onClearError = onClearError
+            )
+        }
+
+        is AuthState.Authenticating -> {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Authenticating...",
                     color = MaterialTheme.colors.onBackground,
-                    style = MaterialTheme.typography.h5,
-                    textAlign = TextAlign.Center,
-                    minLines = 2,
-                    maxLines = 2,
+                    style = MaterialTheme.typography.body1
                 )
-                TextField(
-                    modifier = Modifier.padding(bottom = 16.dp),
-                    enabled = inputFieldsEnabled,
-                    value = ipAddress,
-                    onValueChange = { ipAddress = it },
-                    label = {
-                        Text("IP address")
-                    },
-                    singleLine = true,
-                    colors = TextFieldDefaults.textFieldColors(
-                        textColor = MaterialTheme.colors.onBackground,
-                    )
-                )
-                TextField(
-                    modifier = Modifier.padding(bottom = 16.dp),
-                    enabled = inputFieldsEnabled,
-                    value = port,
-                    onValueChange = { port = it },
-                    label = {
-                        Text("Port (8095 by default)")
-                    },
-                    singleLine = true,
-                    colors = TextFieldDefaults.textFieldColors(
-                        textColor = MaterialTheme.colors.onBackground,
-                    )
-                )
-                Row(
-                    modifier = Modifier.padding(bottom = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        modifier = Modifier.align(Alignment.CenterVertically),
-                        enabled = inputFieldsEnabled,
-                        checked = isTls,
-                        onCheckedChange = { isTls = it })
-                    Text(modifier = Modifier.align(Alignment.CenterVertically), text = "Use TLS")
-                }
-                Button(
-                    enabled = ipAddress.isValidHost() && port.isIpPort() && sessionState !is SessionState.Connecting,
+            }
+        }
+
+        AuthState.NotConnected -> {
+            // Nothing to show
+        }
+    }
+}
+
+@Composable
+private fun AuthenticatedView(
+    user: io.music_assistant.client.api.User?,
+    storedUsername: String?,
+    onLogout: () -> Unit
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = "Authenticated",
+            color = MaterialTheme.colors.primary,
+            style = MaterialTheme.typography.h5
+        )
+
+        val displayName = user?.displayName ?: user?.username ?: storedUsername
+        if (displayName != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Logged in as: $displayName",
+                color = MaterialTheme.colors.onBackground,
+                style = MaterialTheme.typography.body1
+            )
+        }
+
+        user?.role?.let { role ->
+            Text(
+                text = "Role: $role",
+                color = MaterialTheme.colors.onBackground.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.body2
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedButton(onClick = onLogout) {
+            Text("Logout")
+        }
+    }
+}
+
+@Composable
+private fun AuthenticationForm(
+    authState: AuthState,
+    loginError: String?,
+    isLoggingIn: Boolean,
+    onAuthenticateWithToken: (String) -> Unit,
+    onLoginWithCredentials: (String, String) -> Unit,
+    onClearError: () -> Unit
+) {
+    var selectedTabIndex by remember { mutableStateOf(0) }
+    val tabs = listOf("Token", "Login")
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Authentication Required",
+            color = MaterialTheme.colors.onBackground,
+            style = MaterialTheme.typography.h5,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        // Show error message
+        loginError?.let { error ->
+            Text(
+                text = error,
+                color = MaterialTheme.colors.error,
+                style = MaterialTheme.typography.body2,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+        }
+
+        if (authState is AuthState.Failed) {
+            Text(
+                text = authState.reason,
+                color = MaterialTheme.colors.error,
+                style = MaterialTheme.typography.body2,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+        }
+
+        TabRow(
+            selectedTabIndex = selectedTabIndex,
+            modifier = Modifier.padding(horizontal = 32.dp),
+            backgroundColor = MaterialTheme.colors.background,
+            contentColor = MaterialTheme.colors.primary
+        ) {
+            tabs.forEachIndexed { index, title ->
+                Tab(
+                    selected = selectedTabIndex == index,
                     onClick = {
-                        if (sessionState is SessionState.Connected)
-                            viewModel.disconnect()
-                        else
-                            shouldPopOnConnected = true
-                        viewModel.attemptConnection(ipAddress, port, isTls)
-                    }
-                ) {
-                    Text(
-                        text = if (sessionState is SessionState.Connected)
-                            "Disconnect"
-                        else
-                            "Connect"
-                    )
-                }
+                        selectedTabIndex = index
+                        onClearError()
+                    },
+                    text = { Text(title) }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        when (selectedTabIndex) {
+            0 -> TokenAuthForm(
+                isLoggingIn = isLoggingIn,
+                onAuthenticate = onAuthenticateWithToken
+            )
+            1 -> CredentialsAuthForm(
+                isLoggingIn = isLoggingIn,
+                onLogin = onLoginWithCredentials
+            )
+        }
+    }
+}
+
+@Composable
+private fun TokenAuthForm(
+    isLoggingIn: Boolean,
+    onAuthenticate: (String) -> Unit
+) {
+    var token by remember { mutableStateOf("") }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(horizontal = 16.dp)
+    ) {
+        Text(
+            text = "Enter a long-lived access token.\nYou can create one in the Music Assistant web interface under Settings > Users.",
+            color = MaterialTheme.colors.onBackground.copy(alpha = 0.7f),
+            style = MaterialTheme.typography.body2,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        TextField(
+            value = token,
+            onValueChange = { token = it },
+            label = { Text("Access Token") },
+            singleLine = true,
+            enabled = !isLoggingIn,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            colors = TextFieldDefaults.textFieldColors(
+                textColor = MaterialTheme.colors.onBackground,
+            ),
+            visualTransformation = PasswordVisualTransformation()
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            enabled = token.isNotBlank() && !isLoggingIn,
+            onClick = { onAuthenticate(token) }
+        ) {
+            if (isLoggingIn) {
+                CircularProgressIndicator(
+                    modifier = Modifier.height(16.dp),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text("Authenticate")
+            }
+        }
+    }
+}
+
+@Composable
+private fun CredentialsAuthForm(
+    isLoggingIn: Boolean,
+    onLogin: (String, String) -> Unit
+) {
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(horizontal = 16.dp)
+    ) {
+        Text(
+            text = "Login with your Music Assistant credentials.",
+            color = MaterialTheme.colors.onBackground.copy(alpha = 0.7f),
+            style = MaterialTheme.typography.body2,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        TextField(
+            value = username,
+            onValueChange = { username = it },
+            label = { Text("Username") },
+            singleLine = true,
+            enabled = !isLoggingIn,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            colors = TextFieldDefaults.textFieldColors(
+                textColor = MaterialTheme.colors.onBackground,
+            )
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        TextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Password") },
+            singleLine = true,
+            enabled = !isLoggingIn,
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            colors = TextFieldDefaults.textFieldColors(
+                textColor = MaterialTheme.colors.onBackground,
+            )
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            enabled = username.isNotBlank() && password.isNotBlank() && !isLoggingIn,
+            onClick = { onLogin(username, password) }
+        ) {
+            if (isLoggingIn) {
+                CircularProgressIndicator(
+                    modifier = Modifier.height(16.dp),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text("Login")
             }
         }
     }

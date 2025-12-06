@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.update
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+private const val KEY_AUTH_TOKEN = "auth_token"
+private const val KEY_AUTH_USERNAME = "auth_username"
+
 class SettingsRepository(
     private val settings: Settings
 ) {
@@ -58,4 +61,48 @@ class SettingsRepository(
         settings.getStringOrNull("local_player_id") ?: Uuid.random().toString().also {
             settings.putString("local_player_id", it)
         }
+
+    // Authentication token management
+
+    private val _authToken = MutableStateFlow(settings.getStringOrNull(KEY_AUTH_TOKEN))
+    val authToken = _authToken.asStateFlow()
+
+    /**
+     * Get the stored authentication token.
+     */
+    fun getAuthToken(): String? = settings.getStringOrNull(KEY_AUTH_TOKEN)
+
+    /**
+     * Store an authentication token.
+     */
+    fun setAuthToken(token: String) {
+        settings.putString(KEY_AUTH_TOKEN, token)
+        _authToken.update { token }
+    }
+
+    /**
+     * Clear the stored authentication token.
+     */
+    fun clearAuthToken() {
+        settings.remove(KEY_AUTH_TOKEN)
+        settings.remove(KEY_AUTH_USERNAME)
+        _authToken.update { null }
+    }
+
+    /**
+     * Get the stored username (for display purposes).
+     */
+    fun getStoredUsername(): String? = settings.getStringOrNull(KEY_AUTH_USERNAME)
+
+    /**
+     * Store the username (for display purposes).
+     */
+    fun setStoredUsername(username: String) {
+        settings.putString(KEY_AUTH_USERNAME, username)
+    }
+
+    /**
+     * Check if we have stored authentication credentials.
+     */
+    fun hasStoredAuth(): Boolean = settings.getStringOrNull(KEY_AUTH_TOKEN) != null
 }
