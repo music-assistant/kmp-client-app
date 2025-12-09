@@ -3,7 +3,7 @@ agp = "8.13.1"
 android-compileSdk = "36"
 android-minSdk = "26"
 android-targetSdk = "36"
-androidx-activityCompose = "1.12.0"
+androidx-activityCompose = "1.12.1"
 androidx-appcompat = "1.7.1"
 androidx-constraintlayout = "2.2.1"
 androidx-media = "1.7.1"
@@ -19,7 +19,7 @@ kermit = "2.0.8"
 kotlin = "2.2.21"
 kotlinx-coroutines = "1.10.2"
 
-ktor = "3.3.2"
+ktor = "3.3.3"
 
 koin = "4.1.1"
 koinComposeMultiplatform = "4.1.1"
@@ -34,9 +34,9 @@ settingsMultiplatform = "1.3.0"
 reorderable = "3.0.0"
 media3="1.8.0"
 
-vlcj = "4.11.0"
+vlcj = "4.12.1"
 
-androidxNavigation3UI = "1.0.0-alpha05"
+androidxNavigation3UI = "1.0.0-alpha06"
 androidxNavigation3Material = "1.3.0-alpha02"
 
 
@@ -54,7 +54,6 @@ androidx-material = { group = "com.google.android.material", name = "material", 
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "androidx-constraintlayout" }
 androidx-media = { group = "androidx.media", name = "media", version.ref = "androidx-media" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
-# lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-viewmodel = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-runtime-compose = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
 androidx-media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }

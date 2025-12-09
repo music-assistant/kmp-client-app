@@ -5,8 +5,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
-import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.scene.DialogSceneStrategy
@@ -21,18 +21,18 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 
-sealed class NavScreen : NavKey {
+sealed interface NavScreen : NavKey {
     @Serializable
-    data object Main : NavScreen()
+    data object Main : NavScreen
 
     @Serializable
-    data object Home : NavScreen()
+    data object Home : NavScreen
 
     @Serializable
-    data object Settings : NavScreen()
+    data object Settings : NavScreen
 
     @Serializable
-    data class Library(val args: LibraryArgs) : NavScreen()
+    data class Library(val args: LibraryArgs) : NavScreen
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,22 +67,21 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
                 rememberSaveableStateHolder()
             )
         ),
-        entryProvider = { key ->
-            when (key) {
-                is NavScreen.Main -> NavEntry(key) { MainScreen { screen -> backStack.add(screen) } }
-                is NavScreen.Home -> NavEntry(key) { HomeScreen() }
-                is NavScreen.Settings -> NavEntry(
-                    key = key,
-                ) { SettingsScreen { backStack.removeLastOrNull() } }
-
-                is NavScreen.Library -> NavEntry(
-                    key = key,
-                    metadata = BottomSheetSceneStrategy.bottomSheet()
-                ) { LibraryScreen(key.args) { backStack.removeLastOrNull() } }
-
-                else -> throw RuntimeException("Unknown NavScreen: $key")
+        entryProvider = entryProvider {
+            entry<NavScreen.Main> {
+                MainScreen { screen -> backStack.add(screen) }
             }
-
+            entry<NavScreen.Home> {
+                HomeScreen()
+            }
+            entry<NavScreen.Settings> {
+                SettingsScreen { backStack.removeLastOrNull() }
+            }
+            entry<NavScreen.Library>(
+                metadata = BottomSheetSceneStrategy.bottomSheet()
+            ) {
+                LibraryScreen(it.args) { backStack.removeLastOrNull() }
+            }
         }
     )
 }
