@@ -9,9 +9,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.LinearProgressIndicator
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,7 +48,7 @@ fun PlayerCard(
             .clip(RoundedCornerShape(size = 16.dp))
             .alpha(if (isSelected) 1f else 0.4f)
             .background(
-                color = MaterialTheme.colors.secondary,
+                color = MaterialTheme.colorScheme.secondary,
                 shape = RoundedCornerShape(size = 8.dp)
             )
     ) {
@@ -90,9 +90,9 @@ fun PlayerCard(
                 text = player.name,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colors.onPrimary,
+                color = MaterialTheme.colorScheme.onPrimary,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.h5
+                style = MaterialTheme.typography.headlineSmall
             )
             Text(
                 modifier = Modifier
@@ -104,15 +104,15 @@ fun PlayerCard(
                     if (player.isAnnouncing) "ANNOUNCING"
                     else queue?.currentItem?.track?.description ?: "idle",
                 maxLines = 1,
-                color = MaterialTheme.colors.onPrimary,
+                color = MaterialTheme.colorScheme.onPrimary,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.h6
+                style = MaterialTheme.typography.headlineSmall
             )
             LinearProgressIndicator(
                 modifier = Modifier
                     .fillMaxWidth(),
-                progress = currentProgress ?: 0f,
-                color = MaterialTheme.colors.onPrimary,
+                progress = { currentProgress ?: 0f },
+                color = MaterialTheme.colorScheme.onPrimary,
                 strokeCap = StrokeCap.Round
             )
             PlayerControls(

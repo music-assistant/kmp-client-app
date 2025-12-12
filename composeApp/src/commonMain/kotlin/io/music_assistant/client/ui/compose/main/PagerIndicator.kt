@@ -18,9 +18,9 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,7 +53,7 @@ fun HorizontalPagerIndicator(
                     .size(20.dp)
                     .clickable { onItemMoved(-1) },
                 imageVector = FontAwesomeIcons.Solid.ArrowCircleLeft,
-                tint = MaterialTheme.colors.secondary,
+                tint = MaterialTheme.colorScheme.secondary,
                 contentDescription = null,
             )
         } else {
@@ -67,8 +67,8 @@ fun HorizontalPagerIndicator(
             if (pageCount <= 10) {
                 repeat(pageCount) { index ->
                     val color =
-                        if (pagerState.currentPage == index) MaterialTheme.colors.primary
-                        else MaterialTheme.colors.primary.copy(alpha = 0.3f)
+                        if (pagerState.currentPage == index) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
                     Box(
                         modifier = Modifier
                             .padding(2.dp)
@@ -80,8 +80,8 @@ fun HorizontalPagerIndicator(
             } else {
                 Text(
                     text = "${pagerState.currentPage + 1} / $pageCount",
-                    style = MaterialTheme.typography.body2,
-                    color = MaterialTheme.colors.secondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.secondary,
                     textAlign = TextAlign.Center,
                 )
             }
@@ -92,7 +92,7 @@ fun HorizontalPagerIndicator(
                     .size(20.dp)
                     .clickable { onItemMoved(1) },
                 imageVector = FontAwesomeIcons.Solid.ArrowCircleRight,
-                tint = MaterialTheme.colors.secondary,
+                tint = MaterialTheme.colorScheme.secondary,
                 contentDescription = null,
             )
         } else {
@@ -119,7 +119,7 @@ fun VerticalPagerIndicator(
                     .size(20.dp)
                     .clickable { onItemMoved(-1) },
                 imageVector = FontAwesomeIcons.Solid.ArrowCircleUp,
-                tint = MaterialTheme.colors.secondary,
+                tint = MaterialTheme.colorScheme.secondary,
                 contentDescription = null,
             )
         } else {
@@ -133,8 +133,8 @@ fun VerticalPagerIndicator(
             if (pageCount <= 10) {
                 repeat(pageCount) { index ->
                     val color =
-                        if (pagerState.currentPage == index) MaterialTheme.colors.primary
-                        else MaterialTheme.colors.primary.copy(alpha = 0.3f)
+                        if (pagerState.currentPage == index) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
                     Box(
                         modifier = Modifier
                             .padding(2.dp)
@@ -146,8 +146,8 @@ fun VerticalPagerIndicator(
             } else {
                 Text(
                     text = "${pagerState.currentPage + 1} / $pageCount",
-                    style = MaterialTheme.typography.body2,
-                    color = MaterialTheme.colors.secondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.secondary,
                     textAlign = TextAlign.Center,
                 )
             }
@@ -158,7 +158,7 @@ fun VerticalPagerIndicator(
                     .size(20.dp)
                     .clickable { onItemMoved(1) },
                 imageVector = FontAwesomeIcons.Solid.ArrowCircleDown,
-                tint = MaterialTheme.colors.secondary,
+                tint = MaterialTheme.colorScheme.secondary,
                 contentDescription = null,
             )
         } else {

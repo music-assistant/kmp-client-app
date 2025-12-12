@@ -14,6 +14,7 @@ data class ServerMediaItem(
     @SerialName("media_type") val mediaType: MediaType,
     //@SerialName("sort_name") val sortName: String? = null,
     @SerialName("uri") val uri: String? = null,
+    @SerialName("image") val image: MediaItemImage? = null,
     //@SerialName("is_playable") val isPlayable: Boolean? = null,
     //@SerialName("timestamp_added") val timestampAdded: Long? = null,
     //@SerialName("timestamp_modified") val timestampModified: Long? = null,
@@ -36,6 +37,8 @@ data class ServerMediaItem(
     @SerialName("album") val album: ServerMediaItem? = null,
     //@SerialName("disc_number") val discNumber: Int? = null,
     //@SerialName("track_number") val trackNumber: Int? = null,
+    // Folder only
+    @SerialName("items") val items: List<ServerMediaItem>? = null,
 )
 
 @Serializable

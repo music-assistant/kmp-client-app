@@ -79,7 +79,7 @@ iOS Swift App (iosApp)
 - Assets and Xcode project; build phase calls Gradle `:composeApp:embedAndSignAppleFrameworkForXcode` to produce `ComposeApp.framework`.
 
 Navigation
-- Start destination: `AppRoutes.Main` -> `MainScreen`.
+- Start destination: `MainScreen`.
 - Other routes: `LibraryScreen` with args, `SettingsScreen`.
 
 View Models (Koin)

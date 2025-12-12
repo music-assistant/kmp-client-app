@@ -1,4 +1,4 @@
-package io.music_assistant.client.ui.compose.common
+package io.music_assistant.client.ui.compose.common.painters
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -12,7 +12,7 @@ class MusicNotePainter(
     private val iconColor: Color = Color(0xFF9E9E9E)
 ) : Painter() {
 
-    override val intrinsicSize: Size = Size.Unspecified
+    override val intrinsicSize: Size = Size.Companion.Unspecified
 
     override fun DrawScope.onDraw() {
         val canvasWidth = size.width

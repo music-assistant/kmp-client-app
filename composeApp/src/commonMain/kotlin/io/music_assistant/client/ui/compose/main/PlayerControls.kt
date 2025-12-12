@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.MaterialTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,7 +46,7 @@ fun PlayerControls(
         if (player.canSetVolume) {
             ActionIcon(
                 icon = FontAwesomeIcons.Solid.VolumeDown,
-                tint = MaterialTheme.colors.onPrimary,
+                tint = MaterialTheme.colorScheme.onPrimary,
                 size = 26.dp,
                 enabled = enabled,
             ) { playerAction(playerData, PlayerAction.VolumeDown) }
@@ -58,7 +58,7 @@ fun PlayerControls(
                     TablerIcons.Switch2
                 else
                     TablerIcons.ArrowsRight,
-                tint = MaterialTheme.colors.onPrimary,
+                tint = MaterialTheme.colorScheme.onPrimary,
                 size = 26.dp,
                 enabled = enabled && buttonsEnabled,
             ) { playerAction(playerData, PlayerAction.ToggleShuffle(current = it.shuffleEnabled)) }
@@ -66,7 +66,7 @@ fun PlayerControls(
 
         ActionIcon(
             icon = FontAwesomeIcons.Solid.FastBackward,
-            tint = MaterialTheme.colors.onPrimary,
+            tint = MaterialTheme.colorScheme.onPrimary,
             size = 26.dp,
             enabled = enabled && buttonsEnabled,
         ) { playerAction(playerData, PlayerAction.Previous) }
@@ -76,14 +76,14 @@ fun PlayerControls(
                 true -> FontAwesomeIcons.Solid.Pause
                 false -> FontAwesomeIcons.Solid.Play
             },
-            tint = MaterialTheme.colors.onPrimary,
+            tint = MaterialTheme.colorScheme.onPrimary,
             size = 32.dp,
             enabled = enabled && buttonsEnabled,
         ) { playerAction(playerData, PlayerAction.TogglePlayPause) }
 
         ActionIcon(
             icon = FontAwesomeIcons.Solid.FastForward,
-            tint = MaterialTheme.colors.onPrimary,
+            tint = MaterialTheme.colorScheme.onPrimary,
             size = 26.dp,
             enabled = enabled && buttonsEnabled,
         ) { playerAction(playerData, PlayerAction.Next) }
@@ -98,9 +98,9 @@ fun PlayerControls(
                     null -> TablerIcons.Repeat
                 },
                 tint = when (repeatMode) {
-                    RepeatMode.OFF, null -> MaterialTheme.colors.onPrimary.copy(alpha = 0.5f)
+                    RepeatMode.OFF, null -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f)
                     RepeatMode.ALL,
-                    RepeatMode.ONE -> MaterialTheme.colors.onPrimary
+                    RepeatMode.ONE -> MaterialTheme.colorScheme.onPrimary
                 },
                 size = 26.dp,
                 enabled = enabled && buttonsEnabled && repeatMode != null,
@@ -114,7 +114,7 @@ fun PlayerControls(
         if (player.canSetVolume) {
             ActionIcon(
                 icon = FontAwesomeIcons.Solid.VolumeUp,
-                tint = MaterialTheme.colors.onPrimary,
+                tint = MaterialTheme.colorScheme.onPrimary,
                 size = 26.dp,
                 enabled = enabled,
             ) { playerAction(playerData, PlayerAction.VolumeUp) }

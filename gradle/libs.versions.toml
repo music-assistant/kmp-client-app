@@ -36,6 +36,9 @@ media3="1.8.0"
 
 vlcj = "4.12.1"
 
+androidxNavigation3UI = "1.0.0-alpha06"
+androidxNavigation3Material = "1.3.0-alpha02"
+
 
 [libraries]
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
@@ -51,7 +54,6 @@ androidx-material = { group = "com.google.android.material", name = "material", 
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "androidx-constraintlayout" }
 androidx-media = { group = "androidx.media", name = "media", version.ref = "androidx-media" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
-# lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-viewmodel = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-runtime-compose = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
 androidx-media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
@@ -88,6 +90,9 @@ settings-multiplatform = { module = "com.russhwolf:multiplatform-settings-no-arg
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 
 vlcj = { module = "uk.co.caprica:vlcj", version.ref = "vlcj" }
+
+androidx-navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "androidxNavigation3UI" }
+androidx-navigation3-material3-adaptive = { module = "org.jetbrains.compose.material3.adaptive:adaptive-navigation3", version.ref = "androidxNavigation3Material" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

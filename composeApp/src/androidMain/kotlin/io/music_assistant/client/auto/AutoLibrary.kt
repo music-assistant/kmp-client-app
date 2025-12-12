@@ -11,13 +11,8 @@ import androidx.media.MediaBrowserServiceCompat
 import androidx.media.utils.MediaConstants
 import co.touchlab.kermit.Logger
 import io.music_assistant.client.R
+import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
-import io.music_assistant.client.api.getAlbumTracksRequest
-import io.music_assistant.client.api.getArtistAlbumsRequest
-import io.music_assistant.client.api.getArtistsRequest
-import io.music_assistant.client.api.getPlaylistsRequest
-import io.music_assistant.client.api.playMediaRequest
-import io.music_assistant.client.api.searchRequest
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItemList
@@ -55,7 +50,7 @@ class AutoLibrary(
                 .debounce(500)
                 .collect { (query, result) ->
                     val answer = apiClient.sendRequest(
-                        request = searchRequest(
+                        request = Request.Library.search(
                             query = query,
                             mediaTypes = listOf(
                                 MediaType.ARTIST,
@@ -97,7 +92,7 @@ class AutoLibrary(
                 result.detach()
                 scope.launch {
                     result.sendResult(
-                        apiClient.sendRequest(getArtistsRequest())
+                        apiClient.sendRequest(Request.Artist.list())
                             ?.resultAs<List<ServerMediaItem>>()
                             ?.toAppMediaItemList()
                             ?.map {
@@ -114,7 +109,7 @@ class AutoLibrary(
                 result.detach()
                 scope.launch {
                     result.sendResult(
-                        apiClient.sendRequest(getPlaylistsRequest())
+                        apiClient.sendRequest(Request.Playlist.list())
                             ?.resultAs<List<ServerMediaItem>>()
                             ?.toAppMediaItemList()
                             ?.map {
@@ -136,8 +131,8 @@ class AutoLibrary(
                 result.detach()
                 val parentType = MediaType.valueOf(parts[2])
                 val requestAndCategory = when (parentType) {
-                    MediaType.ARTIST -> getArtistAlbumsRequest(parts[0], parts[3])
-                    MediaType.ALBUM -> getAlbumTracksRequest(parts[0], parts[3])
+                    MediaType.ARTIST -> Request.Artist.getAlbums(parts[0], parts[3])
+                    MediaType.ALBUM -> Request.Album.getTracks(parts[0], parts[3])
                     else -> {
                         result.sendResult(null)
                         return
@@ -212,7 +207,7 @@ class AutoLibrary(
         id.split("__").getOrNull(1)?.let { uri ->
             scope.launch {
                 apiClient.sendRequest(
-                    playMediaRequest(
+                    Request.Library.play(
                         media = listOf(uri),
                         queueOrPlayerId = queueId,
                         option = extras?.getString(

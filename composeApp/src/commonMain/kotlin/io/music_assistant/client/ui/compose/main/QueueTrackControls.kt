@@ -1,7 +1,7 @@
 package io.music_assistant.client.ui.compose.main
 
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -28,8 +28,8 @@ fun QueueTrackControls(
     ) { onChosenItemsClear() }
     Text(
         text = "${chosenItems.size} selected ${if (chosenItems.size == 1) "track" else "tracks"}:",
-        color = MaterialTheme.colors.onSurface,
-        style = MaterialTheme.typography.body2,
+        color = MaterialTheme.colorScheme.onSurface,
+        style = MaterialTheme.typography.bodyMedium,
         fontWeight = FontWeight.Bold
     )
     queueId?.let {
@@ -50,7 +50,7 @@ fun QueueTrackControls(
             enabled = enabled
         ) {
             queueAction(
-                QueueAction.RemoveItems(it, chosenItems.map { it.id })
+                QueueAction.RemoveItems(it, chosenItems.map { item -> item.id })
             )
         }
     }

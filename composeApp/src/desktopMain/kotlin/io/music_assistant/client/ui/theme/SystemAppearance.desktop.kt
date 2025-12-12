@@ -1,5 +1,7 @@
 package io.music_assistant.client.ui.theme
 
-@androidx.compose.runtime.Composable
+import androidx.compose.runtime.Composable
+
+@Composable
 actual fun SystemAppearance(isDarkTheme: Boolean) {
 }
