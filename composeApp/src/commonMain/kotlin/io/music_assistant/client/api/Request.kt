@@ -346,3 +346,24 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
         )
     }
 }
+
+data object Auth {
+    fun login(username: String, password: String, deviceName: String) = Request(
+        command = "auth/login",
+        args = buildJsonObject {
+            put("username", JsonPrimitive(username))
+            put("password", JsonPrimitive(password))
+            put("device_name", JsonPrimitive(deviceName))
+        }
+    )
+
+    fun logout() = Request(command = "auth/logout")
+
+    fun authorize(token: String, deviceName: String) = Request(
+        command = "auth",
+        args = buildJsonObject {
+            put("token", JsonPrimitive(token))
+            put("device_name", JsonPrimitive(deviceName))
+        }
+    )
+}

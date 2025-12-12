@@ -52,7 +52,7 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
                 }
             }
         ),
-        NavScreen.Home
+        NavScreen.Main
     )
     val bottomSheetStrategy = remember { BottomSheetSceneStrategy<NavKey>() }
     val dialogStrategy = remember { DialogSceneStrategy<NavKey>() }

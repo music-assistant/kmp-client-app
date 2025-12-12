@@ -142,7 +142,7 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
 
         try {
             val response =
-                sendRequest(loginRequest(username, password, settings.deviceName.value))
+                sendRequest(Auth.login(username, password, settings.deviceName.value))
             currentState = _sessionState.value
             if (currentState !is SessionState.Connected) {
                 return
@@ -238,7 +238,7 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
             return
         }
         try {
-            sendRequest(logoutRequest())
+            sendRequest(Auth.logout())
         } catch (_: Exception) {
         }
         _sessionState.update {
@@ -256,7 +256,7 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                 return
             }
             _sessionState.update { currentState.copy(authProcessState = AuthProcessState.InProgress) }
-            val response = sendRequest(authRequest(token, settings.deviceName.value))
+            val response = sendRequest(Auth.authorize(token, settings.deviceName.value))
             currentState = _sessionState.value
             if (currentState !is SessionState.Connected) {
                 return

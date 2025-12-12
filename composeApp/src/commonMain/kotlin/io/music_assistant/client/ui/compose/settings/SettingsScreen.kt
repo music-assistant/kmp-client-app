@@ -14,23 +14,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.material.TextField
-import androidx.compose.material.TextFieldDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -114,8 +109,8 @@ fun SettingsScreen(onBack: () -> Unit) {
                         .padding(start = 16.dp)
                         .align(Alignment.CenterVertically),
                     text = "Settings",
-                    color = MaterialTheme.colors.onBackground,
-                    style = MaterialTheme.typography.h5,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    style = MaterialTheme.typography.titleSmall,
                     textAlign = TextAlign.Start,
                 )
                 Spacer(modifier = Modifier.weight(1f))
@@ -159,47 +154,49 @@ fun SettingsScreen(onBack: () -> Unit) {
                         }
                     }
                 },
-                color = MaterialTheme.colors.onBackground,
+                color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center,
                 minLines = 2,
                 maxLines = 2,
             )
             if (serverInputsFieldVisible) {
-            TextField(
-                modifier = Modifier.padding(bottom = 16.dp),
-                value = ipAddress,
-                onValueChange = { ipAddress = it },
-                label = {
-                    Text("IP address")
-                },
-                singleLine = true,
-                colors = TextFieldDefaults.textFieldColors(
-                    textColor = MaterialTheme.colors.onBackground,
+                TextField(
+                    modifier = Modifier.padding(bottom = 16.dp),
+                    value = ipAddress,
+                    onValueChange = { ipAddress = it },
+                    label = {
+                        Text("IP address")
+                    },
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                    )
                 )
-            )
-            TextField(
-                modifier = Modifier.padding(bottom = 16.dp),
-                value = port,
-                onValueChange = { port = it },
-                label = {
-                    Text("Port (8095 by default)")
-                },
-                singleLine = true,
-                colors = TextFieldDefaults.textFieldColors(
-                    textColor = MaterialTheme.colors.onBackground,
+                TextField(
+                    modifier = Modifier.padding(bottom = 16.dp),
+                    value = port,
+                    onValueChange = { port = it },
+                    label = {
+                        Text("Port (8095 by default)")
+                    },
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                    )
                 )
-            )
-            Row(
-                modifier = Modifier.padding(bottom = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(
-                    modifier = Modifier.align(Alignment.CenterVertically),
-                    checked = isTls,
-                    onCheckedChange = { isTls = it })
-                Text(modifier = Modifier.align(Alignment.CenterVertically), text = "Use TLS")
-            }
+                Row(
+                    modifier = Modifier.padding(bottom = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        modifier = Modifier.align(Alignment.CenterVertically),
+                        checked = isTls,
+                        onCheckedChange = { isTls = it })
+                    Text(modifier = Modifier.align(Alignment.CenterVertically), text = "Use TLS")
                 }
+            }
             Button(
                 enabled = ipAddress.isValidHost() && port.isIpPort() && sessionState !is SessionState.Connecting,
                 onClick = {
@@ -253,14 +250,6 @@ fun AuthSection(
                     .padding(top = 32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                error?.let {
-                    Text(
-                        modifier = Modifier.padding(bottom = 16.dp),
-                        text = it,
-                        color = MaterialTheme.colors.error,
-                        textAlign = TextAlign.Center,
-                    )
-                }
                 TextField(
                     modifier = Modifier.padding(bottom = 16.dp),
                     enabled = fieldsEnabled,
@@ -268,8 +257,9 @@ fun AuthSection(
                     onValueChange = { login = it },
                     label = { Text("Login") },
                     singleLine = true,
-                    colors = TextFieldDefaults.textFieldColors(
-                        textColor = MaterialTheme.colors.onBackground,
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
                     )
                 )
                 TextField(
@@ -299,10 +289,19 @@ fun AuthSection(
                         }
                     },
                     singleLine = true,
-                    colors = TextFieldDefaults.textFieldColors(
-                        textColor = MaterialTheme.colors.onBackground,
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
                     )
                 )
+                error?.let {
+                    Text(
+                        modifier = Modifier.padding(bottom = 16.dp),
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center,
+                    )
+                }
                 Button(
                     enabled = fieldsEnabled && login.isNotEmpty() && password.isNotEmpty(),
                     onClick = {
@@ -324,7 +323,7 @@ fun AuthSection(
                 Text(
                     modifier = modifier.padding(top = 32.dp),
                     text = "Logged in as ${state.user?.description ?: "Unknown User"}",
-                    color = MaterialTheme.colors.onBackground,
+                    color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center,
                 )
                 Button(

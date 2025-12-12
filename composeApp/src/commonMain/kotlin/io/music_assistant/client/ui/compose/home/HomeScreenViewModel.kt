@@ -25,7 +25,8 @@ class HomeScreenViewModel(
 
     private val connectionState = apiClient.sessionState
 
-    val serverUrl = apiClient.serverInfo.filterNotNull().map { it.baseUrl }
+    val serverUrl =
+        apiClient.sessionState.map { (it as? SessionState.Connected)?.serverInfo?.baseUrl }
 
     private val _state = MutableStateFlow(
         State(
