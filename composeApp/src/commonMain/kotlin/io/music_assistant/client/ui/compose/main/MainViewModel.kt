@@ -8,6 +8,8 @@ import io.music_assistant.client.data.model.client.Player
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.client.SelectedPlayerData
 import io.music_assistant.client.settings.SettingsRepository
+import io.music_assistant.client.utils.AuthProcessState
+import io.music_assistant.client.utils.DataConnectionState
 import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -33,15 +35,43 @@ class MainViewModel(
     private val _links = MutableSharedFlow<String>()
     val links = _links.asSharedFlow()
 
-    val serverUrl = apiClient.serverInfo.filterNotNull().map { it.baseUrl }
+    val serverUrl =
+        apiClient.sessionState.map { (it as? SessionState.Connected)?.serverInfo?.baseUrl }
 
     init {
         viewModelScope.launch {
             apiClient.sessionState.collect {
                 when (it) {
                     is SessionState.Connected -> {
-                        jobs.add(watchPlayersData())
-                        jobs.add(watchSelectedPlayerData())
+                        when (val connState = it.dataConnectionState) {
+                            is DataConnectionState.Ready -> {
+                                _state.update { State.Loading }
+                                jobs.add(watchPlayersData())
+                                jobs.add(watchSelectedPlayerData())
+                            }
+
+                            is DataConnectionState.AwaitingAuth -> {
+                                when (connState.authProcessState) {
+                                    AuthProcessState.Idle,
+                                    is AuthProcessState.Failed -> {
+                                        _state.update { State.NoAuth }
+                                        stopJobs()
+                                    }
+
+                                    AuthProcessState.InProgress -> {
+                                        _state.update { State.Loading }
+                                        stopJobs()
+                                    }
+                                }
+                                _state.update { State.NoAuth }
+                                stopJobs()
+                            }
+
+                            DataConnectionState.AwaitingServerInfo -> {
+                                _state.update { State.Loading }
+                                stopJobs()
+                            }
+                        }
                     }
 
                     is SessionState.Connecting -> {
@@ -116,6 +146,7 @@ class MainViewModel(
         data object Loading : State()
         data object Disconnected : State()
         data object NoServer : State()
+        data object NoAuth : State()
         data class Data(
             val playerData: List<PlayerData>,
             val selectedPlayerData: SelectedPlayerData? = null

@@ -25,6 +25,7 @@ import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.server.SearchResult
 import io.music_assistant.client.data.model.server.ServerMediaItem
+import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -68,7 +69,7 @@ class AutoLibrary(
                     answer?.resultAs<SearchResult>()?.let {
                         result.sendResult(
                             it.toAutoMediaItems(
-                                apiClient.serverInfo.value?.baseUrl,
+                                baseUrl,
                                 defaultIconUri
                             )
                         )
@@ -101,7 +102,7 @@ class AutoLibrary(
                             ?.toAppMediaItemList()
                             ?.map {
                                 it.toAutoMediaItem(
-                                    apiClient.serverInfo.value?.baseUrl,
+                                    baseUrl,
                                     true,
                                     defaultIconUri
                                 )
@@ -118,7 +119,7 @@ class AutoLibrary(
                             ?.toAppMediaItemList()
                             ?.map {
                                 it.toAutoMediaItem(
-                                    apiClient.serverInfo.value?.baseUrl,
+                                    baseUrl,
                                     true,
                                     defaultIconUri
                                 )
@@ -147,7 +148,7 @@ class AutoLibrary(
                         ?.resultAs<List<ServerMediaItem>>()
                         ?.toAppMediaItemList()?.map {
                             it.toAutoMediaItem(
-                                apiClient.serverInfo.value?.baseUrl,
+                                baseUrl,
                                 true,
                                 defaultIconUri
                             )
@@ -157,6 +158,9 @@ class AutoLibrary(
             }
         }
     }
+
+    private val baseUrl: String?
+        get() = (apiClient.sessionState.value as? SessionState.Connected)?.serverInfo?.baseUrl
 
     private fun actionsForItem(itemId: String): List<MediaItem> {
         return buildList {

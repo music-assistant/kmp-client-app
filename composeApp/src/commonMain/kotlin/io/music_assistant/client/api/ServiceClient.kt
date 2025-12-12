@@ -11,29 +11,37 @@ import io.ktor.client.plugins.websocket.wss
 import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import io.ktor.websocket.close
-import io.music_assistant.client.data.model.server.ServerInfo
+import io.music_assistant.client.data.model.server.AuthorizationResponse
+import io.music_assistant.client.data.model.server.LoginResponse
 import io.music_assistant.client.data.model.server.events.Event
 import io.music_assistant.client.settings.SettingsRepository
+import io.music_assistant.client.utils.AuthProcessState
+import io.music_assistant.client.utils.DataConnectionState
 import io.music_assistant.client.utils.SessionState
 import io.music_assistant.client.utils.myJson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.jsonPrimitive
+import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-class ServiceClient(private val settings: SettingsRepository) {
+class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
+
+    override val coroutineContext: CoroutineContext
+        get() = SupervisorJob() + Dispatchers.IO
 
     private val client = HttpClient(CIO) {
         install(WebSockets) { contentConverter = KotlinxWebsocketSerializationConverter(myJson) }
@@ -42,38 +50,45 @@ class ServiceClient(private val settings: SettingsRepository) {
 
     private var _sessionState: MutableStateFlow<SessionState> =
         MutableStateFlow(SessionState.Disconnected.Initial)
-    val sessionState = _sessionState.onEach {
-        when (it) {
-            is SessionState.Connected -> {
-                settings.updateConnectionInfo(it.connectionInfo)
-            }
-
-            is SessionState.Disconnected -> {
-                listeningJob?.cancel()
-                listeningJob = null
-                when (it) {
-                    SessionState.Disconnected.ByUser,
-                    SessionState.Disconnected.NoServerData -> Unit
-
-                    is SessionState.Disconnected.Error,
-                    SessionState.Disconnected.Initial -> {
-                        settings.connectionInfo.value?.let { connectionInfo ->
-                            connect(connectionInfo)
-                        } ?: _sessionState.update { SessionState.Disconnected.NoServerData }
-                    }
-                }
-            }
-
-            is SessionState.Connecting -> Unit
-        }
-    }
+    val sessionState = _sessionState.asStateFlow()
 
     private val _eventsFlow = MutableSharedFlow<Event<out Any>>(extraBufferCapacity = 10)
     val events: Flow<Event<out Any>> = _eventsFlow.asSharedFlow()
-    private val _serverInfoFlow = MutableStateFlow<ServerInfo?>(null)
-    val serverInfo = _serverInfoFlow.asStateFlow()
 
     private val pendingResponses = mutableMapOf<String, (Answer) -> Unit>()
+
+    init {
+        launch {
+            _sessionState.collect {
+                when (it) {
+                    is SessionState.Connected -> {
+                        settings.updateConnectionInfo(it.connectionInfo)
+                        if ((it.dataConnectionState as? DataConnectionState.AwaitingAuth)?.authProcessState == AuthProcessState.Idle) {
+                            settings.token.value?.let { auth -> authorize(auth) }
+                        }
+                    }
+
+                    is SessionState.Disconnected -> {
+                        listeningJob?.cancel()
+                        listeningJob = null
+                        when (it) {
+                            SessionState.Disconnected.ByUser,
+                            SessionState.Disconnected.NoServerData -> Unit
+
+                            is SessionState.Disconnected.Error,
+                            SessionState.Disconnected.Initial -> {
+                                settings.connectionInfo.value?.let { connectionInfo ->
+                                    connect(connectionInfo)
+                                } ?: _sessionState.update { SessionState.Disconnected.NoServerData }
+                            }
+                        }
+                    }
+
+                    is SessionState.Connecting -> Unit
+                }
+            }
+        }
+    }
 
     fun connect(connection: ConnectionInfo) {
         when (_sessionState.value) {
@@ -113,8 +128,194 @@ class ServiceClient(private val settings: SettingsRepository) {
                 }
             }
         }
+    }
 
+    suspend fun login(
+        username: String,
+        password: String,
+    ) {
+        var currentState = _sessionState.value
+        if (currentState !is SessionState.Connected) {
+            return
+        }
+        _sessionState.update { currentState.copy(authProcessState = AuthProcessState.InProgress) }
 
+        try {
+            val response =
+                sendRequest(loginRequest(username, password, settings.deviceName.value))
+            currentState = _sessionState.value
+            if (currentState !is SessionState.Connected) {
+                return
+            }
+
+            if (response == null) {
+                _sessionState.update {
+                    currentState.copy(
+                        authProcessState = AuthProcessState.Failed(
+                            "No response from server"
+                        )
+                    )
+                }
+                return
+            }
+
+            // Check for error in response
+            if (response.json.containsKey("error_code")) {
+                val errorMessage =
+                    response.json["error"]?.jsonPrimitive?.content ?: "Authentication failed"
+                settings.updateToken(null)
+                _sessionState.update {
+                    currentState.copy(
+                        authProcessState = AuthProcessState.Failed(
+                            errorMessage
+                        )
+                    )
+                }
+                return
+            }
+
+            response.resultAs<LoginResponse>()?.let { auth ->
+                if (!auth.success) {
+                    _sessionState.update {
+                        currentState.copy(
+                            authProcessState = AuthProcessState.Failed(
+                                auth.error ?: "Authentication failed"
+                            )
+                        )
+                    }
+                    return
+                }
+                if (auth.token.isNullOrBlank()) {
+                    _sessionState.update {
+                        currentState.copy(
+                            authProcessState = AuthProcessState.Failed(
+                                "No token received"
+                            )
+                        )
+                    }
+                    return
+                }
+                if (auth.user == null) {
+                    _sessionState.update {
+                        currentState.copy(
+                            authProcessState = AuthProcessState.Failed(
+                                "No user data received"
+                            )
+                        )
+                    }
+                    return
+                }
+                authorize(auth.token)
+            } ?: run {
+                _sessionState.update {
+                    currentState.copy(
+                        authProcessState = AuthProcessState.Failed(
+                            "Failed to parse auth data"
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            val currentState = _sessionState.value
+            if (currentState !is SessionState.Connected) {
+                return
+            }
+            _sessionState.update {
+                currentState.copy(
+                    authProcessState = AuthProcessState.Failed(
+                        e.message ?: "Exception happened: $e"
+                    )
+                )
+            }
+            settings.updateToken(null)
+        }
+    }
+
+    suspend fun logout() {
+        settings.updateToken(null)
+        val currentState = _sessionState.value
+        if (currentState !is SessionState.Connected) {
+            return
+        }
+        try {
+            sendRequest(logoutRequest())
+        } catch (_: Exception) {
+        }
+        _sessionState.update {
+            currentState.copy(
+                authProcessState = AuthProcessState.Idle,
+                user = null
+            )
+        }
+    }
+
+    suspend fun authorize(token: String) {
+        try {
+            var currentState = _sessionState.value
+            if (currentState !is SessionState.Connected) {
+                return
+            }
+            _sessionState.update { currentState.copy(authProcessState = AuthProcessState.InProgress) }
+            val response = sendRequest(authRequest(token, settings.deviceName.value))
+            currentState = _sessionState.value
+            if (currentState !is SessionState.Connected) {
+                return
+            }
+            if (response == null) {
+                _sessionState.update {
+                    currentState.copy(
+                        authProcessState = AuthProcessState.Failed(
+                            "No response from server"
+                        )
+                    )
+                }
+                return
+            }
+            if (response.json.containsKey("error_code")) {
+                val errorMessage =
+                    response.json["error"]?.jsonPrimitive?.content ?: "Authentication failed"
+                settings.updateToken(null)
+                _sessionState.update {
+                    currentState.copy(
+                        authProcessState = AuthProcessState.Failed(
+                            errorMessage
+                        )
+                    )
+                }
+                return
+            }
+
+            response.resultAs<AuthorizationResponse>()?.user?.let { user ->
+                settings.updateToken(token)
+                _sessionState.update {
+                    currentState.copy(
+                        authProcessState = AuthProcessState.Idle,
+                        user = user
+                    )
+                }
+            } ?: run {
+                _sessionState.update {
+                    currentState.copy(
+                        authProcessState = AuthProcessState.Failed(
+                            "Failed to parse user data"
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            val currentState = _sessionState.value
+            if (currentState !is SessionState.Connected) {
+                return
+            }
+            _sessionState.update {
+                currentState.copy(
+                    authProcessState = AuthProcessState.Failed(
+                        e.message ?: "Exception happened: $e"
+                    )
+                )
+            }
+            settings.updateToken(null)
+        }
     }
 
     private suspend fun listenForMessages() {
@@ -132,7 +333,9 @@ class ServiceClient(private val settings: SettingsRepository) {
                     }
 
                     message.containsKey("server_id") -> {
-                        _serverInfoFlow.update { myJson.decodeFromJsonElement(message) }
+                        _sessionState.update {
+                            state.copy(serverInfo = myJson.decodeFromJsonElement(message))
+                        }
                     }
 
                     message.containsKey("event") -> {

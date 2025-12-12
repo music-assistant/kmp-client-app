@@ -38,7 +38,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -50,7 +49,8 @@ class LibraryViewModel(
 
     private val connectionState = apiClient.sessionState
 
-    val serverUrl = apiClient.serverInfo.filterNotNull().map { it.baseUrl }
+    val serverUrl =
+        apiClient.sessionState.map { (it as? SessionState.Connected)?.serverInfo?.baseUrl }
 
     private val _toasts = MutableSharedFlow<String>()
     val toasts = _toasts.asSharedFlow()

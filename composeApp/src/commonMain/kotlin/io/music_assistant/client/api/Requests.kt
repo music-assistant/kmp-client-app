@@ -294,3 +294,63 @@ private fun getLibrarySubItemsRequest(
     }
 )
 
+/**
+ * Authenticate the WebSocket session with a token.
+ * This is required for server schema version >= 28.
+ */
+fun authRequest(token: String, deviceName: String? = null) = Request(
+    command = "auth",
+    args = buildJsonObject {
+        put("token", JsonPrimitive(token))
+        deviceName?.let { put("device_name", JsonPrimitive(it)) }
+    }
+)
+
+/**
+ * Login with username and password credentials.
+ * Returns an access token that can be used for future authentication.
+ */
+fun loginRequest(username: String, password: String, deviceName: String? = null) = Request(
+    command = "auth/login",
+    args = buildJsonObject {
+        put("username", JsonPrimitive(username))
+        put("password", JsonPrimitive(password))
+        deviceName?.let { put("device_name", JsonPrimitive(it)) }
+    }
+)
+
+/**
+ * Get current authenticated user information.
+ */
+fun getCurrentUserRequest() = Request(command = "auth/me")
+
+/**
+ * Logout the current user by revoking the current token.
+ */
+fun logoutRequest() = Request(command = "auth/logout")
+
+/**
+ * Create a new long-lived access token.
+ */
+fun createTokenRequest(name: String) = Request(
+    command = "auth/token/create",
+    args = buildJsonObject {
+        put("name", JsonPrimitive(name))
+    }
+)
+
+/**
+ * Get all tokens for the current user.
+ */
+fun getTokensRequest() = Request(command = "auth/tokens")
+
+/**
+ * Revoke an auth token.
+ */
+fun revokeTokenRequest(tokenId: String) = Request(
+    command = "auth/token/revoke",
+    args = buildJsonObject {
+        put("token_id", JsonPrimitive(tokenId))
+    }
+)
+

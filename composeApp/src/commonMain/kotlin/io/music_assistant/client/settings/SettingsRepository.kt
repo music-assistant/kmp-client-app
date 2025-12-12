@@ -43,6 +43,28 @@ class SettingsRepository(
         }
     }
 
+    private val _token = MutableStateFlow(
+        settings.getStringOrNull("token")?.takeIf { it.isNotBlank() }
+    )
+    val token = _token.asStateFlow()
+
+    fun updateToken(token: String?) {
+        if (token != this._token.value) {
+            settings.putString("token", token ?: "")
+            _token.update { token }
+        }
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    val deviceName = MutableStateFlow(
+        settings.getStringOrNull("deviceName")
+            ?: run {
+                val name = "KMP app ${Uuid.random()}"
+                settings.putString("deviceName", name)
+                name
+            }
+    ).asStateFlow()
+
     private val _playersSorting = MutableStateFlow(
         settings.getStringOrNull("players_sort")?.split(",")
     )

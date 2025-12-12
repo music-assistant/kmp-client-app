@@ -120,7 +120,7 @@ fun MainScreen(navController: NavController) {
     ) { scaffoldPadding ->
         var lastDataState by remember { mutableStateOf<MainViewModel.State.Data?>(null) }
         LaunchedEffect(state) {
-            if (state is MainViewModel.State.NoServer) {
+            if (state is MainViewModel.State.NoServer || state is MainViewModel.State.NoAuth) {
                 navController.navigate(AppRoutes.Settings)
             }
             if (state is MainViewModel.State.Data) {
@@ -160,7 +160,8 @@ fun MainScreen(navController: NavController) {
             when (state) {
                 MainViewModel.State.Disconnected,
                 MainViewModel.State.Loading,
-                MainViewModel.State.NoServer -> ServiceLayout(
+                MainViewModel.State.NoServer,
+                MainViewModel.State.NoAuth -> ServiceLayout(
                     stateValue = state,
                 )
 
@@ -189,6 +190,7 @@ private fun ServiceLayout(
                 MainViewModel.State.Disconnected -> "Disconnected"
                 MainViewModel.State.Loading -> "Connecting to server"
                 MainViewModel.State.NoServer -> "Please setup server connection"
+                MainViewModel.State.NoAuth -> "Please authenticate with the server"
             },
             style = MaterialTheme.typography.h5,
             color = MaterialTheme.colors.onBackground,

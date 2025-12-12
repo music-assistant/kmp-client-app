@@ -20,6 +20,7 @@ import io.music_assistant.client.auto.toUri
 import io.music_assistant.client.data.MainDataSource
 import io.music_assistant.client.ui.compose.main.PlayerAction
 import io.music_assistant.client.ui.compose.main.QueueAction
+import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -49,7 +50,7 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
     private val mediaNotificationData = currentPlayerData.filterNotNull()
         .map {
             MediaNotificationData.from(
-                dataSource.apiClient.serverInfo.value?.baseUrl,
+                (dataSource.apiClient.sessionState.value as? SessionState.Connected)?.serverInfo?.baseUrl,
                 it,
                 false
             )
@@ -72,7 +73,7 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
                 mediaSessionHelper.updateQueue(list.map {
                     QueueItem(
                         it.track.toMediaDescription(
-                            dataSource.apiClient.serverInfo.value?.baseUrl,
+                            (dataSource.apiClient.sessionState.value as? SessionState.Connected)?.serverInfo?.baseUrl,
                             defaultIconUri
                         ), it.track.longId
                     )
