@@ -19,7 +19,6 @@ import io.music_assistant.client.data.model.server.ServerPlayer
 import io.music_assistant.client.data.model.server.ServerQueue
 import io.music_assistant.client.data.model.server.ServerQueueItem
 import io.music_assistant.client.data.model.server.events.BuiltinPlayerEvent
-import io.music_assistant.client.data.model.server.events.BuiltinPlayerState
 import io.music_assistant.client.data.model.server.events.MediaItemAddedEvent
 import io.music_assistant.client.data.model.server.events.MediaItemDeletedEvent
 import io.music_assistant.client.data.model.server.events.MediaItemUpdatedEvent
@@ -32,6 +31,7 @@ import io.music_assistant.client.player.MediaPlayerListener
 import io.music_assistant.client.settings.SettingsRepository
 import io.music_assistant.client.ui.compose.main.PlayerAction
 import io.music_assistant.client.ui.compose.main.QueueAction
+import io.music_assistant.client.utils.DataConnectionState
 import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,7 +39,6 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -50,7 +49,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
@@ -64,7 +62,7 @@ class MainDataSource(
 
     private val log = Logger.withTag("MainDataSource")
     private val localPlayerId = settings.getLocalPlayerId()
-    private var localPlayerUpdateInterval = 20000L
+    //private var localPlayerUpdateInterval = 20000L
 
     override val coroutineContext: CoroutineContext
         get() = SupervisorJob() + Dispatchers.IO
@@ -119,8 +117,17 @@ class MainDataSource(
                 when (it) {
                     is SessionState.Connected -> {
                         watchJob = watchApiEvents()
-                        initBuiltinPlayer()
-                        updatePlayersAndQueues()
+                        if (it.dataConnectionState is DataConnectionState.Ready) {
+                            //initBuiltinPlayer() TODO Sendspin?
+                            updatePlayersAndQueues()
+                        } else {
+                            _serverPlayers.update { emptyList() }
+                            _queues.update { emptyList() }
+                            updateJob?.cancel()
+                            updateJob = null
+                            watchJob?.cancel()
+                            watchJob = null
+                        }
                     }
 
                     is SessionState.Connecting -> {
@@ -155,21 +162,21 @@ class MainDataSource(
         }
     }
 
-    private fun initBuiltinPlayer() {
-        updateJob?.cancel()
-        updateJob = launch {
-            apiClient.sendRequest(
-                Request.Player.registerBuiltIn(
-                    Player.LOCAL_PLAYER_NAME,
-                    localPlayerId
-                )
-            )
-            while (isActive) {
-                updateLocalPlayerState()
-                delay(localPlayerUpdateInterval)
-            }
-        }
-    }
+//    private fun initBuiltinPlayer() {
+//        updateJob?.cancel()
+//        updateJob = launch {
+//            apiClient.sendRequest(
+//                Request.Player.registerBuiltIn(
+//                    Player.LOCAL_PLAYER_NAME,
+//                    localPlayerId
+//                )
+//            )
+//            while (isActive) {
+//                updateLocalPlayerState()
+//                delay(localPlayerUpdateInterval)
+//            }
+//        }
+//    }
 
 
     fun selectPlayer(player: Player) {
@@ -426,7 +433,7 @@ class MainDataSource(
                                                     this@MainDataSource
                                                 )
                                             }
-                                            updateLocalPlayerState(false)
+                                            //updateLocalPlayerState(false)
                                         }
                                     }
 
@@ -435,24 +442,25 @@ class MainDataSource(
                                         withContext(Dispatchers.Main) {
                                             localPlayerController.start()
                                         }
-                                        updateLocalPlayerState(true)
+                                        //updateLocalPlayerState(true)
                                     }
 
                                     BuiltinPlayerEventType.PAUSE -> {
                                         withContext(Dispatchers.Main) {
                                             localPlayerController.pause()
                                         }
-                                        updateLocalPlayerState(false)
+                                        //updateLocalPlayerState(false)
                                     }
 
                                     BuiltinPlayerEventType.STOP -> {
                                         withContext(Dispatchers.Main) {
                                             localPlayerController.stop()
                                         }
-                                        updateLocalPlayerState(false)
+                                        //updateLocalPlayerState(false)
                                     }
 
-                                    BuiltinPlayerEventType.TIMEOUT -> updateLocalPlayerState()
+                                    BuiltinPlayerEventType.TIMEOUT -> {/*updateLocalPlayerState()*/
+                                    }
 
                                     BuiltinPlayerEventType.MUTE,
                                     BuiltinPlayerEventType.UNMUTE,
@@ -507,45 +515,45 @@ class MainDataSource(
         }
     }
 
-    private suspend fun updateLocalPlayerState(isPlaying: Boolean? = null) {
-        log.i { "Updating local player state" }
-        val isPlayerPlaying = withContext(Dispatchers.Main) { localPlayerController.isPlaying() }
-        val position = withContext(Dispatchers.Main) {
-            (localPlayerController.getCurrentPosition()
-                ?: 0).toDouble() / 1000
-        }
-        val playing = isPlaying ?: isPlayerPlaying
-        apiClient.sendRequest(
-            Request.Player.updateBuiltInState(
-                localPlayerId,
-                BuiltinPlayerState(
-                    powered = true,
-                    playing = playing,
-                    paused = !playing,
-                    position = position,
-                    volume = 100.0,
-                    muted = false
-                )
-            )
-        )
-        val newUpdateInterval = if (playing) 5000L else 20000L
-        if (newUpdateInterval != localPlayerUpdateInterval) {
-            localPlayerUpdateInterval = newUpdateInterval
-        }
-    }
+//    private suspend fun updateLocalPlayerState(isPlaying: Boolean? = null) {
+//        log.i { "Updating local player state" }
+//        val isPlayerPlaying = withContext(Dispatchers.Main) { localPlayerController.isPlaying() }
+//        val position = withContext(Dispatchers.Main) {
+//            (localPlayerController.getCurrentPosition()
+//                ?: 0).toDouble() / 1000
+//        }
+//        val playing = isPlaying ?: isPlayerPlaying
+//        apiClient.sendRequest(
+//            Request.Player.updateBuiltInState(
+//                localPlayerId,
+//                BuiltinPlayerState(
+//                    powered = true,
+//                    playing = playing,
+//                    paused = !playing,
+//                    position = position,
+//                    volume = 100.0,
+//                    muted = false
+//                )
+//            )
+//        )
+//        val newUpdateInterval = if (playing) 5000L else 20000L
+//        if (newUpdateInterval != localPlayerUpdateInterval) {
+//            localPlayerUpdateInterval = newUpdateInterval
+//        }
+//    }
 
     override fun onReady() {
-        localPlayerController.start()
-        launch { updateLocalPlayerState(true) }
+//        localPlayerController.start()
+//        launch { updateLocalPlayerState(true) }
     }
 
     override fun onAudioCompleted() {
-        launch { updateLocalPlayerState(false) }
+//        launch { updateLocalPlayerState(false) }
     }
 
     override fun onError(error: Throwable?) {
-        log.i(error ?: Exception("Unknown")) { "Media player error $error" }
-        launch { updateLocalPlayerState(false) }
+//        log.i(error ?: Exception("Unknown")) { "Media player error $error" }
+//        launch { updateLocalPlayerState(false) }
     }
 
 }

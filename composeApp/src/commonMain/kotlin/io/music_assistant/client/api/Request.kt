@@ -32,23 +32,23 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
             }
         )
 
-        fun registerBuiltIn(playerName: String, playerId: String) = Request(
-            command = "builtin_player/register",
-            args = buildJsonObject {
-                put("player_name", JsonPrimitive(playerName))
-                put("player_id", JsonPrimitive(playerId))
-
-            }
-        )
-
-        fun updateBuiltInState(playerId: String, state: BuiltinPlayerState) = Request(
-            command = "builtin_player/update_state",
-            args = buildJsonObject {
-                put("player_id", JsonPrimitive(playerId))
-                put("state", myJson.encodeToJsonElement(state))
-
-            }
-        )
+//        fun registerBuiltIn(playerName: String, playerId: String) = Request(
+//            command = "builtin_player/register",
+//            args = buildJsonObject {
+//                put("player_name", JsonPrimitive(playerName))
+//                put("player_id", JsonPrimitive(playerId))
+//
+//            }
+//        )
+//
+//        fun updateBuiltInState(playerId: String, state: BuiltinPlayerState) = Request(
+//            command = "builtin_player/update_state",
+//            args = buildJsonObject {
+//                put("player_id", JsonPrimitive(playerId))
+//                put("state", myJson.encodeToJsonElement(state))
+//
+//            }
+//        )
     }
 
     data object Queue {
