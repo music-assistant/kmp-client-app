@@ -21,9 +21,9 @@ sealed class SessionState {
                 if (serverInfo.schemaVersion?.let { it >= AUTH_REQUIRED_SCHEMA_VERSION } == true)
                     DataConnectionState.AwaitingAuth(authProcessState)
                 else
-                    DataConnectionState.Ready
+                    DataConnectionState.Anonymous
 
-            else -> DataConnectionState.Ready
+            else -> DataConnectionState.Authenticated
         }
 
     }

@@ -117,7 +117,7 @@ class MainDataSource(
                 when (it) {
                     is SessionState.Connected -> {
                         watchJob = watchApiEvents()
-                        if (it.dataConnectionState is DataConnectionState.Ready) {
+                        if (it.dataConnectionState == DataConnectionState.Authenticated || it.dataConnectionState == DataConnectionState.Anonymous) {
                             //initBuiltinPlayer() TODO Sendspin?
                             updatePlayersAndQueues()
                         } else {

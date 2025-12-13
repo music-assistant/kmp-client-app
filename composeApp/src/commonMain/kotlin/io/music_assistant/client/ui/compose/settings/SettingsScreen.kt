@@ -61,7 +61,8 @@ fun SettingsScreen(onBack: () -> Unit) {
     val savedConnectionInfo by viewModel.savedConnectionInfo.collectAsStateWithLifecycle()
     val sessionState by viewModel.sessionState.collectAsStateWithLifecycle()
     var shouldPopOnAuth by remember { mutableStateOf(false) }
-    if ((sessionState as? SessionState.Connected)?.dataConnectionState != DataConnectionState.Ready) {
+    val dataConnection = (sessionState as? SessionState.Connected)?.dataConnectionState
+    if (dataConnection != DataConnectionState.Authenticated && dataConnection != DataConnectionState.Anonymous) {
         shouldPopOnAuth = true
     } else if (shouldPopOnAuth) {
         onBack()
@@ -91,7 +92,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     .fillMaxWidth()
                     .padding(all = 16.dp),
             ) {
-                if ((sessionState as? SessionState.Connected)?.dataConnectionState is DataConnectionState.Ready) {
+                if (dataConnection == DataConnectionState.Authenticated || dataConnection == DataConnectionState.Anonymous) {
                     ActionIcon(
                         icon = FontAwesomeIcons.Solid.ArrowLeft,
                         size = 24.dp
@@ -314,7 +315,7 @@ fun AuthSection(
             }
         }
 
-        DataConnectionState.Ready -> {
+        DataConnectionState.Authenticated -> {
             Column(
                 modifier = modifier
                     .fillMaxWidth()
@@ -335,6 +336,7 @@ fun AuthSection(
             }
         }
 
+        DataConnectionState.Anonymous,
         DataConnectionState.AwaitingServerInfo -> Unit
     }
 }
