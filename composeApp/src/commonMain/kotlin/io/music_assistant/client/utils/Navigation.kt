@@ -75,12 +75,12 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
                 HomeScreen()
             }
             entry<NavScreen.Settings> {
-                SettingsScreen { backStack.removeLastOrNull() }
+                SettingsScreen { if (backStack.last() is NavScreen.Settings) backStack.removeLastOrNull() }
             }
             entry<NavScreen.Library>(
                 metadata = BottomSheetSceneStrategy.bottomSheet()
             ) {
-                LibraryScreen(it.args) { backStack.removeLastOrNull() }
+                LibraryScreen(it.args) { if (backStack.last() is NavScreen.Library) backStack.removeLastOrNull() }
             }
         }
     )

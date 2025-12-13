@@ -11,7 +11,7 @@ sealed class SessionState {
         val connectionInfo: ConnectionInfo,
         val serverInfo: ServerInfo? = null,
         val user: User? = null,
-        val authProcessState: AuthProcessState = AuthProcessState.Idle,
+        val authProcessState: AuthProcessState = AuthProcessState.NotStarted,
     ) : SessionState() {
 
         val dataConnectionState: DataConnectionState = when {
@@ -28,7 +28,7 @@ sealed class SessionState {
 
     }
 
-    data class Connecting(val connectionInfo: ConnectionInfo) : SessionState()
+    data object Connecting : SessionState()
 
     sealed class Disconnected : SessionState() {
         data object Initial : Disconnected()

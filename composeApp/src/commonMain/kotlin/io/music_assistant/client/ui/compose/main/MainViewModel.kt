@@ -46,25 +46,25 @@ class MainViewModel(
                         when (val connState = it.dataConnectionState) {
                             is DataConnectionState.Ready -> {
                                 _state.update { State.Loading }
+                                stopJobs()
                                 jobs.add(watchPlayersData())
                                 jobs.add(watchSelectedPlayerData())
                             }
 
                             is DataConnectionState.AwaitingAuth -> {
                                 when (connState.authProcessState) {
-                                    AuthProcessState.Idle,
-                                    is AuthProcessState.Failed -> {
-                                        _state.update { State.NoAuth }
-                                        stopJobs()
-                                    }
-
+                                    AuthProcessState.NotStarted,
                                     AuthProcessState.InProgress -> {
                                         _state.update { State.Loading }
                                         stopJobs()
                                     }
+
+                                    AuthProcessState.LoggedOut,
+                                    is AuthProcessState.Failed -> {
+                                        _state.update { State.NoAuth }
+                                        stopJobs()
+                                    }
                                 }
-                                _state.update { State.NoAuth }
-                                stopJobs()
                             }
 
                             DataConnectionState.AwaitingServerInfo -> {
@@ -74,7 +74,7 @@ class MainViewModel(
                         }
                     }
 
-                    is SessionState.Connecting -> {
+                    SessionState.Connecting -> {
                         _state.update { State.Loading }
                         stopJobs()
                     }

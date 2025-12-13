@@ -12,7 +12,7 @@ class SettingsViewModel(
     settings: SettingsRepository
 ) : ViewModel() {
 
-    val connectionInfo = settings.connectionInfo
+    val savedConnectionInfo = settings.connectionInfo
     val sessionState = apiClient.sessionState
 
     fun attemptConnection(host: String, port: String, isTls: Boolean) =

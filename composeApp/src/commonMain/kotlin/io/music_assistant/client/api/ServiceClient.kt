@@ -63,7 +63,7 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                 when (it) {
                     is SessionState.Connected -> {
                         settings.updateConnectionInfo(it.connectionInfo)
-                        if ((it.dataConnectionState as? DataConnectionState.AwaitingAuth)?.authProcessState == AuthProcessState.Idle) {
+                        if ((it.dataConnectionState as? DataConnectionState.AwaitingAuth)?.authProcessState == AuthProcessState.NotStarted) {
                             settings.token.value?.let { auth -> authorize(auth) }
                         }
                     }
@@ -84,7 +84,7 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                         }
                     }
 
-                    is SessionState.Connecting -> Unit
+                    SessionState.Connecting -> Unit
                 }
             }
         }
@@ -92,11 +92,11 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
 
     fun connect(connection: ConnectionInfo) {
         when (_sessionState.value) {
-            is SessionState.Connecting,
+            SessionState.Connecting,
             is SessionState.Connected -> return
 
             is SessionState.Disconnected -> {
-                _sessionState.update { SessionState.Connecting(connection) }
+                _sessionState.update { SessionState.Connecting }
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
                         if (connection.isTls) {
@@ -243,7 +243,7 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
         }
         _sessionState.update {
             currentState.copy(
-                authProcessState = AuthProcessState.Idle,
+                authProcessState = AuthProcessState.LoggedOut,
                 user = null
             )
         }
@@ -289,7 +289,7 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                 settings.updateToken(token)
                 _sessionState.update {
                     currentState.copy(
-                        authProcessState = AuthProcessState.Idle,
+                        authProcessState = AuthProcessState.NotStarted,
                         user = user
                     )
                 }

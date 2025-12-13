@@ -130,7 +130,7 @@ class MainDataSource(
                         }
                     }
 
-                    is SessionState.Connecting -> {
+                    SessionState.Connecting -> {
                         updateJob?.cancel()
                         updateJob = null
                         watchJob?.cancel()

@@ -58,24 +58,21 @@ fun SettingsScreen(onBack: () -> Unit) {
     val themeViewModel = koinViewModel<ThemeViewModel>()
     val theme = themeViewModel.theme.collectAsStateWithLifecycle(ThemeSetting.FollowSystem)
     val viewModel = koinViewModel<SettingsViewModel>()
-    val connectionInfo by viewModel.connectionInfo.collectAsStateWithLifecycle(null)
-    val sessionState by viewModel.sessionState.collectAsStateWithLifecycle(
-        SessionState.Disconnected.Initial
-    )
-    var shouldPopOnConnected by remember {
-        mutableStateOf(
-            sessionState !is SessionState.Connected
-                    && sessionState != SessionState.Disconnected.Initial
-        )
-    }
-    if (sessionState is SessionState.Connected && shouldPopOnConnected) {
+    val savedConnectionInfo by viewModel.savedConnectionInfo.collectAsStateWithLifecycle()
+    val sessionState by viewModel.sessionState.collectAsStateWithLifecycle()
+    var shouldPopOnAuth by remember { mutableStateOf(false) }
+    if ((sessionState as? SessionState.Connected)?.dataConnectionState != DataConnectionState.Ready) {
+        shouldPopOnAuth = true
+    } else if (shouldPopOnAuth) {
         onBack()
     }
+
     BackHandler(enabled = true) {
         if (sessionState is SessionState.Connected) {
             onBack()
         }
     }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -94,7 +91,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     .fillMaxWidth()
                     .padding(all = 16.dp),
             ) {
-                if (sessionState is SessionState.Connected && (sessionState as SessionState.Connected).dataConnectionState is DataConnectionState.Ready) {
+                if ((sessionState as? SessionState.Connected)?.dataConnectionState is DataConnectionState.Ready) {
                     ActionIcon(
                         icon = FontAwesomeIcons.Solid.ArrowLeft,
                         size = 24.dp
@@ -128,8 +125,8 @@ fun SettingsScreen(onBack: () -> Unit) {
             var port by remember { mutableStateOf("8095") }
             var isTls by remember { mutableStateOf(false) }
             val serverInputsFieldVisible = sessionState is SessionState.Disconnected
-            LaunchedEffect(connectionInfo) {
-                connectionInfo?.let {
+            LaunchedEffect(savedConnectionInfo) {
+                savedConnectionInfo?.let {
                     ipAddress = it.host
                     port = it.port.toString()
                     isTls = it.isTls
@@ -139,12 +136,14 @@ fun SettingsScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(bottom = 24.dp),
                 text = when (val state = sessionState) {
                     is SessionState.Connected -> {
-                        "Connected to ${state.connectionInfo.host}:${state.connectionInfo.port}" +
-                                (state.serverInfo?.let { "\nServer version ${it.serverVersion}, schema ${it.schemaVersion}" }
-                                    ?: "")
+                        savedConnectionInfo?.let { conn ->
+                            "Connected to ${conn.host}:${conn.port}" +
+                                    (state.serverInfo?.let { server -> "\nServer version ${server.serverVersion}, schema ${server.schemaVersion}" }
+                                        ?: "")
+                        } ?: "Unknown connection"
                     }
 
-                    is SessionState.Connecting -> "Connecting to $ipAddress:$port."
+                    SessionState.Connecting -> "Connecting to $ipAddress:$port."
                     is SessionState.Disconnected -> {
                         when (state) {
                             SessionState.Disconnected.ByUser -> ""
@@ -194,11 +193,14 @@ fun SettingsScreen(onBack: () -> Unit) {
                         modifier = Modifier.align(Alignment.CenterVertically),
                         checked = isTls,
                         onCheckedChange = { isTls = it })
-                    Text(modifier = Modifier.align(Alignment.CenterVertically), text = "Use TLS")
+                    Text(
+                        modifier = Modifier.align(Alignment.CenterVertically),
+                        text = "Use TLS"
+                    )
                 }
             }
             Button(
-                enabled = ipAddress.isValidHost() && port.isIpPort() && sessionState !is SessionState.Connecting,
+                enabled = ipAddress.isValidHost() && port.isIpPort() && sessionState != SessionState.Connecting,
                 onClick = {
                     if (sessionState is SessionState.Connected)
                         viewModel.disconnect()
@@ -239,10 +241,9 @@ fun AuthSection(
             var password by remember { mutableStateOf("") }
             var isPasswordVisible by remember { mutableStateOf(false) }
             val error = when (connState.authProcessState) {
-                AuthProcessState.Idle,
-                AuthProcessState.InProgress -> null
-
                 is AuthProcessState.Failed -> connState.authProcessState.reason
+                AuthProcessState.LoggedOut -> "Logged out"
+                else -> null
             }
             Column(
                 modifier = modifier
