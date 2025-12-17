@@ -1,0 +1,49 @@
+package io.music_assistant.client.player.sendspin.model
+
+import kotlinx.serialization.*
+import kotlinx.serialization.descriptors.*
+import kotlinx.serialization.encoding.*
+
+@Serializable(with = VersionedRoleSerializer::class)
+data class VersionedRole(
+    val role: String,
+    val version: String
+) {
+    val identifier: String
+        get() = "$role@$version"
+
+    constructor(stringLiteral: String) : this(
+        role = stringLiteral.substringBefore('@', stringLiteral),
+        version = stringLiteral.substringAfter('@', "v1")
+    )
+
+    companion object {
+        val PLAYER_V1 = VersionedRole("player", "v1")
+        val CONTROLLER_V1 = VersionedRole("controller", "v1")
+        val METADATA_V1 = VersionedRole("metadata", "v1")
+        val ARTWORK_V1 = VersionedRole("artwork", "v1")
+        val VISUALIZER_V1 = VersionedRole("visualizer", "v1")
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is VersionedRole) return false
+        return role == other.role && version == other.version
+    }
+
+    override fun hashCode(): Int {
+        return 31 * role.hashCode() + version.hashCode()
+    }
+}
+
+object VersionedRoleSerializer : KSerializer<VersionedRole> {
+    override val descriptor = PrimitiveSerialDescriptor("VersionedRole", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: VersionedRole) {
+        encoder.encodeString(value.identifier)
+    }
+
+    override fun deserialize(decoder: Decoder): VersionedRole {
+        return VersionedRole(stringLiteral = decoder.decodeString())
+    }
+}
