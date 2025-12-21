@@ -3,9 +3,7 @@ package io.music_assistant.client.data.model.client
 import io.music_assistant.client.data.model.server.PlayerFeature
 import io.music_assistant.client.data.model.server.PlayerState
 import io.music_assistant.client.data.model.server.ServerPlayer
-import kotlinx.serialization.Serializable
 
-@Serializable
 data class Player(
     val id: String,
     val name: String,

@@ -96,7 +96,7 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
                         library.play(
                             it,
                             extras,
-                            playerData.queue?.id ?: playerData.player.id
+                            playerData.queueInfo?.id ?: playerData.player.id
                         )
                     }
                 }
@@ -124,7 +124,7 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
                         ?.let { queueItemId ->
                             dataSource.queueAction(
                                 QueueAction.PlayQueueItem(
-                                    playerData.queue?.id ?: playerData.player.id, queueItemId
+                                    playerData.queueInfo?.id ?: playerData.player.id, queueItemId
                                 )
 
                             )
@@ -141,7 +141,7 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
             override fun onCustomAction(action: String, extras: Bundle?) {
                 when (action) {
                     "ACTION_TOGGLE_SHUFFLE" -> currentPlayerData.value?.let { playerData ->
-                        playerData.queue?.let {
+                        playerData.queueInfo?.let {
                             dataSource.playerAction(
                                 playerData,
                                 PlayerAction.ToggleShuffle(current = it.shuffleEnabled)
@@ -150,7 +150,7 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
                     }
 
                     "ACTION_TOGGLE_REPEAT" -> currentPlayerData.value?.let { playerData ->
-                        playerData.queue?.repeatMode?.let { repeatMode ->
+                        playerData.queueInfo?.repeatMode?.let { repeatMode ->
                             dataSource.playerAction(
                                 playerData,
                                 PlayerAction.ToggleRepeatMode(current = repeatMode)

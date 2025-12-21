@@ -56,7 +56,7 @@ fun MainScreen(navigateTo: (NavScreen) -> Unit) {
     LaunchedEffect(Unit) {
         viewModel.links.collectLatest { url -> uriHandler.openUri(url) }
     }
-    val state by viewModel.state.collectAsStateWithLifecycle(MainViewModel.State.Loading)
+    val state by viewModel.state.collectAsStateWithLifecycle(MainViewModel.PlayersState.Loading)
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
     var isFabVisible by rememberSaveable { mutableStateOf(true) }
     val nestedScrollConnection = remember {
@@ -84,11 +84,11 @@ fun MainScreen(navigateTo: (NavScreen) -> Unit) {
                     modifier = Modifier.navigationBarsPadding().wrapContentSize(),
                     verticalAlignment = Alignment.Bottom
                 ) {
-                    if (state is MainViewModel.State.Data) {
+                    if (state is MainViewModel.PlayersState.Data) {
                         ExtendedFloatingActionButton(
                             modifier = Modifier.height(48.dp).padding(end = 8.dp),
                             onClick = {
-                                (state as? MainViewModel.State.Data)?.selectedPlayer
+                                (state as? MainViewModel.PlayersState.Data)?.selectedPlayer
                                     ?.let { selected ->
                                         navigateTo(NavScreen.Library(selected.libraryArgs))
                                     }
@@ -120,13 +120,13 @@ fun MainScreen(navigateTo: (NavScreen) -> Unit) {
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButtonPosition = FabPosition.End,
     ) { scaffoldPadding ->
-        var lastDataState by remember { mutableStateOf<MainViewModel.State.Data?>(null) }
+        var lastDataState by remember { mutableStateOf<MainViewModel.PlayersState.Data?>(null) }
         LaunchedEffect(state) {
-            if (state is MainViewModel.State.NoServer || state is MainViewModel.State.NoAuth) {
+            if (state is MainViewModel.PlayersState.NoServer || state is MainViewModel.PlayersState.NoAuth) {
                 navigateTo(NavScreen.Settings)
             }
-            if (state is MainViewModel.State.Data) {
-                lastDataState = state as MainViewModel.State.Data
+            if (state is MainViewModel.PlayersState.Data) {
+                lastDataState = state as MainViewModel.PlayersState.Data
             }
         }
         Box(
@@ -160,14 +160,14 @@ fun MainScreen(navigateTo: (NavScreen) -> Unit) {
                 }
             }
             when (state) {
-                MainViewModel.State.Disconnected,
-                MainViewModel.State.Loading,
-                MainViewModel.State.NoServer,
-                MainViewModel.State.NoAuth -> ServiceLayout(
+                MainViewModel.PlayersState.Disconnected,
+                MainViewModel.PlayersState.Loading,
+                MainViewModel.PlayersState.NoServer,
+                MainViewModel.PlayersState.NoAuth -> ServiceLayout(
                     stateValue = state,
                 )
 
-                is MainViewModel.State.Data -> Unit
+                is MainViewModel.PlayersState.Data -> Unit
             }
         }
     }
@@ -175,7 +175,7 @@ fun MainScreen(navigateTo: (NavScreen) -> Unit) {
 
 @Composable
 private fun ServiceLayout(
-    stateValue: MainViewModel.State,
+    stateValue: MainViewModel.PlayersState,
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
@@ -188,11 +188,11 @@ private fun ServiceLayout(
             modifier = Modifier
                 .padding(all = 16.dp),
             text = when (stateValue) {
-                is MainViewModel.State.Data -> "Connected to server"
-                MainViewModel.State.Disconnected -> "Disconnected"
-                MainViewModel.State.Loading -> "Connecting to server"
-                MainViewModel.State.NoServer -> "Please setup server connection"
-                MainViewModel.State.NoAuth -> "Please authenticate with the server"
+                is MainViewModel.PlayersState.Data -> "Connected to server"
+                MainViewModel.PlayersState.Disconnected -> "Disconnected"
+                MainViewModel.PlayersState.Loading -> "Connecting to server"
+                MainViewModel.PlayersState.NoServer -> "Please setup server connection"
+                MainViewModel.PlayersState.NoAuth -> "Please authenticate with the server"
             },
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
@@ -205,7 +205,7 @@ private fun ServiceLayout(
 @Composable
 private fun VerticalDataLayout(
     serverUrl: String?,
-    state: MainViewModel.State.Data,
+    state: MainViewModel.PlayersState.Data,
     nestedScrollConnection: NestedScrollConnection,
     viewModel: MainViewModel,
     forceShowFab: () -> Unit,
@@ -216,7 +216,7 @@ private fun VerticalDataLayout(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         val playersData = state.playerData
-        val selectedPlayerData = state.selectedPlayerData
+        val selectedPlayerData = state.selectedPlayer
 
         HorizontalPlayersPager(
             serverUrl = serverUrl,
@@ -236,24 +236,24 @@ private fun VerticalDataLayout(
             forceShowFab = forceShowFab,
         )
 
-        state.selectedPlayer?.let { playerData ->
+        selectedPlayerData?.let { playerData ->
             QueueSection(
                 modifier = Modifier.fillMaxSize(),
                 nestedScrollConnection = nestedScrollConnection,
                 serverUrl = serverUrl,
                 players = playersData,
                 playerData = playerData,
-                queueItems = selectedPlayerData?.queueItems,
-                chosenItemsIds = selectedPlayerData?.chosenItemsIds,
+                queueItems = playerData.queueItems,
+                chosenItemsIds = state.chosenIds,
                 queueAction = { action ->
                     viewModel.queueAction(action)
                 },
                 onItemChosenChanged = { id ->
-                    viewModel.onItemChosenChanged(
+                    viewModel.onQueueItemChosenChanged(
                         id
                     )
                 },
-                onChosenItemsClear = { viewModel.onChosenItemsClear() }
+                onChosenItemsClear = { viewModel.onQueueChosenItemsClear() }
             )
         }
     }
@@ -262,7 +262,7 @@ private fun VerticalDataLayout(
 @Composable
 private fun HorizontalDataLayout(
     serverUrl: String?,
-    state: MainViewModel.State.Data,
+    state: MainViewModel.PlayersState.Data,
     nestedScrollConnection: NestedScrollConnection,
     viewModel: MainViewModel,
     forceShowFab: () -> Unit,
@@ -273,7 +273,7 @@ private fun HorizontalDataLayout(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         val playersData = state.playerData
-        val selectedPlayerData = state.selectedPlayerData
+        val selectedPlayerData = state.selectedPlayer
 
         VerticalPlayersPager(
             serverUrl = serverUrl,
@@ -293,24 +293,24 @@ private fun HorizontalDataLayout(
             forceShowFab = forceShowFab,
         )
 
-        state.selectedPlayer?.let { playerData ->
+        selectedPlayerData?.let { playerData ->
             QueueSection(
                 modifier = Modifier.fillMaxSize(),
                 nestedScrollConnection = nestedScrollConnection,
                 serverUrl = serverUrl,
                 players = playersData,
                 playerData = playerData,
-                queueItems = selectedPlayerData?.queueItems,
-                chosenItemsIds = selectedPlayerData?.chosenItemsIds,
+                queueItems = playerData.queueItems,
+                chosenItemsIds = state.chosenIds,
                 queueAction = { action ->
                     viewModel.queueAction(action)
                 },
                 onItemChosenChanged = { id ->
-                    viewModel.onItemChosenChanged(
+                    viewModel.onQueueItemChosenChanged(
                         id
                     )
                 },
-                onChosenItemsClear = { viewModel.onChosenItemsClear() }
+                onChosenItemsClear = { viewModel.onQueueChosenItemsClear() }
             )
         }
     }

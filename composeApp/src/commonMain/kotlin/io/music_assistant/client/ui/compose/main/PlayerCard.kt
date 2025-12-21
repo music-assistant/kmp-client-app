@@ -24,9 +24,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import io.music_assistant.client.data.model.client.Player
 import io.music_assistant.client.data.model.client.PlayerData
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import io.music_assistant.client.ui.compose.common.OverflowMenuOption
+import io.music_assistant.client.ui.compose.common.OverflowMenuThreeDots
 
 @Composable
 fun PlayerCard(
@@ -39,7 +39,7 @@ fun PlayerCard(
     dspSettingsAction: (String) -> Unit,
 ) {
     val player = playerData.player
-    val queue = playerData.queue
+    val queue = playerData.queueInfo
     val currentProgress = queue?.currentItem?.track?.duration
         ?.let { (queue.elapsedTime?.toFloat() ?: 0f) / it.toFloat() }
 
@@ -123,31 +123,4 @@ fun PlayerCard(
         }
     }
 
-}
-
-@Preview
-@Composable
-fun PlayerCardPreview() {
-    MaterialTheme {
-        PlayerCard(
-            modifier = Modifier.fillMaxWidth(),
-            serverUrl = null,
-            playerData = PlayerData(
-                player = Player(
-                    id = "1",
-                    name = "Test Player",
-                    isPlaying = true,
-                    isAnnouncing = false,
-                    canSetVolume = true,
-                    isBuiltin = false,
-                    shouldBeShown = true,
-                    queueId = null
-                )
-            ),
-            isSelected = true,
-            playerAction = { _, _ -> },
-            settingsAction = {},
-            dspSettingsAction = {}
-        )
-    }
 }

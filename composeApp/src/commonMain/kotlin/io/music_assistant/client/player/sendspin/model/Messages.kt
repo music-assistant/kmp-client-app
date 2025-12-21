@@ -1,4 +1,4 @@
-@file:OptIn(InternalSerializationApi::class)
+@file:OptIn(InternalSerializationApi::class, ExperimentalSerializationApi::class)
 
 package io.music_assistant.client.player.sendspin.model
 

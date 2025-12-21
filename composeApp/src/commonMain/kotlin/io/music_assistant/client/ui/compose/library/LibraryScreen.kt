@@ -93,14 +93,14 @@ import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.ui.compose.common.ActionIcon
-import io.music_assistant.client.ui.compose.common.ListState
+import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.painters.MusicNotePainter
 import io.music_assistant.client.ui.compose.common.ToastHost
 import io.music_assistant.client.ui.compose.common.ToastState
 import io.music_assistant.client.ui.compose.common.VerticalHidingContainer
 import io.music_assistant.client.ui.compose.common.rememberToastState
-import io.music_assistant.client.ui.compose.main.OverflowMenu
-import io.music_assistant.client.ui.compose.main.OverflowMenuOption
+import io.music_assistant.client.ui.compose.common.OverflowMenu
+import io.music_assistant.client.ui.compose.common.OverflowMenuOption
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
@@ -196,7 +196,7 @@ private fun Library(
         containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
             if (
-                selectedList?.listState is ListState.Data
+                selectedList?.dataState is DataState.Data
                 && selectedList.parentItems.lastOrNull()?.mediaType == MediaType.ARTIST
             ) {
                 VerticalHidingContainer(
@@ -319,8 +319,8 @@ private fun Library(
                         if (list.parentItems.isEmpty()) {
                             NewPlaylistArea(
                                 modifier = Modifier.padding(4.dp),
-                                existingNames = (list.listState as? ListState.Data)
-                                    ?.items
+                                existingNames = (list.dataState as? DataState.Data)
+                                    ?.data
                                     ?.map { it.name.trim() }
                                     ?.toSet()
                                     ?: emptySet(),
@@ -419,12 +419,12 @@ private fun ItemsListArea(
         modifier = modifier
             .fillMaxSize(),
     ) {
-        when (list.listState) {
-            is ListState.Loading -> {
+        when (list.dataState) {
+            is DataState.Loading -> {
                 Text(modifier = Modifier.align(Alignment.Center), text = "Loading...")
             }
 
-            is ListState.Error -> {
+            is DataState.Error -> {
                 Column(
                     modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = CenterHorizontally
@@ -441,12 +441,12 @@ private fun ItemsListArea(
                 }
             }
 
-            is ListState.NoData -> {
+            is DataState.NoData -> {
                 Text(modifier = Modifier.align(Alignment.Center), text = "Nothing to show")
             }
 
-            is ListState.Data -> {
-                if (list.listState.items.isEmpty()) {
+            is DataState.Data -> {
+                if (list.dataState.data.isEmpty()) {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = CenterHorizontally
@@ -465,7 +465,7 @@ private fun ItemsListArea(
                     ItemsList(
                         parentItem = parentItem,
                         serverUrl = serverUrl,
-                        items = list.listState.items,
+                        items = list.dataState.data,
                         checkedItems = checkedItems,
                         ongoingItems = ongoingItems,
                         playlists = playlists,

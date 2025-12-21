@@ -2,621 +2,671 @@
 
 package io.music_assistant.client.ui.compose.home
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathOperation
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Fill
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
-import io.music_assistant.client.data.model.client.AppMediaItem
-import io.music_assistant.client.ui.compose.common.ListState
-import io.music_assistant.client.ui.compose.common.painters.MusicMicrophonePainter
-import io.music_assistant.client.ui.compose.common.painters.MusicNotePainter
-import io.music_assistant.client.utils.SessionState
+import io.music_assistant.client.data.model.client.PlayerData
+import io.music_assistant.client.data.model.client.QueueTrack
+import io.music_assistant.client.ui.compose.common.DataState
+import io.music_assistant.client.ui.compose.main.PlayerAction
+import io.music_assistant.client.ui.compose.main.PlayerControls
+import io.music_assistant.client.utils.NavScreen
+import io.music_assistant.client.utils.conditional
 import org.koin.compose.viewmodel.koinViewModel
-import kotlin.math.PI
-import kotlin.math.abs
-import kotlin.math.exp
-import kotlin.math.sin
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
-    viewModel: HomeScreenViewModel = koinViewModel()
+    viewModel: HomeScreenViewModel = koinViewModel(),
+    navigateTo: (NavScreen) -> Unit
 ) {
-    val state = viewModel.state.collectAsStateWithLifecycle()
-    val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
+    var showPlayersView by remember { mutableStateOf(false) }
+
+    val recommendationsState = viewModel.recommendationsState.collectAsStateWithLifecycle()
+    val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
+    val playersState by viewModel.playersState.collectAsStateWithLifecycle()
+    // Single pager state used across all views
+    val data = playersState as? HomeScreenViewModel.PlayersState.Data
+    val playerPagerState = rememberPagerState(
+        initialPage = data?.selectedPlayerIndex ?: 0,
+        pageCount = { data?.playerData?.size ?: 0 }
+    )
+
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Your Library") })
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 2.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // TODO: Replace with actual logo
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = "Logo",
+                        modifier = Modifier.size(32.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "MASSIVE",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 2.sp
+                    )
+                }
+            }
         }
     ) { paddingValues ->
-        val connectionState = state.value.connectionState
-        val listState = state.value.recommendations
-        if (connectionState !is SessionState.Connected || listState !is ListState.Data) {
+        val connectionState = recommendationsState.value.connectionState
+        val dataState = recommendationsState.value.recommendations
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            // Simple slide transition between main screen and big player
+            AnimatedContent(
+                targetState = showPlayersView,
+                transitionSpec = {
+                    slideInVertically(
+                        initialOffsetY = { if (targetState) it else -it },
+                        animationSpec = tween(300)
+                    ) togetherWith slideOutVertically(
+                        targetOffsetY = { if (targetState) -it else it },
+                        animationSpec = tween(300)
+                    )
+                },
+                label = "player_transition"
+            ) { isPlayersViewShown ->
+                if (!isPlayersViewShown) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background)
+                    ) {
+
+                        LandingPage(
+                            Modifier.weight(1f),
+                            connectionState,
+                            dataState,
+                            serverUrl,
+                            onItemClick = viewModel::onRecommendationItemClicked,
+                            onLongItemClick = { item ->  /*TODO*/ },
+                            onRowActionClick = { id -> viewModel.onRowButtonClicked(id) },
+                        )
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight()
+                                .clickable { showPlayersView = true }
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                .padding(top = 8.dp),
+                        ) {
+                            when (val state = playersState) {
+                                is HomeScreenViewModel.PlayersState.Loading -> Text(
+                                    modifier = Modifier.fillMaxWidth().height(80.dp),
+                                    text = "Loading players...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+
+                                is HomeScreenViewModel.PlayersState.Data -> {
+                                    if (state.playerData.isEmpty()) {
+                                        Text(
+                                            modifier = Modifier.fillMaxWidth().height(80.dp),
+                                            text = "No players available",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    } else {
+                                        PlayersPager(
+                                            modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+                                            playerPagerState = playerPagerState,
+                                            playersState = state,
+                                            playerAction = { playerData, action ->
+                                                viewModel.playerAction(playerData, action)
+                                            },
+                                            showQueue = false,
+                                        )
+                                    }
+                                }
+
+                                else -> Text(
+                                    modifier = Modifier.fillMaxWidth().height(80.dp),
+                                    text = "No players available",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    when (val state = playersState) {
+                        is HomeScreenViewModel.PlayersState.Loading -> Text(
+                            modifier = Modifier.fillMaxSize(),
+                            text = "Loading players...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+
+                        is HomeScreenViewModel.PlayersState.Data -> {
+                            if (state.playerData.isEmpty()) {
+                                Text(
+                                    modifier = Modifier.fillMaxSize(),
+                                    text = "No players available",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                            } else {
+                                PlayersView(
+                                    onCollapse = { showPlayersView = false },
+                                    playerPagerState = playerPagerState,
+                                    playersState = state,
+                                    playerAction = { playerData, action ->
+                                        viewModel.playerAction(playerData, action)
+                                    },
+                                )
+                            }
+                        }
+
+                        else -> Text(
+                            modifier = Modifier.fillMaxSize(),
+                            text = "No players available",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlayersPager(
+    modifier: Modifier = Modifier,
+    playerPagerState: PagerState,
+    playersState: HomeScreenViewModel.PlayersState.Data,
+    playerAction: (PlayerData, PlayerAction) -> Unit,
+    showQueue: Boolean = true
+) {
+    var isQueueExpanded by remember { mutableStateOf(false) }
+    Column(modifier = modifier) {
+        PageIndicator(playerPagerState)
+        HorizontalPager(
+            modifier = Modifier.wrapContentHeight(),
+            state = playerPagerState
+        ) { page ->
+
+            val player = playersState.playerData.getOrNull(page) ?: return@HorizontalPager
+
+            Column {
+                Text(
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .fillMaxWidth(),
+                    text = player.player.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                AnimatedVisibility(
+                    visible = isQueueExpanded.takeIf { showQueue } != false,
+                    enter = fadeIn(tween(300)) + expandVertically(tween(300)),
+                    exit = fadeOut(tween(200)) + shrinkVertically(tween(300))
+                ) {
+                    CompactPlayerItem(item = player)
+                }
+
+                Column(
+                    modifier = Modifier
+                        .conditional(
+                            condition = isQueueExpanded.takeIf { showQueue } == false,
+                            ifTrue = { weight(1f) },
+                            ifFalse = { wrapContentHeight() }
+                        )
+                ) {
+
+                    AnimatedVisibility(
+                        visible = isQueueExpanded.takeIf { showQueue } == false,
+                        enter = fadeIn(tween(300)) + expandVertically(tween(300)),
+                        exit = fadeOut(tween(200)) + shrinkVertically(tween(300))
+                    ) {
+                        FullPlayerItem(
+                            modifier = Modifier.fillMaxSize(),
+                            item = player,
+                            playerAction = playerAction,
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.fillMaxWidth().height(8.dp))
+
+                player.queue.takeIf { showQueue }?.let { queue ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .conditional(
+                                condition = isQueueExpanded,
+                                ifTrue = { weight(1f) },
+                                ifFalse = { wrapContentHeight() }
+                            )
+                            .animateContentSize()  // Add animation here too
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(onClick = { isQueueExpanded = !isQueueExpanded })
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Queue",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Icon(
+                                imageVector = if (isQueueExpanded) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
+                                contentDescription = "Toggle Queue"
+                            )
+                        }
+
+                        if (isQueueExpanded) {
+                            when (queue) {
+                                is DataState.Error -> Text(
+                                    modifier = Modifier.fillMaxWidth().weight(1f),
+                                    text = "Error loading",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+
+                                is DataState.Loading -> Text(
+                                    modifier = Modifier.fillMaxWidth().weight(1f),
+                                    text = "Loading...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+
+                                is DataState.NoData -> Text(
+                                    modifier = Modifier.fillMaxWidth().weight(1f),
+                                    text = "No items",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+
+                                is DataState.Data -> {
+                                    when (val items = queue.data.items) {
+                                        is DataState.Error -> Text(
+                                            modifier = Modifier.fillMaxWidth().weight(1f),
+                                            text = "Error loading",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center
+                                        )
+
+                                        is DataState.Loading -> Text(
+                                            modifier = Modifier.fillMaxWidth().weight(1f),
+                                            text = "Loading...",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center
+                                        )
+
+                                        is DataState.NoData -> Text(
+                                            modifier = Modifier.fillMaxWidth().weight(1f),
+                                            text = "Not loaded",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center
+                                        )
+
+                                        is DataState.Data -> {
+                                            if (items.data.isEmpty()) {
+                                                Text(
+                                                    modifier = Modifier.fillMaxWidth().weight(1f),
+                                                    text = "No items",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    textAlign = TextAlign.Center
+                                                )
+                                            } else {
+                                                LazyColumn(
+                                                    modifier = Modifier.fillMaxWidth().weight(1f),
+                                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                                ) {
+                                                    items(items.data.size) { index ->
+                                                        QueueItemRow(
+                                                            items.data[index],
+                                                            index + 1
+                                                        )
+                                                    }
+                                                }
+                                            }
+
+                                        }
+                                    }
+
+                                }
+                            }
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.weight(0.5f).padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End,
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                contentDescription = "Volume",
+                                modifier = Modifier.size(32.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Slider(
+                            modifier = Modifier.weight(0.5f),
+                            value = 0.4f,
+                            onValueChange = { /* TODO */ },
+                        )
+                    }
+                }
+            }
+        }
+
+    }
+}
+
+@Composable
+private fun PageIndicator(
+    playerPagerState: PagerState
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(playerPagerState.pageCount) { index ->
             Box(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                items(items = listState.items.filter {
-                    it.items?.filter { item ->
-                        item is AppMediaItem.Track
-                                || item is AppMediaItem.Artist
-                                || item is AppMediaItem.Album
-                                || item is AppMediaItem.Playlist
-                    }.orEmpty().isNotEmpty()
-                }) { row ->
-                    CategoryRow(
-                        serverUrl = serverUrl,
-                        title = row.name,
-                        buttonLabel = "All items",
-                        onItemClick = viewModel::onItemClicked,
-                        onLongItemClick = { item ->  /*TODO*/ },
-                        onAllClick = { viewModel.onRowButtonClicked(row.itemId) },
-                        mediaItems = row.items.orEmpty()
+                modifier = Modifier
+                    .padding(horizontal = 4.dp)
+                    .size(if (index == playerPagerState.currentPage) 8.dp else 6.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (index == playerPagerState.currentPage)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                alpha = 0.3f
+                            )
                     )
-                }
-            }
-        }
-    }
-}
-
-// --- Common UI Components ---
-
-@Composable
-fun CategoryRow(
-    serverUrl: String?,
-    title: String,
-    buttonLabel: String,
-    onItemClick: (AppMediaItem) -> Unit,
-    onLongItemClick: (AppMediaItem) -> Unit,
-    onAllClick: () -> Unit,
-    mediaItems: List<AppMediaItem>
-) {
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge
             )
-            TextButton(
-                onClick = onAllClick,
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Text(buttonLabel, style = MaterialTheme.typography.labelLarge)
-            }
-        }
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            items(items = mediaItems) { item ->
-                when (item) {
-                    is AppMediaItem.Track -> TrackItem(
-                        item = item,
-                        itemSize = 96.dp,
-                        onClick = onItemClick,
-                        onLongClick = onLongItemClick,
-                        serverUrl = serverUrl
-                    )
-
-                    is AppMediaItem.Artist -> ArtistItem(
-                        item = item,
-                        itemSize = 96.dp,
-                        onClick = onItemClick,
-                        onLongClick = onLongItemClick,
-                        serverUrl = serverUrl
-                    )
-
-                    is AppMediaItem.Album -> AlbumItem(
-                        item = item,
-                        itemSize = 96.dp,
-                        onClick = onItemClick,
-                        onLongClick = onLongItemClick,
-                        serverUrl = serverUrl
-                    )
-
-                    is AppMediaItem.Playlist -> PlaylistItem(
-                        item = item,
-                        itemSize = 96.dp,
-                        onClick = onItemClick,
-                        onLongClick = onLongItemClick,
-                        serverUrl = serverUrl
-                    )
-
-                    else -> {}
-                }
-            }
         }
     }
 }
 
-// --- Specific Item Composables ---
 @Composable
-fun LibraryItem(
-    item: AppMediaItem,
-    onClick: (AppMediaItem) -> Unit,
-    onLongClick: (AppMediaItem) -> Unit,
-    content: @Composable ColumnScope.() -> Unit,
-) {
+fun CompactPlayerItem(item: PlayerData) {
+    val track = item.queueInfo?.currentItem?.track
     Column(
         modifier = Modifier
-            .wrapContentSize()
-            .clip(RoundedCornerShape(8.dp))
-            .combinedClickable(
-                onClick = { onClick(item) },
-                onLongClick = { onLongClick(item) }
-            )
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp),
     ) {
-        content()
-    }
-}
-
-@Composable
-fun TrackItem(
-    item: AppMediaItem.Track,
-    itemSize: Dp,
-    onClick: (AppMediaItem) -> Unit,
-    onLongClick: (AppMediaItem) -> Unit,
-    serverUrl: String?,
-) {
-    LibraryItem(item, onClick, onLongClick) {
-        Box(
-            modifier = Modifier
-                .size(itemSize)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            val placeholder =
-                MusicNotePainter(
-                    backgroundColor = MaterialTheme.colorScheme.primaryContainer,
-                    iconColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            AsyncImage(
-                placeholder = placeholder,
-                fallback = placeholder,
-                model = item.imageInfo?.url(serverUrl),
-                contentDescription = item.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-
-            // Draw waveform overlay at the bottom
-            val waveformPainter = WaveformPainter(
-                waveColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                thickness = 3f
-            )
-            Canvas(
+            // Album cover on the far left
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(20.dp)
-                    .align(Alignment.BottomCenter)
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
             ) {
-                with(waveformPainter) {
-                    draw(size)
+                // TODO: Load actual album image
+                Icon(
+                    imageVector = Icons.Default.Album,
+                    contentDescription = "Album",
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Track info
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = track?.name ?: "(idle)",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = track?.subtitle ?: "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Compact controls
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { /* TODO */ }) {
+                    Icon(Icons.Default.SkipPrevious, "Previous")
+                }
+                IconButton(onClick = { /* TODO */ }) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        "Play/Pause",
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+                IconButton(onClick = { /* TODO */ }) {
+                    Icon(Icons.Default.SkipNext, "Next")
                 }
             }
         }
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = item.name,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.width(itemSize)
+    }
+}
+
+@Composable
+private fun FullPlayerItem(
+    modifier: Modifier,
+    item: PlayerData,
+    playerAction: (PlayerData, PlayerAction) -> Unit
+) {
+    val track = item.queueInfo?.currentItem?.track
+    Column(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceEvenly
+    ) {
+
+
+        Icon(
+            imageVector = Icons.Default.Album,
+            contentDescription = "Album",
+            modifier = Modifier.fillMaxWidth().aspectRatio(1f).padding(16.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Text(
-            text = item.subtitle.orEmpty(),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.width(itemSize)
+
+
+        // Track info
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = track?.name ?: "(idle)",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = track?.subtitle ?: "",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        val currentProgress = track?.duration
+            ?.let { (item.queueInfo.elapsedTime?.toFloat() ?: 0f) / it.toFloat() } ?: 0f
+
+        // Progress bar
+        Slider(
+            value = currentProgress,
+            onValueChange = { /* TODO seek */ },
+            modifier = Modifier.fillMaxWidth(),
+            thumb = {},
+        )
+
+        PlayerControls(
+            playerData = item,
+            playerAction = playerAction,
+            enabled = !item.player.isAnnouncing
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun PlayersView(
+    onCollapse: () -> Unit,
+    playerPagerState: PagerState,
+    playersState: HomeScreenViewModel.PlayersState.Data,
+    playerAction: (PlayerData, PlayerAction) -> Unit
+) {
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+    ) {
+        // Close button
+        IconButton(
+            onClick = onCollapse,
+            modifier = Modifier.fillMaxWidth().align(Alignment.CenterHorizontally)
+        ) {
+            Icon(Icons.Default.ExpandMore, "Collapse", modifier = Modifier.size(32.dp))
+        }
+        PlayersPager(
+            modifier = Modifier.fillMaxSize(),
+            playerPagerState = playerPagerState,
+            playersState = playersState,
+            playerAction = playerAction,
         )
     }
 }
 
 @Composable
-fun ArtistItem(
-    item: AppMediaItem.Artist,
-    itemSize: Dp,
-    onClick: (AppMediaItem) -> Unit,
-    onLongClick: (AppMediaItem) -> Unit,
-    serverUrl: String?,
-) {
-    LibraryItem(item, onClick, onLongClick) {
-        Box(
+fun QueueItemRow(item: QueueTrack, position: Int) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color.Transparent,
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
             modifier = Modifier
-                .size(itemSize)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer)
+                .clickable { /* TODO */ }
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            val placeholder =
-                MusicMicrophonePainter(
-                    backgroundColor = MaterialTheme.colorScheme.primaryContainer,
-                    iconColor = MaterialTheme.colorScheme.onPrimaryContainer
+            Text(
+                text = position.toString(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.width(24.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.track.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
                 )
-            AsyncImage(
-                placeholder = placeholder,
-                fallback = placeholder,
-                model = item.imageInfo?.url(serverUrl),
-                contentDescription = item.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-        Spacer(Modifier.height(4.dp))
-        Text(
-            modifier = Modifier.width(itemSize),
-            text = item.name,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
-fun AlbumItem(
-    item: AppMediaItem.Album,
-    itemSize: Dp,
-    onClick: (AppMediaItem) -> Unit,
-    onLongClick: (AppMediaItem) -> Unit,
-    serverUrl: String?,
-) {
-    LibraryItem(item, onClick, onLongClick) {
-        Box(
-            modifier = Modifier
-                .size(itemSize)
-                .clip(RoundedCornerShape(8.dp))
-        ) {
-
-            val vinylRecord = VinylRecordPainter(
-                recordColor = Color(0xFF202020),
-                labelColor = MaterialTheme.colorScheme.primaryContainer,
-                holeColor = MaterialTheme.colorScheme.background
-            )
-            val stripWidth = 10.dp
-            val holeRadius = 10.dp
-
-            Image(
-                painter = vinylRecord,
-                contentDescription = "Vinyl Record",
-                modifier = Modifier.fillMaxSize().clip(CircleShape)
-            )
-
-            AsyncImage(
-                placeholder = vinylRecord,
-                fallback = vinylRecord,
-                model = item.imageInfo?.url(serverUrl),
-                contentDescription = item.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(CutStripShape(stripWidth))
-                    .clip(HoleShape(holeRadius))
-            )
-
-            Canvas(modifier = Modifier.size(itemSize)) {
-                val center = size.width / 2f
-                val radiusPx = holeRadius.toPx()
-                drawCircle(
-                    color = Color.Black,
-                    radius = radiusPx + 1.dp.toPx(),
-                    center = Offset(center, center),
-                    style = Stroke(width = 3.dp.toPx())
+                Text(
+                    text = item.track.subtitle ?: "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
-        Spacer(Modifier.height(4.dp))
-        Text(
-            modifier = Modifier.width(itemSize),
-            text = item.name,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            modifier = Modifier.width(itemSize),
-            text = item.subtitle.orEmpty(),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
-fun PlaylistItem(
-    item: AppMediaItem.Playlist,
-    itemSize: Dp,
-    onClick: (AppMediaItem) -> Unit,
-    onLongClick: (AppMediaItem) -> Unit,
-    serverUrl: String?,
-) {
-    LibraryItem(item, onClick, onLongClick) {
-        Box(
-            modifier = Modifier
-                .size(itemSize)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.List,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(50.dp)
-            )
-            AsyncImage(
-                model = item.imageInfo?.url(serverUrl),
-                contentDescription = item.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-        Spacer(Modifier.height(4.dp))
-        Text(
-            modifier = Modifier.width(itemSize),
-            text = item.name,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-class CutStripShape(private val stripWidth: Dp) : Shape {
-    override fun createOutline(
-        size: Size,
-        layoutDirection: LayoutDirection,
-        density: Density
-    ): Outline {
-        return Outline.Generic(Path().apply {
-            val stripPx = with(density) { stripWidth.toPx() }
-
-            // Defines the album cover area, excluding the rightmost strip
-            moveTo(0f, 0f)
-            lineTo(size.width - stripPx, 0f)
-            lineTo(size.width - stripPx, size.height)
-            lineTo(0f, size.height)
-            close()
-        })
-    }
-}
-
-class HoleShape(private val holeRadius: Dp) : Shape {
-    override fun createOutline(
-        size: Size,
-        layoutDirection: LayoutDirection,
-        density: Density
-    ): Outline {
-        val radiusPx = with(density) { holeRadius.toPx() }
-        val center = size.width / 2f
-
-        // 1. Define the full cover path (the shape we want to keep)
-        val coverPath = Path().apply {
-            addRect(Rect(Offset.Zero, size))
-        }
-
-        // 2. Define the hole path (the shape we want to cut out)
-        val holePath = Path().apply {
-            val rect = Rect(
-                left = center - radiusPx,
-                top = center - radiusPx,
-                right = center + radiusPx,
-                bottom = center + radiusPx
-            )
-            // Use addOval to define the circle
-            addOval(oval = rect)
-        }
-
-        // 3. Perform the subtraction operation (Difference)
-        val finalPath = Path.combine(
-            operation = PathOperation.Difference, // <-- This explicitly subtracts the second path
-            path1 = coverPath, // The album cover
-            path2 = holePath // The hole
-        )
-
-        return Outline.Generic(finalPath)
-    }
-}
-
-class VinylRecordPainter(
-    private val recordColor: Color = Color(0xFF202020), // Dark grey/black for vinyl
-    private val labelColor: Color = Color(0xFFFF5722), // Bright orange/red for label
-    private val holeColor: Color = Color.Black, // Color for the center spindle hole
-    private val holeRadius: Dp = 3.dp, // Color for the center spindle hole
-    private val grooveColor: Color = labelColor.copy(alpha = 0.4f), // Subtle white for grooves
-    private val grooveCount: Int = 6 // Number of grooves to draw
-) : Painter() {
-
-    override val intrinsicSize: Size = Size.Unspecified
-
-    override fun DrawScope.onDraw() {
-        val diameter = size.minDimension
-        val radius = diameter / 2f
-        val center = Offset(size.width / 2f, size.height / 2f)
-
-        // Draw the main record body (dark circle)
-        drawCircle(
-            color = recordColor,
-            radius = radius,
-            center = center,
-            style = Fill
-        )
-
-        // Draw the record label (smaller colored circle)
-        val labelRadius = radius * 0.45f
-        drawCircle(
-            color = labelColor,
-            radius = labelRadius,
-            center = center,
-            style = Fill
-        )
-
-        // Draw the center spindle hole (tiny black circle)
-        val holeRadius = with(Density(density)) { holeRadius.toPx() }
-        drawCircle(
-            color = holeColor,
-            radius = holeRadius,
-            center = center,
-            style = Fill
-        )
-
-        // Start grooves from just outside the label, extending to the edge of the record
-        val grooveStartRadius = labelRadius + (1.dp.toPx()) // Start slightly after the label
-        val grooveEndRadius = radius - (1.dp.toPx()) // End slightly before the outer edge
-
-        if (grooveEndRadius > grooveStartRadius) {
-            val grooveSpacing = (grooveEndRadius - grooveStartRadius) / grooveCount
-            for (i in 0 until grooveCount) {
-                val currentGrooveRadius = grooveStartRadius + (i * grooveSpacing)
-                drawCircle(
-                    color = grooveColor,
-                    radius = currentGrooveRadius,
-                    center = center,
-                    style = Stroke(width = 0.5.dp.toPx()) // Very thin stroke for grooves
-                )
-            }
-        }
-    }
-}
-
-
-class WaveformPainter(
-    private val waveColor: Color,
-    private val thickness: Float = 4f,
-    private val baseFrequency: Float = 16f,
-    private val baseAmplitudeFactor: Float = 0.8f,
-    private val verticalOffset: Float = 0.3f
-) : Painter() {
-
-    override val intrinsicSize: Size = Size.Unspecified
-
-    override fun DrawScope.onDraw() {
-        if (size.width <= 0f || size.height <= 0f) return
-
-        val centerLine = size.height * (0.5f + verticalOffset) // Shift the center line down
-
-        var phase = 0f
-        var prevX = 0f
-        var prevY = centerLine
-
-        // Draw the wave with variable amplitude and frequency
-        for (x in 0..size.width.toInt()) {
-            val normalizedX = x.toFloat() / size.width
-
-            // Create an envelope that peaks only at the exact center
-            val distanceFromCenter = abs(normalizedX - 0.5f) * 2f // 0 at center, 1 at edges
-            // Using Gaussian-like curve for sharp peak at center
-            val envelopeCurve = exp(-distanceFromCenter * distanceFromCenter * 8f)
-            // Scale from 0.2 to 1.0 instead of 0 to 1.0
-            val envelope = 0.1f + envelopeCurve * 0.9f
-
-            // Vary amplitude based on position
-            val amplitude = size.height * baseAmplitudeFactor * envelope
-
-            // Vary frequency based on position (higher frequency in the center)
-            val frequency = baseFrequency * (0.5f + envelope * 0.5f)
-
-            // Accumulate phase for smooth transitions
-            if (x > 0) {
-                phase += frequency * 2 * PI.toFloat() / size.width
-            }
-
-            // Calculate y using accumulated phase, centered on the shifted center line
-            val y = centerLine + amplitude * sin(phase)
-
-            // Interpolate color based on envelope (amplitude)
-            // envelope ranges from 0.1 to 1.0, we map it to color interpolation
-            val colorT = 1 - ((envelope - 0.1f) / 0.9f) // Normalize to 1..0
-            val segmentColor = Color(
-                red = 1f - (1f - waveColor.red) * colorT,
-                green = 1f - (1f - waveColor.green) * colorT,
-                blue = 1f - (1f - waveColor.blue) * colorT,
-                alpha = waveColor.alpha
-            )
-
-            // Draw line segment with current color
-            if (x > 0) {
-                drawLine(
-                    color = segmentColor,
-                    start = Offset(prevX, prevY),
-                    end = Offset(x.toFloat(), y),
-                    strokeWidth = thickness
-                )
-            }
-
-            prevX = x.toFloat()
-            prevY = y
         }
     }
 }

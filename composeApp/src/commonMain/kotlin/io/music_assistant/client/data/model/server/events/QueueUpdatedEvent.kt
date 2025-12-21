@@ -1,6 +1,6 @@
 package io.music_assistant.client.data.model.server.events
 
-import io.music_assistant.client.data.model.client.Queue.Companion.toQueue
+import io.music_assistant.client.data.model.client.QueueInfo.Companion.toQueue
 import io.music_assistant.client.data.model.server.EventType
 import io.music_assistant.client.data.model.server.ServerQueue
 import kotlinx.serialization.SerialName

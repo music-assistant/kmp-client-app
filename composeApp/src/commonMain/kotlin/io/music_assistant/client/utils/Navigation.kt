@@ -52,7 +52,7 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
                 }
             }
         ),
-        NavScreen.Main
+        NavScreen.Home
     )
     val bottomSheetStrategy = remember { BottomSheetSceneStrategy<NavKey>() }
     val dialogStrategy = remember { DialogSceneStrategy<NavKey>() }
@@ -72,7 +72,7 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
                 MainScreen { screen -> backStack.add(screen) }
             }
             entry<NavScreen.Home> {
-                HomeScreen()
+                HomeScreen{ screen -> backStack.add(screen) }
             }
             entry<NavScreen.Settings> {
                 SettingsScreen { if (backStack.last() is NavScreen.Settings) backStack.removeLastOrNull() }

@@ -47,7 +47,7 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
 
     private val dataSource: MainDataSource by inject()
     private val players = dataSource.playersData
-        .map { list -> list.filter { it.queue?.currentItem != null } }
+        .map { list -> list.filter { it.queueInfo?.currentItem != null } }
         .stateIn(scope, SharingStarted.Eagerly, emptyList())
     private val activePlayerIndex = MutableStateFlow(-1)
     private val currentPlayerData =
@@ -163,7 +163,7 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
                 when (action) {
                     "ACTION_SWITCH_PLAYER" -> switchPlayer()
                     "ACTION_TOGGLE_SHUFFLE" -> currentPlayerData.value?.let { playerData ->
-                        playerData.queue?.let {
+                        playerData.queueInfo?.let {
                             dataSource.playerAction(
                                 playerData,
                                 PlayerAction.ToggleShuffle(current = it.shuffleEnabled)
@@ -172,7 +172,7 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
                     }
 
                     "ACTION_TOGGLE_REPEAT" -> currentPlayerData.value?.let { playerData ->
-                        playerData.queue?.repeatMode?.let { repeatMode ->
+                        playerData.queueInfo?.repeatMode?.let { repeatMode ->
                             dataSource.playerAction(
                                 playerData,
                                 PlayerAction.ToggleRepeatMode(current = repeatMode)

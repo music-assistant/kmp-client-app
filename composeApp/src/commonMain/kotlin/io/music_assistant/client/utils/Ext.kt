@@ -1,6 +1,7 @@
 package io.music_assistant.client.utils
 
 import androidx.compose.ui.Modifier
+import io.music_assistant.client.api.Answer
 import kotlin.time.Duration
 
 fun Duration?.toMinSec() =
@@ -41,4 +42,6 @@ fun Modifier.conditional(
         this
     }
 }
+
+inline fun <reified T : Any> Result<Answer>.resultAs(): T?  = getOrNull()?.resultAs()
 

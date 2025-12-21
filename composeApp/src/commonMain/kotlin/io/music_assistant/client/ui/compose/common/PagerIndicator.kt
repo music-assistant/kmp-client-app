@@ -1,4 +1,4 @@
-package io.music_assistant.client.ui.compose.main
+package io.music_assistant.client.ui.compose.common
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -173,7 +173,7 @@ fun HorizontalPagerIndicatorPreview() {
     MaterialTheme {
         HorizontalPagerIndicator(
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-            pagerState = rememberPagerState (pageCount = {5}, initialPage = 2),
+            pagerState = rememberPagerState (pageCount = {16}, initialPage = 2),
             onItemMoved = {}
         )
     }

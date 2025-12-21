@@ -22,17 +22,17 @@ data class MediaNotificationData(
         fun from(serverUrl: String?, playerData: PlayerData, multiplePlayers: Boolean) =
             MediaNotificationData(
                 multiplePlayers = multiplePlayers,
-                longItemId = playerData.queue?.currentItem?.track?.longId,
-                name = playerData.queue?.currentItem?.track?.name,
-                artist = playerData.queue?.currentItem?.track?.subtitle,
-                album = playerData.queue?.currentItem?.track?.album?.name,
-                repeatMode = playerData.queue?.repeatMode,
-                shuffleEnabled = playerData.queue?.shuffleEnabled,
+                longItemId = playerData.queueInfo?.currentItem?.track?.longId,
+                name = playerData.queueInfo?.currentItem?.track?.name,
+                artist = playerData.queueInfo?.currentItem?.track?.subtitle,
+                album = playerData.queueInfo?.currentItem?.track?.album?.name,
+                repeatMode = playerData.queueInfo?.repeatMode,
+                shuffleEnabled = playerData.queueInfo?.shuffleEnabled,
                 isPlaying = playerData.player.isPlaying,
-                imageUrl = playerData.queue?.currentItem?.track?.imageInfo?.url(serverUrl),
-                elapsedTime = playerData.queue?.elapsedTime?.toLong()?.let { it * 1000 },
+                imageUrl = playerData.queueInfo?.currentItem?.track?.imageInfo?.url(serverUrl),
+                elapsedTime = playerData.queueInfo?.elapsedTime?.toLong()?.let { it * 1000 },
                 playerName = playerData.player.name,
-                duration = playerData.queue?.currentItem?.track?.duration?.toLong()
+                duration = playerData.queueInfo?.currentItem?.track?.duration?.toLong()
                     ?.let { it * 1000 }
             )
 

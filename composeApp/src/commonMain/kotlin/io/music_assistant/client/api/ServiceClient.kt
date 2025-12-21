@@ -19,6 +19,7 @@ import io.music_assistant.client.utils.AuthProcessState
 import io.music_assistant.client.utils.DataConnectionState
 import io.music_assistant.client.utils.SessionState
 import io.music_assistant.client.utils.myJson
+import io.music_assistant.client.utils.resultAs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -148,7 +149,7 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                 return
             }
 
-            if (response == null) {
+            if (response.isFailure) {
                 _sessionState.update {
                     currentState.copy(
                         authProcessState = AuthProcessState.Failed(
@@ -160,9 +161,9 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
             }
 
             // Check for error in response
-            if (response.json.containsKey("error_code")) {
+            if (response.getOrNull()?.json?.containsKey("error_code") == true) {
                 val errorMessage =
-                    response.json["error"]?.jsonPrimitive?.content ?: "Authentication failed"
+                    response.getOrNull()?.json["error"]?.jsonPrimitive?.content ?: "Authentication failed"
                 settings.updateToken(null)
                 _sessionState.update {
                     currentState.copy(
@@ -261,7 +262,7 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
             if (currentState !is SessionState.Connected) {
                 return
             }
-            if (response == null) {
+            if (response.isFailure) {
                 _sessionState.update {
                     currentState.copy(
                         authProcessState = AuthProcessState.Failed(
@@ -271,9 +272,9 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                 }
                 return
             }
-            if (response.json.containsKey("error_code")) {
+            if (response.getOrNull()?.json?.containsKey("error_code") == true) {
                 val errorMessage =
-                    response.json["error"]?.jsonPrimitive?.content ?: "Authentication failed"
+                    response.getOrNull()?.json["error"]?.jsonPrimitive?.content ?: "Authentication failed"
                 settings.updateToken(null)
                 _sessionState.update {
                     currentState.copy(
@@ -356,28 +357,28 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
         }
     }
 
-    suspend fun sendCommand(command: String): Answer? = sendRequest(Request(command = command))
+    suspend fun sendCommand(command: String): Result<Answer> = sendRequest(Request(command = command))
 
-    suspend fun sendRequest(request: Request): Answer? = suspendCoroutine { continuation ->
+    suspend fun sendRequest(request: Request): Result<Answer> = suspendCoroutine { continuation ->
         pendingResponses[request.messageId] = { response ->
             if (response.json.contains("error_code")) {
                 Logger.withTag("ServiceClient")
                     .e { "Error response for command ${request.command}: $response" }
             }
-            continuation.resume(response)
+            continuation.resume(Result.success(response))
         }
         CoroutineScope(Dispatchers.IO).launch {
             val state = _sessionState.value as? SessionState.Connected
                 ?: run {
                     pendingResponses.remove(request.messageId)
-                    continuation.resume(null)
+                    continuation.resume(Result.failure(IllegalStateException("Not connected")))
                     return@launch
                 }
             try {
                 state.session.sendSerialized(request)
             } catch (e: Exception) {
                 pendingResponses.remove(request.messageId)
-                continuation.resume(null)
+                continuation.resume(Result.failure(e))
                 disconnect(SessionState.Disconnected.Error(Exception("Error sending command: ${e.message}")))
             }
         }

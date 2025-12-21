@@ -16,7 +16,7 @@ import io.music_assistant.client.data.model.server.ServerMediaItem
 import io.music_assistant.client.data.model.server.events.MediaItemAddedEvent
 import io.music_assistant.client.data.model.server.events.MediaItemDeletedEvent
 import io.music_assistant.client.data.model.server.events.MediaItemUpdatedEvent
-import io.music_assistant.client.ui.compose.common.ListState
+import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -50,7 +50,7 @@ class LibraryViewModel(
                 LibraryList(
                     tab = it,
                     parentItems = emptyList(),
-                    listState = ListState.NoData(),
+                    dataState = DataState.NoData(),
                     isSelected = it == LibraryTab.Artists,
                 )
             },
@@ -74,7 +74,7 @@ class LibraryViewModel(
             connectionState.collect { connection ->
                 _state.update { state -> state.copy(connectionState = connection) }
                 if (connection is SessionState.Connected
-                    && _state.value.libraryLists.any { it.listState is ListState.NoData }
+                    && _state.value.libraryLists.any { it.dataState is DataState.NoData }
                 ) {
                     viewModelScope.launch {
                         refreshListForTab(LibraryTab.Artists)
@@ -98,7 +98,7 @@ class LibraryViewModel(
                                     if (list.tab == LibraryTab.Search) {
                                         list.copy(
                                             parentItems = emptyList(),
-                                            listState = ListState.NoData()
+                                            dataState = DataState.NoData()
                                         )
                                     } else list
                                 }
@@ -151,10 +151,10 @@ class LibraryViewModel(
                                 list.parentItems.take(it)
                             } ?: list.parentItems
                     }
-                    val updatedListState = when (val state = list.listState) {
-                        is ListState.Data -> {
-                            ListState.Data(
-                                buildUpdatedList(list.tab, newItem, state.items, modification)
+                    val updatedDataState = when (val state = list.dataState) {
+                        is DataState.Data -> {
+                            DataState.Data(
+                                buildUpdatedList(list.tab, newItem, state.data, modification)
                             )
                         }
 
@@ -162,7 +162,7 @@ class LibraryViewModel(
                     }
                     list.copy(
                         parentItems = updatedParents,
-                        listState = updatedListState
+                        dataState = updatedDataState
                     )
                 },
                 ongoingItems = s.ongoingItems.filter { item -> item.hasAnyMappingFrom(newItem) },
@@ -340,7 +340,7 @@ class LibraryViewModel(
                     playlistId = playlist.itemId,
                     trackUris = track.uri?.let { listOf(it) } ?: return@launch,
                 )
-            )?.let {
+            ).takeIf { it.isSuccess }?.let {
                 _toasts.emit("Added to ${playlist.name}")
             }
         }
@@ -453,13 +453,13 @@ class LibraryViewModel(
             s.copy(
                 libraryLists = s.libraryLists.map {
                     if (it.tab == tab) {
-                        it.copy(listState = ListState.Loading())
+                        it.copy(dataState = DataState.Loading())
                     } else {
                         it
                     }
                 })
         }
-        apiClient.sendRequest(request)?.let { answer ->
+        apiClient.sendRequest(request).getOrNull()?.let { answer ->
             resultParser(answer)
                 ?.filter { predicate(it) }
                 ?.let { list ->
@@ -467,7 +467,7 @@ class LibraryViewModel(
                         s.copy(
                             libraryLists = s.libraryLists.map {
                                 if (it.tab == tab) {
-                                    it.copy(listState = ListState.Data(list))
+                                    it.copy(dataState = DataState.Data(list))
                                 } else {
                                     it
                                 }
@@ -484,7 +484,7 @@ class LibraryViewModel(
                 s.copy(
                     libraryLists = s.libraryLists.map {
                         if (it.tab == tab) {
-                            it.copy(listState = ListState.Error())
+                            it.copy(dataState = DataState.Error())
                         } else {
                             it
                         }
@@ -500,7 +500,7 @@ class LibraryViewModel(
     data class LibraryList(
         val tab: LibraryTab,
         val parentItems: List<AppMediaItem>,
-        val listState: ListState<AppMediaItem>,
+        val dataState: DataState<List<AppMediaItem>>,
         val isSelected: Boolean,
     )
 

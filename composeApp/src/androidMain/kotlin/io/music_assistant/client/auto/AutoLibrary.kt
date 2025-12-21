@@ -21,6 +21,7 @@ import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.server.SearchResult
 import io.music_assistant.client.data.model.server.ServerMediaItem
 import io.music_assistant.client.utils.SessionState
+import io.music_assistant.client.utils.resultAs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -61,7 +62,7 @@ class AutoLibrary(
                             libraryOnly = false
                         )
                     )
-                    answer?.resultAs<SearchResult>()?.let {
+                    answer.resultAs<SearchResult>()?.let {
                         result.sendResult(
                             it.toAutoMediaItems(
                                 baseUrl,
@@ -93,7 +94,7 @@ class AutoLibrary(
                 scope.launch {
                     result.sendResult(
                         apiClient.sendRequest(Request.Artist.list())
-                            ?.resultAs<List<ServerMediaItem>>()
+                            .resultAs<List<ServerMediaItem>>()
                             ?.toAppMediaItemList()
                             ?.map {
                                 it.toAutoMediaItem(
@@ -110,7 +111,7 @@ class AutoLibrary(
                 scope.launch {
                     result.sendResult(
                         apiClient.sendRequest(Request.Playlist.list())
-                            ?.resultAs<List<ServerMediaItem>>()
+                            .resultAs<List<ServerMediaItem>>()
                             ?.toAppMediaItemList()
                             ?.map {
                                 it.toAutoMediaItem(
@@ -140,7 +141,7 @@ class AutoLibrary(
                 }
                 scope.launch {
                     val list = apiClient.sendRequest(requestAndCategory)
-                        ?.resultAs<List<ServerMediaItem>>()
+                        .resultAs<List<ServerMediaItem>>()
                         ?.toAppMediaItemList()?.map {
                             it.toAutoMediaItem(
                                 baseUrl,

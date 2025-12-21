@@ -53,8 +53,10 @@ import compose.icons.tablericons.ArrowBigRight
 import compose.icons.tablericons.ClipboardX
 import compose.icons.tablericons.GripVertical
 import io.music_assistant.client.data.model.client.PlayerData
-import io.music_assistant.client.data.model.client.Queue
+import io.music_assistant.client.data.model.client.QueueInfo
 import io.music_assistant.client.data.model.client.QueueTrack
+import io.music_assistant.client.ui.compose.common.OverflowMenu
+import io.music_assistant.client.ui.compose.common.OverflowMenuOption
 import io.music_assistant.client.ui.compose.common.painters.MusicNotePainter
 import io.music_assistant.client.utils.conditional
 import kotlinx.coroutines.launch
@@ -82,7 +84,7 @@ fun QueueSection(
                 nestedScrollConnection = nestedScrollConnection,
                 serverUrl = serverUrl,
                 players = players,
-                queue = playerData.queue,
+                queue = playerData.queueInfo,
                 isPlaying = playerData.player.isPlaying,
                 items = items,
                 chosenItemsIds = chosenItemsIds,
@@ -114,7 +116,7 @@ private fun QueueUI(
     nestedScrollConnection: NestedScrollConnection,
     serverUrl: String?,
     players: List<PlayerData>,
-    queue: Queue?,
+    queue: QueueInfo?,
     isPlaying: Boolean,
     items: List<QueueTrack>,
     chosenItemsIds: Set<String>?,
@@ -330,10 +332,7 @@ private fun QueueUI(
                     ) {
                         Text(
                             modifier = Modifier.fillMaxWidth().alpha(0.7f),
-                            text = item.track.artists
-                                ?.takeIf { it.isNotEmpty() }
-                                ?.joinToString(separator = ", ") { it.name }
-                                ?: "Unknown",
+                            text = item.track.subtitle ?: "Unknown",
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             color = when {
