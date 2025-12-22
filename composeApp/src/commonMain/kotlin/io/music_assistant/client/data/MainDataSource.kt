@@ -97,11 +97,11 @@ class MainDataSource(
             .stateIn(this, SharingStarted.Eagerly, false)
 
     private val _selectedPlayerId = MutableStateFlow<String?>(null)
-    val selectedPlayerIndex = _playersData
-        .map { list ->
-            list.indexOfFirst { it.playerId == _selectedPlayerId.value }.takeIf { it >= 0 }
+    val selectedPlayerIndex = combine(_playersData, _selectedPlayerId) { list, selectedId ->
+        selectedId?.let { id ->
+            list.indexOfFirst { it.playerId == id }.takeIf { it >= 0 }
         }
-        .stateIn(this, SharingStarted.Eagerly, null)
+    }.stateIn(this, SharingStarted.Eagerly, null)
 
     private val _chosenItemsIds = MutableStateFlow<Set<String>>(emptySet())
     val chosenItemsIds = _chosenItemsIds.asStateFlow()
@@ -186,6 +186,7 @@ class MainDataSource(
         }
         launch {
             selectedPlayerIndex.filterNotNull().collect {
+                Logger.e("Refreshing queue for selected player index: $it")
                 refreshPlayerQueueItems(playersData.value[it])
             }
         }

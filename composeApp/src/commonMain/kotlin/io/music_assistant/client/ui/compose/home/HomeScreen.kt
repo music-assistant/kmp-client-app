@@ -53,10 +53,12 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -92,6 +94,15 @@ fun HomeScreen(
         initialPage = data?.selectedPlayerIndex ?: 0,
         pageCount = { data?.playerData?.size ?: 0 }
     )
+
+    // Update selected player when pager changes to load queue items
+    LaunchedEffect(playerPagerState, playersState) {
+        snapshotFlow { playerPagerState.currentPage }.collect { currentPage ->
+            data?.playerData?.getOrNull(currentPage)?.let { playerData ->
+                viewModel.selectPlayer(playerData.player)
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
