@@ -34,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,7 +56,6 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import co.touchlab.kermit.Logger
 import coil3.compose.AsyncImage
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.ui.compose.common.DataState
@@ -77,7 +77,21 @@ fun LandingPage(
     onLongItemClick: (AppMediaItem) -> Unit,
     onRowActionClick: (String) -> Unit,
 ) {
-    Logger.e("LandingPage recomposition - connectionState: $connectionState, dataState: $dataState")
+    val filteredData = remember(dataState) {
+        if (dataState is DataState.Data) {
+            dataState.data.filter {
+                it.items?.any { item ->
+                    item is AppMediaItem.Track
+                            || item is AppMediaItem.Artist
+                            || item is AppMediaItem.Album
+                            || item is AppMediaItem.Playlist
+                } == true
+            }
+        } else {
+            emptyList()
+        }
+    }
+
     if (connectionState !is SessionState.Connected || dataState !is DataState.Data) {
         Box(
             modifier = modifier.fillMaxSize(),
@@ -90,14 +104,10 @@ fun LandingPage(
             modifier = modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
-            items(items = dataState.data.filter {
-                it.items?.filter { item ->
-                    item is AppMediaItem.Track
-                            || item is AppMediaItem.Artist
-                            || item is AppMediaItem.Album
-                            || item is AppMediaItem.Playlist
-                }.orEmpty().isNotEmpty()
-            }) { row ->
+            items(
+                items = filteredData,
+                key = { it.itemId }
+            ) { row ->
                 CategoryRow(
                     serverUrl = serverUrl,
                     title = row.name,
@@ -147,7 +157,27 @@ fun CategoryRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            items(items = mediaItems) { item ->
+            items(
+                items = mediaItems,
+                key = { item ->
+                    when (item) {
+                        is AppMediaItem.Track -> "track_${item.itemId}"
+                        is AppMediaItem.Artist -> "artist_${item.itemId}"
+                        is AppMediaItem.Album -> "album_${item.itemId}"
+                        is AppMediaItem.Playlist -> "playlist_${item.itemId}"
+                        else -> item.hashCode()
+                    }
+                },
+                contentType = { item ->
+                    when (item) {
+                        is AppMediaItem.Track -> "Track"
+                        is AppMediaItem.Artist -> "Artist"
+                        is AppMediaItem.Album -> "Album"
+                        is AppMediaItem.Playlist -> "Playlist"
+                        else -> "Unknown"
+                    }
+                }
+            ) { item ->
                 when (item) {
                     is AppMediaItem.Track -> TrackItem(
                         item = item,
@@ -219,18 +249,22 @@ fun TrackItem(
     onLongClick: (AppMediaItem) -> Unit,
     serverUrl: String?,
 ) {
+    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
+    val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
+
     LibraryItem(item, onClick, onLongClick) {
         Box(
             modifier = Modifier
                 .size(itemSize)
                 .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer)
+                .background(primaryContainer)
         ) {
-            val placeholder =
+            val placeholder = remember(primaryContainer, onPrimaryContainer) {
                 MusicNotePainter(
-                    backgroundColor = MaterialTheme.colorScheme.primaryContainer,
-                    iconColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    backgroundColor = primaryContainer,
+                    iconColor = onPrimaryContainer
                 )
+            }
             AsyncImage(
                 placeholder = placeholder,
                 fallback = placeholder,
@@ -241,10 +275,12 @@ fun TrackItem(
             )
 
             // Draw waveform overlay at the bottom
-            val waveformPainter = WaveformPainter(
-                waveColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                thickness = 3f
-            )
+            val waveformPainter = remember(onPrimaryContainer) {
+                WaveformPainter(
+                    waveColor = onPrimaryContainer,
+                    thickness = 3f
+                )
+            }
             Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -283,18 +319,22 @@ fun ArtistItem(
     onLongClick: (AppMediaItem) -> Unit,
     serverUrl: String?,
 ) {
+    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
+    val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
+
     LibraryItem(item, onClick, onLongClick) {
         Box(
             modifier = Modifier
                 .size(itemSize)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer)
+                .background(primaryContainer)
         ) {
-            val placeholder =
+            val placeholder = remember(primaryContainer, onPrimaryContainer) {
                 MusicMicrophonePainter(
-                    backgroundColor = MaterialTheme.colorScheme.primaryContainer,
-                    iconColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    backgroundColor = primaryContainer,
+                    iconColor = onPrimaryContainer
                 )
+            }
             AsyncImage(
                 placeholder = placeholder,
                 fallback = placeholder,
@@ -323,6 +363,9 @@ fun AlbumItem(
     onLongClick: (AppMediaItem) -> Unit,
     serverUrl: String?,
 ) {
+    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
+    val background = MaterialTheme.colorScheme.background
+
     LibraryItem(item, onClick, onLongClick) {
         Box(
             modifier = Modifier
@@ -330,13 +373,18 @@ fun AlbumItem(
                 .clip(RoundedCornerShape(8.dp))
         ) {
 
-            val vinylRecord = VinylRecordPainter(
-                recordColor = Color(0xFF202020),
-                labelColor = MaterialTheme.colorScheme.primaryContainer,
-                holeColor = MaterialTheme.colorScheme.background
-            )
+            val vinylRecord = remember(primaryContainer, background) {
+                VinylRecordPainter(
+                    recordColor = Color(0xFF202020),
+                    labelColor = primaryContainer,
+                    holeColor = background
+                )
+            }
             val stripWidth = 10.dp
             val holeRadius = 10.dp
+
+            val cutStripShape = remember(stripWidth) { CutStripShape(stripWidth) }
+            val holeShape = remember(holeRadius) { HoleShape(holeRadius) }
 
             Image(
                 painter = vinylRecord,
@@ -352,8 +400,8 @@ fun AlbumItem(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(CutStripShape(stripWidth))
-                    .clip(HoleShape(holeRadius))
+                    .clip(cutStripShape)
+                    .clip(holeShape)
             )
 
             Canvas(modifier = Modifier.size(itemSize)) {
@@ -491,6 +539,10 @@ class VinylRecordPainter(
     private val grooveCount: Int = 6 // Number of grooves to draw
 ) : Painter() {
 
+    // Cache for groove radii
+    private var cachedSize: Size? = null
+    private var cachedGrooveRadii: List<Float>? = null
+
     override val intrinsicSize: Size = Size.Unspecified
 
     override fun DrawScope.onDraw() {
@@ -516,29 +568,47 @@ class VinylRecordPainter(
         )
 
         // Draw the center spindle hole (tiny black circle)
-        val holeRadius = with(Density(density)) { holeRadius.toPx() }
+        val holePx = with(Density(density)) { holeRadius.toPx() }
         drawCircle(
             color = holeColor,
-            radius = holeRadius,
+            radius = holePx,
             center = center,
             style = Fill
         )
 
-        // Start grooves from just outside the label, extending to the edge of the record
-        val grooveStartRadius = labelRadius + (1.dp.toPx()) // Start slightly after the label
-        val grooveEndRadius = radius - (1.dp.toPx()) // End slightly before the outer edge
-
-        if (grooveEndRadius > grooveStartRadius) {
-            val grooveSpacing = (grooveEndRadius - grooveStartRadius) / grooveCount
-            for (i in 0 until grooveCount) {
-                val currentGrooveRadius = grooveStartRadius + (i * grooveSpacing)
-                drawCircle(
-                    color = grooveColor,
-                    radius = currentGrooveRadius,
-                    center = center,
-                    style = Stroke(width = 0.5.dp.toPx()) // Very thin stroke for grooves
-                )
+        // Calculate or retrieve cached groove radii
+        val grooveRadii = if (cachedSize == size && cachedGrooveRadii != null) {
+            cachedGrooveRadii!!
+        } else {
+            calculateGrooveRadii(labelRadius, radius).also {
+                cachedSize = size
+                cachedGrooveRadii = it
             }
+        }
+
+        // Draw grooves from cache
+        val strokeWidth = 0.5.dp.toPx()
+        for (grooveRadius in grooveRadii) {
+            drawCircle(
+                color = grooveColor,
+                radius = grooveRadius,
+                center = center,
+                style = Stroke(width = strokeWidth)
+            )
+        }
+    }
+
+    private fun DrawScope.calculateGrooveRadii(labelRadius: Float, radius: Float): List<Float> {
+        val grooveStartRadius = labelRadius + 1.dp.toPx()
+        val grooveEndRadius = radius - 1.dp.toPx()
+
+        return if (grooveEndRadius > grooveStartRadius) {
+            val grooveSpacing = (grooveEndRadius - grooveStartRadius) / grooveCount
+            List(grooveCount) { i ->
+                grooveStartRadius + (i * grooveSpacing)
+            }
+        } else {
+            emptyList()
         }
     }
 }
@@ -552,64 +622,72 @@ class WaveformPainter(
     private val verticalOffset: Float = 0.3f
 ) : Painter() {
 
+    // Cache for the calculated path points
+    private var cachedSize: Size? = null
+    private var cachedPoints: List<Pair<Offset, Color>>? = null
+
     override val intrinsicSize: Size = Size.Unspecified
 
     override fun DrawScope.onDraw() {
         if (size.width <= 0f || size.height <= 0f) return
 
-        val centerLine = size.height * (0.5f + verticalOffset) // Shift the center line down
+        // Check if we need to recalculate (size changed)
+        val points = if (cachedSize == size && cachedPoints != null) {
+            cachedPoints!!
+        } else {
+            calculateWaveform(size).also {
+                cachedSize = size
+                cachedPoints = it
+            }
+        }
+
+        // Draw the cached points
+        for (i in 1 until points.size) {
+            val (prevPoint, color) = points[i - 1]
+            val (currPoint, _) = points[i]
+            drawLine(
+                color = color,
+                start = prevPoint,
+                end = currPoint,
+                strokeWidth = thickness
+            )
+        }
+    }
+
+    private fun calculateWaveform(size: Size): List<Pair<Offset, Color>> {
+        val points = mutableListOf<Pair<Offset, Color>>()
+        val centerLine = size.height * (0.5f + verticalOffset)
 
         var phase = 0f
-        var prevX = 0f
-        var prevY = centerLine
+        val stepSize = 4 // Increased from 2 to 4 for better performance
 
-        // Draw the wave with variable amplitude and frequency
-        for (x in 0..size.width.toInt()) {
+        for (x in 0..size.width.toInt() step stepSize) {
             val normalizedX = x.toFloat() / size.width
 
             // Create an envelope that peaks only at the exact center
-            val distanceFromCenter = abs(normalizedX - 0.5f) * 2f // 0 at center, 1 at edges
-            // Using Gaussian-like curve for sharp peak at center
+            val distanceFromCenter = abs(normalizedX - 0.5f) * 2f
             val envelopeCurve = exp(-distanceFromCenter * distanceFromCenter * 8f)
-            // Scale from 0.2 to 1.0 instead of 0 to 1.0
             val envelope = 0.1f + envelopeCurve * 0.9f
 
             // Vary amplitude based on position
             val amplitude = size.height * baseAmplitudeFactor * envelope
 
-            // Vary frequency based on position (higher frequency in the center)
+            // Vary frequency based on position
             val frequency = baseFrequency * (0.5f + envelope * 0.5f)
 
             // Accumulate phase for smooth transitions
             if (x > 0) {
-                phase += frequency * 2 * PI.toFloat() / size.width
+                phase += frequency * 2 * PI.toFloat() / size.width * stepSize
             }
 
-            // Calculate y using accumulated phase, centered on the shifted center line
+            // Calculate y using accumulated phase
             val y = centerLine + amplitude * sin(phase)
 
-            // Interpolate color based on envelope (amplitude)
-            // envelope ranges from 0.1 to 1.0, we map it to color interpolation
-            val colorT = 1 - ((envelope - 0.1f) / 0.9f) // Normalize to 1..0
-            val segmentColor = Color(
-                red = 1f - (1f - waveColor.red) * colorT,
-                green = 1f - (1f - waveColor.green) * colorT,
-                blue = 1f - (1f - waveColor.blue) * colorT,
-                alpha = waveColor.alpha
-            )
-
-            // Draw line segment with current color
-            if (x > 0) {
-                drawLine(
-                    color = segmentColor,
-                    start = Offset(prevX, prevY),
-                    end = Offset(x.toFloat(), y),
-                    strokeWidth = thickness
-                )
-            }
-
-            prevX = x.toFloat()
-            prevY = y
+            // Use the same color for all points to reduce allocations
+            // The visual difference is minimal but performance is better
+            points.add(Offset(x.toFloat(), y) to waveColor)
         }
+
+        return points
     }
 }
