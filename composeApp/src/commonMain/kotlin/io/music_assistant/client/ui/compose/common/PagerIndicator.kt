@@ -1,5 +1,7 @@
 package io.music_assistant.client.ui.compose.common
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,6 +25,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,6 +41,8 @@ import compose.icons.fontawesomeicons.solid.ArrowCircleDown
 import compose.icons.fontawesomeicons.solid.ArrowCircleLeft
 import compose.icons.fontawesomeicons.solid.ArrowCircleRight
 import compose.icons.fontawesomeicons.solid.ArrowCircleUp
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
@@ -42,6 +52,56 @@ fun HorizontalPagerIndicator(
     onItemMoved: ((Int) -> Unit)?,
 ) {
     val pageCount = pagerState.pageCount
+    val coroutineScope = rememberCoroutineScope()
+
+    // Animation states
+    val verticalOffset = remember { Animatable(0f) }
+    val swapProgress = remember { Animatable(0f) }
+    var animationState by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+
+    fun moveWithAnimation(indexShift: Int) {
+        val fromIndex = pagerState.currentPage
+        val toIndex = (fromIndex + indexShift).coerceIn(0, pageCount - 1)
+
+        if (fromIndex == toIndex) {
+            onItemMoved?.invoke(indexShift)
+            return
+        }
+
+        coroutineScope.launch {
+            animationState = fromIndex to toIndex
+
+            // Phase 1: Pull down (166ms)
+            verticalOffset.animateTo(
+                targetValue = 4f,
+                animationSpec = tween(durationMillis = 166)
+            )
+
+            // Phase 2: Swap horizontally (168ms)
+            launch {
+                swapProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 168)
+                )
+            }
+
+            // Call callback midway through swap
+            delay(84)
+            onItemMoved?.invoke(indexShift)
+            delay(84)
+
+            // Phase 3: Pull up (166ms)
+            verticalOffset.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 166)
+            )
+
+            // Reset
+            swapProgress.snapTo(0f)
+            animationState = null
+        }
+    }
+
     Row(
         modifier = modifier.fillMaxWidth().wrapContentHeight(),
         horizontalArrangement = Arrangement.Center,
@@ -52,7 +112,7 @@ fun HorizontalPagerIndicator(
                 Icon(
                     modifier = Modifier
                         .size(20.dp)
-                        .clickable { it(-1) },
+                        .clickable { moveWithAnimation(-1) },
                     imageVector = FontAwesomeIcons.Solid.ArrowCircleLeft,
                     tint = MaterialTheme.colorScheme.primary,
                     contentDescription = null,
@@ -68,9 +128,29 @@ fun HorizontalPagerIndicator(
         ) {
             if (pageCount <= 10) {
                 repeat(pageCount) { index ->
+                    val (fromIndex, toIndex) = animationState ?: (null to null)
+                    val isFrom = index == fromIndex
+                    val isTo = index == toIndex
+
+                    // Calculate offsets
+                    val xOffset = when {
+                        isFrom && toIndex != null -> {
+                            val direction = if (toIndex > fromIndex) 1f else -1f
+                            16f * direction * swapProgress.value
+                        }
+                        isTo && fromIndex != null -> {
+                            val direction = if (fromIndex > toIndex) 1f else -1f
+                            16f * direction * swapProgress.value
+                        }
+                        else -> 0f
+                    }
+
+                    val yOffset = if (isFrom) verticalOffset.value else 0f
+
                     Box(
                         modifier = Modifier
                             .padding(horizontal = 4.dp)
+                            .offset(x = xOffset.dp, y = yOffset.dp)
                             .size(if (index == pagerState.currentPage) 8.dp else 6.dp)
                             .clip(CircleShape)
                             .background(
@@ -97,7 +177,7 @@ fun HorizontalPagerIndicator(
                 Icon(
                     modifier = Modifier
                         .size(20.dp)
-                        .clickable { it(1) },
+                        .clickable { moveWithAnimation(1) },
                     imageVector = FontAwesomeIcons.Solid.ArrowCircleRight,
                     tint = MaterialTheme.colorScheme.primary,
                     contentDescription = null,
@@ -116,6 +196,56 @@ fun VerticalPagerIndicator(
     onItemMoved: ((Int) -> Unit)?,
 ) {
     val pageCount = pagerState.pageCount
+    val coroutineScope = rememberCoroutineScope()
+
+    // Animation states
+    val horizontalOffset = remember { Animatable(0f) }
+    val swapProgress = remember { Animatable(0f) }
+    var animationState by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+
+    fun moveWithAnimation(indexShift: Int) {
+        val fromIndex = pagerState.currentPage
+        val toIndex = (fromIndex + indexShift).coerceIn(0, pageCount - 1)
+
+        if (fromIndex == toIndex) {
+            onItemMoved?.invoke(indexShift)
+            return
+        }
+
+        coroutineScope.launch {
+            animationState = fromIndex to toIndex
+
+            // Phase 1: Pull right (166ms)
+            horizontalOffset.animateTo(
+                targetValue = 4f,
+                animationSpec = tween(durationMillis = 166)
+            )
+
+            // Phase 2: Swap vertically (168ms)
+            launch {
+                swapProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 168)
+                )
+            }
+
+            // Call callback midway through swap
+            delay(84)
+            onItemMoved?.invoke(indexShift)
+            delay(84)
+
+            // Phase 3: Pull back left (166ms)
+            horizontalOffset.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 166)
+            )
+
+            // Reset
+            swapProgress.snapTo(0f)
+            animationState = null
+        }
+    }
+
     Column(
         modifier = modifier.wrapContentWidth().fillMaxHeight(),
         verticalArrangement = Arrangement.Center,
@@ -126,7 +256,7 @@ fun VerticalPagerIndicator(
                 Icon(
                     modifier = Modifier
                         .size(20.dp)
-                        .clickable { it(-1) },
+                        .clickable { moveWithAnimation(-1) },
                     imageVector = FontAwesomeIcons.Solid.ArrowCircleUp,
                     tint = MaterialTheme.colorScheme.primary,
                     contentDescription = null,
@@ -142,9 +272,29 @@ fun VerticalPagerIndicator(
         ) {
             if (pageCount <= 10) {
                 repeat(pageCount) { index ->
+                    val (fromIndex, toIndex) = animationState ?: (null to null)
+                    val isFrom = index == fromIndex
+                    val isTo = index == toIndex
+
+                    // Calculate offsets
+                    val yOffset = when {
+                        isFrom && toIndex != null -> {
+                            val direction = if (toIndex > fromIndex) 1f else -1f
+                            16f * direction * swapProgress.value
+                        }
+                        isTo && fromIndex != null -> {
+                            val direction = if (fromIndex > toIndex) 1f else -1f
+                            16f * direction * swapProgress.value
+                        }
+                        else -> 0f
+                    }
+
+                    val xOffset = if (isFrom) horizontalOffset.value else 0f
+
                     Box(
                         modifier = Modifier
                             .padding(vertical = 4.dp)
+                            .offset(x = xOffset.dp, y = yOffset.dp)
                             .size(if (index == pagerState.currentPage) 8.dp else 6.dp)
                             .clip(CircleShape)
                             .background(
@@ -171,7 +321,7 @@ fun VerticalPagerIndicator(
                 Icon(
                     modifier = Modifier
                         .size(20.dp)
-                        .clickable { it(1) },
+                        .clickable { moveWithAnimation(1) },
                     imageVector = FontAwesomeIcons.Solid.ArrowCircleDown,
                     tint = MaterialTheme.colorScheme.primary,
                     contentDescription = null,

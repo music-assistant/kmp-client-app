@@ -97,3 +97,7 @@ fun FeatureScreen(viewModel: FeatureViewModel = koinViewModel()) {
 - Use sealed class/interface for result types
 - Display errors via Toast or inline error states
 - Log with context: `Logger.withTag("Component").e { "message" }`
+
+## Misc rules
+
+- Don't ever use non-null assertions in live code (!!). Always handle nulls safely.
