@@ -78,17 +78,10 @@ fun HorizontalPagerIndicator(
             )
 
             // Phase 2: Swap horizontally (168ms)
-            launch {
-                swapProgress.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(durationMillis = 168)
-                )
-            }
-
-            // Call callback midway through swap
-            delay(84)
-            onItemMoved?.invoke(indexShift)
-            delay(84)
+            swapProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 168)
+            )
 
             // Phase 3: Pull up (166ms)
             verticalOffset.animateTo(
@@ -99,6 +92,7 @@ fun HorizontalPagerIndicator(
             // Reset
             swapProgress.snapTo(0f)
             animationState = null
+            onItemMoved?.invoke(indexShift)
         }
     }
 
@@ -138,10 +132,12 @@ fun HorizontalPagerIndicator(
                             val direction = if (toIndex > fromIndex) 1f else -1f
                             16f * direction * swapProgress.value
                         }
+
                         isTo && fromIndex != null -> {
                             val direction = if (fromIndex > toIndex) 1f else -1f
                             16f * direction * swapProgress.value
                         }
+
                         else -> 0f
                     }
 
@@ -222,17 +218,10 @@ fun VerticalPagerIndicator(
             )
 
             // Phase 2: Swap vertically (168ms)
-            launch {
-                swapProgress.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(durationMillis = 168)
-                )
-            }
-
-            // Call callback midway through swap
-            delay(84)
-            onItemMoved?.invoke(indexShift)
-            delay(84)
+            swapProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 168)
+            )
 
             // Phase 3: Pull back left (166ms)
             horizontalOffset.animateTo(
@@ -243,6 +232,7 @@ fun VerticalPagerIndicator(
             // Reset
             swapProgress.snapTo(0f)
             animationState = null
+            onItemMoved?.invoke(indexShift)
         }
     }
 
@@ -282,10 +272,12 @@ fun VerticalPagerIndicator(
                             val direction = if (toIndex > fromIndex) 1f else -1f
                             16f * direction * swapProgress.value
                         }
+
                         isTo && fromIndex != null -> {
                             val direction = if (fromIndex > toIndex) 1f else -1f
                             16f * direction * swapProgress.value
                         }
+
                         else -> 0f
                     }
 
