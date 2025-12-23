@@ -1,0 +1,239 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
+package io.music_assistant.client.ui.compose.home
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import io.music_assistant.client.data.model.client.PlayerData
+import io.music_assistant.client.ui.compose.common.painters.MusicNotePainter
+import io.music_assistant.client.ui.compose.main.PlayerAction
+import io.music_assistant.client.ui.compose.main.PlayerControls
+
+@Composable
+fun CompactPlayerItem(item: PlayerData, serverUrl: String?) {
+    val track = item.queueInfo?.currentItem?.track
+    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
+    val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Album cover on the far left
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(primaryContainer.copy(alpha = track?.let { 1f } ?: 0.4f)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (track != null) {
+                    val placeholder = remember(primaryContainer, onPrimaryContainer) {
+                        MusicNotePainter(
+                            backgroundColor = primaryContainer,
+                            iconColor = onPrimaryContainer
+                        )
+                    }
+                    AsyncImage(
+                        placeholder = placeholder,
+                        fallback = placeholder,
+                        model = track.imageInfo?.url(serverUrl),
+                        contentDescription = track.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Album,
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp),
+                        tint = onPrimaryContainer.copy(alpha = 0.4f)
+                    )
+                }
+            }
+
+            // Track info
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = track?.name ?: "--idle--",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                track?.subtitle?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            // Compact controls
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { /* TODO */ }) {
+                    Icon(Icons.Default.SkipPrevious, "Previous")
+                }
+                IconButton(onClick = { /* TODO */ }) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        "Play/Pause",
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+                IconButton(onClick = { /* TODO */ }) {
+                    Icon(Icons.Default.SkipNext, "Next")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FullPlayerItem(
+    modifier: Modifier,
+    item: PlayerData,
+    serverUrl: String?,
+    playerAction: (PlayerData, PlayerAction) -> Unit
+) {
+    val track = item.queueInfo?.currentItem?.track
+    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
+    val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
+
+    Column(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceEvenly
+    ) {
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .padding(16.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(primaryContainer.copy(alpha = track?.let { 1f } ?: 0.4f)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (track != null) {
+                val placeholder = remember(primaryContainer, onPrimaryContainer) {
+                    MusicNotePainter(
+                        backgroundColor = primaryContainer,
+                        iconColor = onPrimaryContainer
+                    )
+                }
+                AsyncImage(
+                    placeholder = placeholder,
+                    fallback = placeholder,
+                    model = track.imageInfo?.url(serverUrl),
+                    contentDescription = track.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Album,
+                    contentDescription = null,
+                    modifier = Modifier.size(120.dp),
+                    tint = onPrimaryContainer.copy(alpha = 0.4f)
+                )
+            }
+        }
+
+
+        // Track info
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = track?.name ?: "--idle--",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            track?.subtitle?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        val duration = track?.duration?.takeIf { it > 0 }?.toFloat()
+        val elapsed = item.queueInfo?.elapsedTime?.toFloat()
+
+        // Progress bar
+        Slider(
+            value = elapsed ?: 0f,
+            valueRange = duration?.let { 0f..it } ?: 0f..1f,
+            enabled = elapsed?.takeIf { duration != null } != null,
+            onValueChange = { /* TODO seek */ },
+            modifier = Modifier.fillMaxWidth(),
+            thumb = {
+                elapsed?.takeIf { duration != null }?.let {
+                    Box(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                    )
+                }
+            },
+        )
+
+        PlayerControls(
+            playerData = item,
+            playerAction = playerAction,
+            enabled = !item.player.isAnnouncing
+        )
+    }
+}

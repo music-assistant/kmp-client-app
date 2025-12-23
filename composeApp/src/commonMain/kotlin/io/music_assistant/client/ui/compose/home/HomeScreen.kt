@@ -206,6 +206,7 @@ fun HomeScreen(
                                             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
                                             playerPagerState = playerPagerState,
                                             playersState = state,
+                                            serverUrl = serverUrl,
                                             playerAction = { playerData, action ->
                                                 viewModel.playerAction(playerData, action)
                                             },
@@ -254,6 +255,7 @@ fun HomeScreen(
                                     onCollapse = { showPlayersView = false },
                                     playerPagerState = playerPagerState,
                                     playersState = state,
+                                    serverUrl = serverUrl,
                                     playerAction = { playerData, action ->
                                         viewModel.playerAction(playerData, action)
                                     },
@@ -282,6 +284,7 @@ private fun PlayersPager(
     modifier: Modifier = Modifier,
     playerPagerState: PagerState,
     playersState: HomeScreenViewModel.PlayersState.Data,
+    serverUrl: String?,
     playerAction: (PlayerData, PlayerAction) -> Unit,
     showQueue: Boolean = true
 ) {
@@ -319,10 +322,10 @@ private fun PlayersPager(
                                 .fillMaxWidth()
                                 .wrapContentSize()
                                 .clickable { isQueueExpanded = !isQueueExpanded }) {
-                            CompactPlayerItem(item = player)
+                            CompactPlayerItem(item = player, serverUrl = serverUrl)
                         }
                     } else {
-                        CompactPlayerItem(item = player)
+                        CompactPlayerItem(item = player, serverUrl = serverUrl)
                     }
                 }
 
@@ -343,6 +346,7 @@ private fun PlayersPager(
                         FullPlayerItem(
                             modifier = Modifier.fillMaxSize(),
                             item = player,
+                            serverUrl = serverUrl,
                             playerAction = playerAction,
                         )
                     }
@@ -541,161 +545,13 @@ private fun PageIndicator(
     }
 }
 
-@Composable
-fun CompactPlayerItem(item: PlayerData) {
-    val track = item.queueInfo?.currentItem?.track
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Album cover on the far left
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                // TODO: Load actual album image
-                Icon(
-                    imageVector = Icons.Default.Album,
-                    contentDescription = "Album",
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Track info
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = track?.name ?: "--idle--",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                track?.subtitle?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-
-            // Compact controls
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = { /* TODO */ }) {
-                    Icon(Icons.Default.SkipPrevious, "Previous")
-                }
-                IconButton(onClick = { /* TODO */ }) {
-                    Icon(
-                        Icons.Default.PlayArrow,
-                        "Play/Pause",
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-                IconButton(onClick = { /* TODO */ }) {
-                    Icon(Icons.Default.SkipNext, "Next")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun FullPlayerItem(
-    modifier: Modifier,
-    item: PlayerData,
-    playerAction: (PlayerData, PlayerAction) -> Unit
-) {
-    val track = item.queueInfo?.currentItem?.track
-    Column(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceEvenly
-    ) {
-
-
-        Icon(
-            imageVector = Icons.Default.Album,
-            contentDescription = "Album",
-            modifier = Modifier.fillMaxWidth().aspectRatio(1f).padding(16.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-
-        // Track info
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = track?.name ?: "--idle--",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            track?.subtitle?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-
-        val duration = track?.duration?.takeIf { it > 0 }?.toFloat()
-        val elapsed = item.queueInfo?.elapsedTime?.toFloat()
-
-        // Progress bar
-        Slider(
-            value = elapsed ?: 0f,
-            valueRange = duration?.let { 0f..it } ?: 0f..1f,
-            enabled = elapsed?.takeIf { duration != null } != null,
-            onValueChange = { /* TODO seek */ },
-            modifier = Modifier.fillMaxWidth(),
-            thumb = {
-                elapsed?.takeIf { duration != null }?.let {
-                    Box(
-                        modifier = Modifier
-                            .size(16.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary)
-                    )
-                }
-            },
-        )
-
-        PlayerControls(
-            playerData = item,
-            playerAction = playerAction,
-            enabled = !item.player.isAnnouncing
-        )
-    }
-}
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PlayersView(
     onCollapse: () -> Unit,
     playerPagerState: PagerState,
     playersState: HomeScreenViewModel.PlayersState.Data,
+    serverUrl: String?,
     playerAction: (PlayerData, PlayerAction) -> Unit
 ) {
 
@@ -715,6 +571,7 @@ fun PlayersView(
             modifier = Modifier.fillMaxSize(),
             playerPagerState = playerPagerState,
             playersState = playersState,
+            serverUrl = serverUrl,
             playerAction = playerAction,
         )
     }
