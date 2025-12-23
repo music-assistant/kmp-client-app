@@ -65,6 +65,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -127,7 +128,9 @@ fun HomeScreen(
                         text = "MASSIVE",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp
+                        letterSpacing = 2.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -181,7 +184,9 @@ fun HomeScreen(
                                     text = "Loading players...",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
 
                                 is HomeScreenViewModel.PlayersState.Data -> {
@@ -191,7 +196,9 @@ fun HomeScreen(
                                             text = "No players available",
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            textAlign = TextAlign.Center
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     } else {
                                         PlayersPager(
@@ -211,7 +218,9 @@ fun HomeScreen(
                                     text = "No players available",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -223,7 +232,9 @@ fun HomeScreen(
                             text = "Loading players...",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
 
                         is HomeScreenViewModel.PlayersState.Data -> {
@@ -233,7 +244,9 @@ fun HomeScreen(
                                     text = "No players available",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             } else {
                                 PlayersView(
@@ -252,7 +265,9 @@ fun HomeScreen(
                             text = "No players available",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -288,7 +303,9 @@ private fun PlayersPager(
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 AnimatedVisibility(
                     visible = isQueueExpanded.takeIf { showQueue } != false,
@@ -345,7 +362,9 @@ private fun PlayersPager(
                             Text(
                                 text = "Queue",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Icon(
                                 imageVector = if (isQueueExpanded) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
@@ -360,7 +379,9 @@ private fun PlayersPager(
                                     text = "Error loading",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
 
                                 is DataState.Loading -> Text(
@@ -368,7 +389,9 @@ private fun PlayersPager(
                                     text = "Loading...",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
 
                                 is DataState.NoData -> Text(
@@ -376,7 +399,9 @@ private fun PlayersPager(
                                     text = "No items",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
 
                                 is DataState.Data -> {
@@ -386,7 +411,9 @@ private fun PlayersPager(
                                             text = "Error loading",
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            textAlign = TextAlign.Center
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
 
                                         is DataState.Loading -> Text(
@@ -394,7 +421,9 @@ private fun PlayersPager(
                                             text = "Loading...",
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            textAlign = TextAlign.Center
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
 
                                         is DataState.NoData -> Text(
@@ -402,7 +431,9 @@ private fun PlayersPager(
                                             text = "Not loaded",
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            textAlign = TextAlign.Center
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
 
                                         is DataState.Data -> {
@@ -412,17 +443,26 @@ private fun PlayersPager(
                                                     text = "No items",
                                                     style = MaterialTheme.typography.bodyMedium,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    textAlign = TextAlign.Center
+                                                    textAlign = TextAlign.Center,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
                                                 )
                                             } else {
+                                                val currentItemId = queue.data.info.currentItem?.id
+                                                val currentItemIndex = currentItemId?.let { id ->
+                                                    items.data.indexOfFirst { it.id == id }
+                                                } ?: -1
+
                                                 LazyColumn(
                                                     modifier = Modifier.fillMaxWidth().weight(1f),
                                                     verticalArrangement = Arrangement.spacedBy(4.dp)
                                                 ) {
                                                     items(items.data.size) { index ->
                                                         QueueItemRow(
-                                                            items.data[index],
-                                                            index + 1
+                                                            item = items.data[index],
+                                                            position = index + 1,
+                                                            isCurrentItem = index == currentItemIndex,
+                                                            isPlayedItem = currentItemIndex >= 0 && index < currentItemIndex
                                                         )
                                                     }
                                                 }
@@ -527,12 +567,16 @@ fun CompactPlayerItem(item: PlayerData) {
                     text = track?.name ?: "(idle)",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = track?.subtitle ?: "",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
@@ -588,12 +632,16 @@ private fun FullPlayerItem(
             Text(
                 text = track?.name ?: "(idle)",
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = track?.subtitle ?: "",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
 
@@ -647,7 +695,14 @@ fun PlayersView(
 }
 
 @Composable
-fun QueueItemRow(item: QueueTrack, position: Int) {
+fun QueueItemRow(
+    item: QueueTrack,
+    position: Int,
+    isCurrentItem: Boolean,
+    isPlayedItem: Boolean
+) {
+    val alpha = if (isPlayedItem) 0.4f else 1f
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = Color.Transparent,
@@ -655,27 +710,45 @@ fun QueueItemRow(item: QueueTrack, position: Int) {
     ) {
         Row(
             modifier = Modifier
-                .clickable { /* TODO */ }
+                .clickable(enabled = !isCurrentItem && !isPlayedItem) { /* TODO */ }
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = position.toString(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.width(24.dp)
-            )
+            // Show play icon for current item, number for others
+            if (isCurrentItem) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "Currently playing",
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
+                    modifier = Modifier.size(16.dp)
+                )
+            } else {
+                Text(
+                    text = position.toString(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
+                    modifier = Modifier.width(16.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = item.track.name,
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = if (isCurrentItem) FontWeight.Bold else FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = item.track.subtitle ?: "",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }

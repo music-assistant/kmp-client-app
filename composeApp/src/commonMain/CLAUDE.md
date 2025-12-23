@@ -1,0 +1,1 @@
+@import ../../../.claude/project.md
