@@ -89,6 +89,7 @@ fun HomeScreen(
     navigateTo: (NavScreen) -> Unit
 ) {
     var showPlayersView by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     val recommendationsState = viewModel.recommendationsState.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
@@ -214,6 +215,7 @@ fun HomeScreen(
                                                 viewModel.playerAction(playerData, action)
                                             },
                                             showQueue = false,
+                                            onItemMoved = null
                                         )
                                     }
                                 }
@@ -262,6 +264,16 @@ fun HomeScreen(
                                     playerAction = { playerData, action ->
                                         viewModel.playerAction(playerData, action)
                                     },
+                                    onItemMoved = { indexShift ->
+                                        val newIndex = (playerPagerState.currentPage + indexShift).coerceIn(0, state.playerData.size - 1)
+                                        val newPlayers = state.playerData.map { it.player.id }.toMutableList().apply {
+                                            add(newIndex, removeAt(playerPagerState.currentPage))
+                                        }
+                                        viewModel.onPlayersSortChanged(newPlayers)
+                                        coroutineScope.launch {
+                                            playerPagerState.animateScrollToPage(newIndex)
+                                        }
+                                    }
                                 )
                             }
                         }
@@ -289,19 +301,14 @@ private fun PlayersPager(
     playersState: HomeScreenViewModel.PlayersState.Data,
     serverUrl: String?,
     playerAction: (PlayerData, PlayerAction) -> Unit,
-    showQueue: Boolean = true
+    showQueue: Boolean = true,
+    onItemMoved: ((Int) -> Unit)?,
 ) {
     var isQueueExpanded by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
     Column(modifier = modifier) {
         HorizontalPagerIndicator(
             pagerState = playerPagerState,
-            onItemMoved = { offset ->
-                coroutineScope.launch {
-                    val newPage = (playerPagerState.currentPage + offset).coerceIn(0, playerPagerState.pageCount - 1)
-                    playerPagerState.animateScrollToPage(newPage)
-                }
-            }
+            onItemMoved = onItemMoved
         )
         HorizontalPager(
             modifier = Modifier.wrapContentHeight(),
@@ -535,7 +542,8 @@ fun PlayersView(
     playerPagerState: PagerState,
     playersState: HomeScreenViewModel.PlayersState.Data,
     serverUrl: String?,
-    playerAction: (PlayerData, PlayerAction) -> Unit
+    playerAction: (PlayerData, PlayerAction) -> Unit,
+    onItemMoved: ((Int) -> Unit)
 ) {
 
     Column(
@@ -556,6 +564,7 @@ fun PlayersView(
             playersState = playersState,
             serverUrl = serverUrl,
             playerAction = playerAction,
+            onItemMoved = onItemMoved,
         )
     }
 }

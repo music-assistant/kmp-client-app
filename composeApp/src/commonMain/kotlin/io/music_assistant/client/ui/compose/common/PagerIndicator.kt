@@ -39,7 +39,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 fun HorizontalPagerIndicator(
     modifier: Modifier = Modifier,
     pagerState: PagerState,
-    onItemMoved: (Int) -> Unit,
+    onItemMoved: ((Int) -> Unit)?,
 ) {
     val pageCount = pagerState.pageCount
     Row(
@@ -47,17 +47,19 @@ fun HorizontalPagerIndicator(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (pagerState.currentPage > 0) {
-            Icon(
-                modifier = Modifier
-                    .size(20.dp)
-                    .clickable { onItemMoved(-1) },
-                imageVector = FontAwesomeIcons.Solid.ArrowCircleLeft,
-                tint = MaterialTheme.colorScheme.primary,
-                contentDescription = null,
-            )
-        } else {
-            Spacer(modifier = Modifier.width(20.dp))
+        onItemMoved?.let {
+            if (pagerState.currentPage > 0) {
+                Icon(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clickable { it(-1) },
+                    imageVector = FontAwesomeIcons.Solid.ArrowCircleLeft,
+                    tint = MaterialTheme.colorScheme.primary,
+                    contentDescription = null,
+                )
+            } else {
+                Spacer(modifier = Modifier.width(20.dp))
+            }
         }
         Row(
             modifier = Modifier.padding(horizontal = 8.dp),
@@ -90,17 +92,19 @@ fun HorizontalPagerIndicator(
                 )
             }
         }
-        if (pagerState.currentPage < pageCount - 1) {
-            Icon(
-                modifier = Modifier
-                    .size(20.dp)
-                    .clickable { onItemMoved(1) },
-                imageVector = FontAwesomeIcons.Solid.ArrowCircleRight,
-                tint = MaterialTheme.colorScheme.primary,
-                contentDescription = null,
-            )
-        } else {
-            Spacer(modifier = Modifier.width(20.dp))
+        onItemMoved?.let {
+            if (pagerState.currentPage < pageCount - 1) {
+                Icon(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clickable { it(1) },
+                    imageVector = FontAwesomeIcons.Solid.ArrowCircleRight,
+                    tint = MaterialTheme.colorScheme.primary,
+                    contentDescription = null,
+                )
+            } else {
+                Spacer(modifier = Modifier.width(20.dp))
+            }
         }
     }
 }
@@ -109,7 +113,7 @@ fun HorizontalPagerIndicator(
 fun VerticalPagerIndicator(
     modifier: Modifier = Modifier,
     pagerState: PagerState,
-    onItemMoved: (Int) -> Unit,
+    onItemMoved: ((Int) -> Unit)?,
 ) {
     val pageCount = pagerState.pageCount
     Column(
@@ -117,20 +121,22 @@ fun VerticalPagerIndicator(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (pagerState.currentPage > 0) {
-            Icon(
-                modifier = Modifier
-                    .size(20.dp)
-                    .clickable { onItemMoved(-1) },
-                imageVector = FontAwesomeIcons.Solid.ArrowCircleUp,
-                tint = MaterialTheme.colorScheme.primary,
-                contentDescription = null,
-            )
-        } else {
-            Spacer(modifier = Modifier.height(20.dp))
+        onItemMoved?.let {
+            if (pagerState.currentPage > 0) {
+                Icon(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clickable { it(-1) },
+                    imageVector = FontAwesomeIcons.Solid.ArrowCircleUp,
+                    tint = MaterialTheme.colorScheme.primary,
+                    contentDescription = null,
+                )
+            } else {
+                Spacer(modifier = Modifier.height(20.dp))
+            }
         }
         Column(
-            modifier = Modifier.padding(horizontal = 8.dp),
+            modifier = Modifier.padding(vertical = 8.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -138,7 +144,7 @@ fun VerticalPagerIndicator(
                 repeat(pageCount) { index ->
                     Box(
                         modifier = Modifier
-                            .padding(horizontal = 4.dp)
+                            .padding(vertical = 4.dp)
                             .size(if (index == pagerState.currentPage) 8.dp else 6.dp)
                             .clip(CircleShape)
                             .background(
@@ -160,17 +166,19 @@ fun VerticalPagerIndicator(
                 )
             }
         }
-        if (pagerState.currentPage < pageCount - 1) {
-            Icon(
-                modifier = Modifier
-                    .size(20.dp)
-                    .clickable { onItemMoved(1) },
-                imageVector = FontAwesomeIcons.Solid.ArrowCircleDown,
-                tint = MaterialTheme.colorScheme.primary,
-                contentDescription = null,
-            )
-        } else {
-            Spacer(modifier = Modifier.height(20.dp))
+        onItemMoved?.let {
+            if (pagerState.currentPage < pageCount - 1) {
+                Icon(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clickable { it(1) },
+                    imageVector = FontAwesomeIcons.Solid.ArrowCircleDown,
+                    tint = MaterialTheme.colorScheme.primary,
+                    contentDescription = null,
+                )
+            } else {
+                Spacer(modifier = Modifier.height(20.dp))
+            }
         }
     }
 }
@@ -181,7 +189,7 @@ fun HorizontalPagerIndicatorPreview() {
     MaterialTheme {
         HorizontalPagerIndicator(
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-            pagerState = rememberPagerState (pageCount = {16}, initialPage = 2),
+            pagerState = rememberPagerState(pageCount = { 16 }, initialPage = 2),
             onItemMoved = {}
         )
     }
@@ -193,7 +201,7 @@ fun VerticalPagerIndicatorPreview() {
     MaterialTheme {
         VerticalPagerIndicator(
             modifier = Modifier.fillMaxHeight().wrapContentWidth(),
-            pagerState = rememberPagerState (pageCount = {5}, initialPage = 2),
+            pagerState = rememberPagerState(pageCount = { 5 }, initialPage = 2),
             onItemMoved = {}
         )
     }
