@@ -58,6 +58,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -73,10 +74,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.client.QueueTrack
 import io.music_assistant.client.ui.compose.common.DataState
+import io.music_assistant.client.ui.compose.common.HorizontalPagerIndicator
 import io.music_assistant.client.ui.compose.main.PlayerAction
 import io.music_assistant.client.ui.compose.main.PlayerControls
 import io.music_assistant.client.utils.NavScreen
 import io.music_assistant.client.utils.conditional
+import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -289,8 +292,17 @@ private fun PlayersPager(
     showQueue: Boolean = true
 ) {
     var isQueueExpanded by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
     Column(modifier = modifier) {
-        PageIndicator(playerPagerState)
+        HorizontalPagerIndicator(
+            pagerState = playerPagerState,
+            onItemMoved = { offset ->
+                coroutineScope.launch {
+                    val newPage = (playerPagerState.currentPage + offset).coerceIn(0, playerPagerState.pageCount - 1)
+                    playerPagerState.animateScrollToPage(newPage)
+                }
+            }
+        )
         HorizontalPager(
             modifier = Modifier.wrapContentHeight(),
             state = playerPagerState
@@ -513,35 +525,6 @@ private fun PlayersPager(
             }
         }
 
-    }
-}
-
-@Composable
-private fun PageIndicator(
-    playerPagerState: PagerState
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        repeat(playerPagerState.pageCount) { index ->
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 4.dp)
-                    .size(if (index == playerPagerState.currentPage) 8.dp else 6.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (index == playerPagerState.currentPage)
-                            MaterialTheme.colorScheme.primary
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                alpha = 0.3f
-                            )
-                    )
-            )
-        }
     }
 }
 

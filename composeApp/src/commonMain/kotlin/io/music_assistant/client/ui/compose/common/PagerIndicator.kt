@@ -53,7 +53,7 @@ fun HorizontalPagerIndicator(
                     .size(20.dp)
                     .clickable { onItemMoved(-1) },
                 imageVector = FontAwesomeIcons.Solid.ArrowCircleLeft,
-                tint = MaterialTheme.colorScheme.secondary,
+                tint = MaterialTheme.colorScheme.primary,
                 contentDescription = null,
             )
         } else {
@@ -66,22 +66,26 @@ fun HorizontalPagerIndicator(
         ) {
             if (pageCount <= 10) {
                 repeat(pageCount) { index ->
-                    val color =
-                        if (pagerState.currentPage == index) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
                     Box(
                         modifier = Modifier
-                            .padding(2.dp)
+                            .padding(horizontal = 4.dp)
+                            .size(if (index == pagerState.currentPage) 8.dp else 6.dp)
                             .clip(CircleShape)
-                            .background(color)
-                            .size(4.dp)
+                            .background(
+                                if (index == pagerState.currentPage)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                        alpha = 0.3f
+                                    )
+                            )
                     )
                 }
             } else {
                 Text(
                     text = "${pagerState.currentPage + 1} / $pageCount",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.secondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
             }
@@ -92,7 +96,7 @@ fun HorizontalPagerIndicator(
                     .size(20.dp)
                     .clickable { onItemMoved(1) },
                 imageVector = FontAwesomeIcons.Solid.ArrowCircleRight,
-                tint = MaterialTheme.colorScheme.secondary,
+                tint = MaterialTheme.colorScheme.primary,
                 contentDescription = null,
             )
         } else {
@@ -119,7 +123,7 @@ fun VerticalPagerIndicator(
                     .size(20.dp)
                     .clickable { onItemMoved(-1) },
                 imageVector = FontAwesomeIcons.Solid.ArrowCircleUp,
-                tint = MaterialTheme.colorScheme.secondary,
+                tint = MaterialTheme.colorScheme.primary,
                 contentDescription = null,
             )
         } else {
@@ -132,22 +136,26 @@ fun VerticalPagerIndicator(
         ) {
             if (pageCount <= 10) {
                 repeat(pageCount) { index ->
-                    val color =
-                        if (pagerState.currentPage == index) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
                     Box(
                         modifier = Modifier
-                            .padding(2.dp)
+                            .padding(horizontal = 4.dp)
+                            .size(if (index == pagerState.currentPage) 8.dp else 6.dp)
                             .clip(CircleShape)
-                            .background(color)
-                            .size(4.dp)
+                            .background(
+                                if (index == pagerState.currentPage)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                        alpha = 0.3f
+                                    )
+                            )
                     )
                 }
             } else {
                 Text(
                     text = "${pagerState.currentPage + 1} / $pageCount",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.secondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
             }
@@ -158,7 +166,7 @@ fun VerticalPagerIndicator(
                     .size(20.dp)
                     .clickable { onItemMoved(1) },
                 imageVector = FontAwesomeIcons.Solid.ArrowCircleDown,
-                tint = MaterialTheme.colorScheme.secondary,
+                tint = MaterialTheme.colorScheme.primary,
                 contentDescription = null,
             )
         } else {
