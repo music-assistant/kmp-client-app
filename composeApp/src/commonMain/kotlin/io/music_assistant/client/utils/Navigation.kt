@@ -72,7 +72,7 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
                 MainScreen { screen -> backStack.add(screen) }
             }
             entry<NavScreen.Home> {
-                HomeScreen{ screen -> backStack.add(screen) }
+                HomeScreen(navigateTo = { screen -> backStack.add(screen) })
             }
             entry<NavScreen.Settings> {
                 SettingsScreen { if (backStack.last() is NavScreen.Settings) backStack.removeLastOrNull() }

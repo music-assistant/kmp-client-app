@@ -3,7 +3,6 @@ package io.music_assistant.client.api
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.server.RepeatMode
-import io.music_assistant.client.data.model.server.events.BuiltinPlayerState
 import io.music_assistant.client.utils.myJson
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -11,7 +10,6 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.encodeToJsonElement
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -22,13 +20,24 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
     @SerialName("message_id") val messageId: String = Uuid.random().toString()
 ) {
     data object Player {
-        fun command(
+        fun simpleCommand(
             playerId: String,
             command: String
         ) = Request(
             command = "players/cmd/$command",
             args = buildJsonObject {
                 put("player_id", JsonPrimitive(playerId))
+            }
+        )
+
+        fun setVolume(
+            playerId: String,
+            volumeLevel: Double,
+        ) = Request(
+            command = "players/cmd/volume_set",
+            args = buildJsonObject {
+                put("player_id", JsonPrimitive(playerId))
+                put("volume_level", JsonPrimitive(volumeLevel))
             }
         )
 

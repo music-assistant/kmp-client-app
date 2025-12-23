@@ -5,9 +5,9 @@ import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItem
-import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.client.Player
 import io.music_assistant.client.data.model.client.Player.Companion.toPlayer
+import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.client.Queue
 import io.music_assistant.client.data.model.client.QueueInfo
 import io.music_assistant.client.data.model.client.QueueInfo.Companion.toQueue
@@ -144,7 +144,7 @@ class MainDataSource(
                     is SessionState.Connected -> {
                         watchJob = watchApiEvents()
                         if (it.dataConnectionState == DataConnectionState.Authenticated || it.dataConnectionState == DataConnectionState.Anonymous) {
-                            //initBuiltinPlayer() TODO Sendspin?
+                            //initBuiltinPlayer() TODO Sendspin
                             updatePlayersAndQueues()
                         } else {
                             _serverPlayers.update { emptyList() }
@@ -176,12 +176,12 @@ class MainDataSource(
         }
         launch {
             playersData.collect { dataList ->
-                if (dataList.none { data -> data.playerId == _selectedPlayerId.value }) {
+                if (dataList.isNotEmpty()
+                    && dataList.none { data -> data.playerId == _selectedPlayerId.value }
+                ) {
                     _selectedPlayerId.update { dataList.getOrNull(0)?.playerId }
                 }
-                if (dataList.isNotEmpty() /*&& it.first().player.id != localPlayerId*/) {
-                    updatePlayersAndQueues()
-                }
+                updatePlayersAndQueues()
             }
         }
         launch {
@@ -236,19 +236,25 @@ class MainDataSource(
             when (action) {
                 PlayerAction.TogglePlayPause -> {
                     apiClient.sendRequest(
-                        Request.Player.command(playerId = data.player.id, command = "play_pause")
+                        Request.Player.simpleCommand(
+                            playerId = data.player.id,
+                            command = "play_pause"
+                        )
                     )
                 }
 
                 PlayerAction.Next -> {
                     apiClient.sendRequest(
-                        Request.Player.command(playerId = data.player.id, command = "next")
+                        Request.Player.simpleCommand(playerId = data.player.id, command = "next")
                     )
                 }
 
                 PlayerAction.Previous -> {
                     apiClient.sendRequest(
-                        Request.Player.command(playerId = data.player.id, command = "previous")
+                        Request.Player.simpleCommand(
+                            playerId = data.player.id,
+                            command = "previous"
+                        )
                     )
                 }
 
@@ -280,11 +286,15 @@ class MainDataSource(
                 )
 
                 PlayerAction.VolumeDown -> apiClient.sendRequest(
-                    Request.Player.command(playerId = data.player.id, command = "volume_down")
+                    Request.Player.simpleCommand(playerId = data.player.id, command = "volume_down")
                 )
 
                 PlayerAction.VolumeUp -> apiClient.sendRequest(
-                    Request.Player.command(playerId = data.player.id, command = "volume_up")
+                    Request.Player.simpleCommand(playerId = data.player.id, command = "volume_up")
+                )
+
+                is PlayerAction.VolumeSet -> apiClient.sendRequest(
+                    Request.Player.setVolume(playerId = data.player.id, volumeLevel = action.level)
                 )
             }
         }
