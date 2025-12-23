@@ -575,20 +575,22 @@ fun CompactPlayerItem(item: PlayerData) {
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = track?.name ?: "(idle)",
+                    text = track?.name ?: "--idle--",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = track?.subtitle ?: "",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                track?.subtitle?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
 
             // Compact controls
@@ -641,30 +643,43 @@ private fun FullPlayerItem(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = track?.name ?: "(idle)",
+                text = track?.name ?: "--idle--",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Text(
-                text = track?.subtitle ?: "",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            track?.subtitle?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
 
-        val currentProgress = track?.duration
-            ?.let { (item.queueInfo.elapsedTime?.toFloat() ?: 0f) / it.toFloat() } ?: 0f
+        val duration = track?.duration?.takeIf { it > 0 }?.toFloat()
+        val elapsed = item.queueInfo?.elapsedTime?.toFloat()
 
         // Progress bar
         Slider(
-            value = currentProgress,
+            value = elapsed ?: 0f,
+            valueRange = duration?.let { 0f..it } ?: 0f..1f,
+            enabled = elapsed?.takeIf { duration != null } != null,
             onValueChange = { /* TODO seek */ },
             modifier = Modifier.fillMaxWidth(),
-            thumb = {},
+            thumb = {
+                elapsed?.takeIf { duration != null }?.let {
+                    Box(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                    )
+                }
+            },
         )
 
         PlayerControls(
