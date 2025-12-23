@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -312,7 +313,17 @@ private fun PlayersPager(
                     enter = fadeIn(tween(300)) + expandVertically(tween(300)),
                     exit = fadeOut(tween(200)) + shrinkVertically(tween(300))
                 ) {
-                    CompactPlayerItem(item = player)
+                    if (showQueue) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentSize()
+                                .clickable { isQueueExpanded = !isQueueExpanded }) {
+                            CompactPlayerItem(item = player)
+                        }
+                    } else {
+                        CompactPlayerItem(item = player)
+                    }
                 }
 
                 Column(
