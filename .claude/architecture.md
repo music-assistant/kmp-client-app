@@ -101,3 +101,6 @@ fun FeatureScreen(viewModel: FeatureViewModel = koinViewModel()) {
 ## Misc rules
 
 - Don't ever use non-null assertions in live code (!!). Always handle nulls safely.
+- Use Kotlin-like idioms (e.g., prefer `let`, `also`, `apply` for scoping).
+- Instead of `if-else` chains, prefer `when` expressions for better readability.
+- Instead of `if-else` for nullable variable, use safe calls and the Elvis operator, or `?.let{} ?: run {}` expression.

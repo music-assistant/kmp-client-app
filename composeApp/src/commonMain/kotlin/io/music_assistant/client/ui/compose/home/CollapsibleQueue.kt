@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -78,78 +79,56 @@ fun CollapsibleQueue(
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 contentAlignment = Alignment.Center
             ) {
-                when (queue) {
-                    is DataState.Error -> Text(
-                        text = "Error loading queue",
+                val message: String? = when (queue) {
+                    is DataState.Error -> "Error loading queue"
+                    is DataState.Loading -> "Loading queue..."
+                    is DataState.NoData -> "No items"
+                    is DataState.Data -> when (queue.data.items) {
+                        is DataState.Error -> "Error loading queue"
+                        is DataState.Loading -> "Loading queue..."
+                        is DataState.NoData -> "Not loaded"
+                        is DataState.Data -> null
+                    }
+                }
+
+                message?.let {
+                    Text(
+                        text = message,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                } ?: run {
+                    val queueData = (queue as DataState.Data).data
+                    val items = (queueData.items as DataState.Data).data
 
-                    is DataState.Loading -> Text(
-                        text = "Loading queue...",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-
-                    is DataState.NoData -> Text(
-                        text = "No items",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-
-                    is DataState.Data -> {
-                        when (val items = queue.data.items) {
-                            is DataState.Error -> Text(
-                                text = "Error loading queue",
+                    if (items.isEmpty()) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "Queue is empty",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                            OutlinedButton(onClick = { navigateTo(NavScreen.Library(libraryArgs)) }) {
+                                Text(text = "Browse Library")
+                            }
+                        }
+                    } else {
+                        val currentItemId = queueData.info.currentItem?.id
+                        val currentItemIndex = currentItemId?.let { id ->
+                            items.indexOfFirst { it.id == id }
+                        } ?: -1
 
-                            is DataState.Loading -> Text(
-                                text = "Loading queue...",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-
-                            is DataState.NoData -> Text(
-                                text = "Not loaded",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-
-                            is DataState.Data -> {
-                                if (items.data.isEmpty()) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(
-                                            text = "Queue is empty",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                        Button(onClick = { navigateTo(NavScreen.Library(libraryArgs)) }) {
-                                            Text(text = "Browse Library")
-                                        }
-                                    }
-                                } else {
-                                    val currentItemId = queue.data.info.currentItem?.id
-                                    val currentItemIndex = currentItemId?.let { id ->
-                                        items.data.indexOfFirst { it.id == id }
-                                    } ?: -1
-
-                                    LazyColumn(
-                                        modifier = Modifier.fillMaxSize(),
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        items(items.data.size) { index ->
-                                            QueueItemRow(
-                                                item = items.data[index],
-                                                position = index + 1,
-                                                isCurrentItem = index == currentItemIndex,
-                                                isPlayedItem = currentItemIndex >= 0 && index < currentItemIndex
-                                            )
-                                        }
-                                    }
-                                }
-
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            items(items.size) { index ->
+                                QueueItemRow(
+                                    item = items[index],
+                                    position = index + 1,
+                                    isCurrentItem = index == currentItemIndex,
+                                    isPlayedItem = currentItemIndex >= 0 && index < currentItemIndex
+                                )
                             }
                         }
                     }

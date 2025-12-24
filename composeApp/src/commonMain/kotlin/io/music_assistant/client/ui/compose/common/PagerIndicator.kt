@@ -41,7 +41,6 @@ import compose.icons.fontawesomeicons.solid.ArrowCircleDown
 import compose.icons.fontawesomeicons.solid.ArrowCircleLeft
 import compose.icons.fontawesomeicons.solid.ArrowCircleRight
 import compose.icons.fontawesomeicons.solid.ArrowCircleUp
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
