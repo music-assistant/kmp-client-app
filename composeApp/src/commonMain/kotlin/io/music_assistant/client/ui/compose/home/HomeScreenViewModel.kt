@@ -64,14 +64,15 @@ class HomeScreenViewModel(
         viewModelScope.launch {
             apiClient.sessionState.collect { connection ->
                 _recommendationsState.update { state -> state.copy(connectionState = connection) }
-                if (connection is SessionState.Connected && _recommendationsState.value.recommendations is DataState.Loading) {
-                    loadRecommendations()
-                }
                 when (connection) {
                     is SessionState.Connected -> {
                         when (val connState = connection.dataConnectionState) {
                             DataConnectionState.Anonymous,
                             DataConnectionState.Authenticated -> {
+                                // Load recommendations when data connection is ready
+                                if (_recommendationsState.value.recommendations is DataState.Loading) {
+                                    loadRecommendations()
+                                }
                                 _playersState.update { PlayersState.Loading }
                                 stopJobs()
                                 jobs.add(watchPlayersData())

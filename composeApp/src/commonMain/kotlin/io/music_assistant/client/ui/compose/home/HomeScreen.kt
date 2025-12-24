@@ -184,7 +184,7 @@ fun HomeScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .wrapContentHeight()
-                                .defaultMinSize(minHeight = 80.dp)
+                                .defaultMinSize(minHeight = 120.dp)
                                 .clickable { showPlayersView = true }
                                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                                 .padding(top = 8.dp),
