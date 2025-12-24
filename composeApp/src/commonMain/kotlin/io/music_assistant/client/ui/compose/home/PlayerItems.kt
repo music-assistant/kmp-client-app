@@ -21,6 +21,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderColors
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.music_assistant.client.data.model.client.PlayerData
@@ -204,11 +206,13 @@ fun FullPlayerItem(
             enabled = elapsed?.takeIf { duration != null } != null,
             onValueChange = { /* TODO seek */ },
             modifier = Modifier.fillMaxWidth(),
-            thumb = {
+            thumb = { state ->
                 elapsed?.takeIf { duration != null }?.let {
                     SliderDefaults.Thumb(
                         interactionSource = remember { MutableInteractionSource() },
-                        thumbSize = androidx.compose.ui.unit.DpSize(16.dp, 16.dp)
+                        thumbSize = DpSize(16.dp, 16.dp),
+                        colors = SliderDefaults.colors()
+                            .copy(thumbColor = MaterialTheme.colorScheme.secondary),
                     )
                 }
             },

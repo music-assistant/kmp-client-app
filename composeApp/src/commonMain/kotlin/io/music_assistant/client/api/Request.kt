@@ -41,6 +41,17 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
             }
         )
 
+        fun setMute(
+            playerId: String,
+            muted: Boolean,
+        ) = Request(
+            command = "players/cmd/volume_mute",
+            args = buildJsonObject {
+                put("player_id", JsonPrimitive(playerId))
+                put("muted", JsonPrimitive(muted))
+            }
+        )
+
 //        fun registerBuiltIn(playerName: String, playerId: String) = Request(
 //            command = "builtin_player/register",
 //            args = buildJsonObject {

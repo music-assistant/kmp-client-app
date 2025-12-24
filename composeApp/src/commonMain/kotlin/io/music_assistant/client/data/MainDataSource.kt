@@ -293,6 +293,10 @@ class MainDataSource(
                     Request.Player.simpleCommand(playerId = data.player.id, command = "volume_up")
                 )
 
+                PlayerAction.ToggleMute -> apiClient.sendRequest(
+                    Request.Player.setMute(playerId = data.player.id, !data.player.volumeMuted)
+                )
+
                 is PlayerAction.VolumeSet -> apiClient.sendRequest(
                     Request.Player.setVolume(playerId = data.player.id, volumeLevel = action.level)
                 )

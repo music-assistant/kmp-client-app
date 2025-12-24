@@ -34,6 +34,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeMute
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MusicNote
@@ -57,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -395,10 +397,18 @@ private fun PlayersPager(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                            modifier = Modifier
+                                .size(24.dp)
+                                .alpha(if (player.player.canMute) 1F else 0.5f)
+                                .clickable(enabled = player.player.canMute) {
+                                    playerAction(player, PlayerAction.ToggleMute)
+                                },
+                            imageVector = if (player.player.volumeMuted)
+                                Icons.AutoMirrored.Filled.VolumeMute
+                            else
+                                Icons.AutoMirrored.Filled.VolumeUp,
                             contentDescription = "Volume",
-                            modifier = Modifier.size(32.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = MaterialTheme.colorScheme.primary
                         )
                         Slider(
                             modifier = Modifier.weight(1f),
@@ -414,7 +424,9 @@ private fun PlayersPager(
                             thumb = {
                                 SliderDefaults.Thumb(
                                     interactionSource = remember { MutableInteractionSource() },
-                                    thumbSize = androidx.compose.ui.unit.DpSize(16.dp, 16.dp)
+                                    thumbSize = androidx.compose.ui.unit.DpSize(16.dp, 16.dp),
+                                    colors = SliderDefaults.colors()
+                                        .copy(thumbColor = MaterialTheme.colorScheme.secondary),
                                 )
                             },
                             track = { sliderState ->

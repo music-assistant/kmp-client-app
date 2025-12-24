@@ -8,8 +8,8 @@ sealed interface PlayerAction {
     data object Previous : PlayerAction
     data object VolumeUp : PlayerAction
     data object VolumeDown : PlayerAction
-
     data class VolumeSet(val level: Double): PlayerAction
+    data object ToggleMute: PlayerAction
     data class ToggleShuffle(val current: Boolean) : PlayerAction
     data class ToggleRepeatMode(val current: RepeatMode) : PlayerAction
     data class SeekTo(val pos: Long) : PlayerAction
