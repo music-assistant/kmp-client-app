@@ -13,6 +13,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
@@ -37,7 +39,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeMute
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -74,6 +75,9 @@ import io.music_assistant.client.ui.compose.nav.BackHandler
 import io.music_assistant.client.utils.NavScreen
 import io.music_assistant.client.utils.conditional
 import kotlinx.coroutines.launch
+import musicassistantclient.composeapp.generated.resources.Res
+import musicassistantclient.composeapp.generated.resources.ic_ma_logo
+import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -113,7 +117,9 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             Surface(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding(),
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 2.dp
             ) {
@@ -122,15 +128,13 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // TODO: Replace with actual logo
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = "Logo",
-                        modifier = Modifier.size(32.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                    Image(
+                        painter = painterResource(Res.drawable.ic_ma_logo),
+                        contentDescription = "Music Assistant Logo",
+                        modifier = Modifier.size(48.dp)
                     )
                     Text(
-                        text = "MASSIVE",
+                        text = "MASS",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 2.sp,

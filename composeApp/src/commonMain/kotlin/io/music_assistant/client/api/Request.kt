@@ -30,6 +30,16 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
             }
         )
 
+        fun seek(
+            queueId: String,
+            position: Long,
+        ) = Request(
+            command = "players/cmd/seek",
+            args = buildJsonObject {
+                put("player_id", JsonPrimitive(queueId))
+                put("position", JsonPrimitive(position))
+            })
+
         fun setVolume(
             playerId: String,
             volumeLevel: Double,
@@ -155,16 +165,6 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
             args = buildJsonObject {
                 put("queue_id", JsonPrimitive(queueId))
                 put("shuffle_enabled", JsonPrimitive(enabled))
-            })
-
-        fun seek(
-            queueId: String,
-            position: Long,
-        ) = Request(
-            command = "player_queues/seek",
-            args = buildJsonObject {
-                put("queue_id", JsonPrimitive(queueId))
-                put("position", JsonPrimitive(position))
             })
     }
 

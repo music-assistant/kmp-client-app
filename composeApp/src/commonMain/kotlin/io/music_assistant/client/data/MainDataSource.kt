@@ -237,7 +237,7 @@ class MainDataSource(
                 PlayerAction.TogglePlayPause -> {
                     apiClient.sendRequest(
                         Request.Player.simpleCommand(
-                            playerId = data.player.id,
+                            playerId = data.playerId,
                             command = "play_pause"
                         )
                     )
@@ -245,14 +245,14 @@ class MainDataSource(
 
                 PlayerAction.Next -> {
                     apiClient.sendRequest(
-                        Request.Player.simpleCommand(playerId = data.player.id, command = "next")
+                        Request.Player.simpleCommand(playerId = data.playerId, command = "next")
                     )
                 }
 
                 PlayerAction.Previous -> {
                     apiClient.sendRequest(
                         Request.Player.simpleCommand(
-                            playerId = data.player.id,
+                            playerId = data.playerId,
                             command = "previous"
                         )
                     )
@@ -260,9 +260,9 @@ class MainDataSource(
 
                 is PlayerAction.SeekTo -> {
                     apiClient.sendRequest(
-                        Request.Queue.seek(
-                            queueId = data.queueInfo?.id ?: return@launch,
-                            position = action.pos
+                        Request.Player.seek(
+                            queueId = data.playerId,
+                            position = action.position
                         )
                     )
                 }

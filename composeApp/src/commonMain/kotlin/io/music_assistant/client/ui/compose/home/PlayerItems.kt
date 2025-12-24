@@ -41,7 +41,11 @@ import io.music_assistant.client.ui.compose.main.PlayerAction
 import io.music_assistant.client.ui.compose.main.PlayerControls
 
 @Composable
-fun CompactPlayerItem(item: PlayerData, serverUrl: String?, playerAction: (PlayerData, PlayerAction) -> Unit) {
+fun CompactPlayerItem(
+    item: PlayerData,
+    serverUrl: String?,
+    playerAction: (PlayerData, PlayerAction) -> Unit
+) {
     val track = item.queueInfo?.currentItem?.track
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
@@ -204,7 +208,7 @@ fun FullPlayerItem(
             value = elapsed ?: 0f,
             valueRange = duration?.let { 0f..it } ?: 0f..1f,
             enabled = elapsed?.takeIf { duration != null } != null,
-            onValueChange = { /* TODO seek */ },
+            onValueChange = { playerAction(item, PlayerAction.SeekTo(it.toLong())) },
             modifier = Modifier.fillMaxWidth(),
             thumb = { state ->
                 elapsed?.takeIf { duration != null }?.let {
