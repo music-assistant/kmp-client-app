@@ -102,7 +102,7 @@ fun CollapsibleQueue(
                     val items = (queueData.items as DataState.Data).data
 
                     if (items.isEmpty()) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
                             Text(
                                 text = "Queue is empty",
                                 style = MaterialTheme.typography.bodyMedium,

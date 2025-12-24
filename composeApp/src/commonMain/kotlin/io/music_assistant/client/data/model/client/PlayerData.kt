@@ -25,7 +25,20 @@ data class PlayerData(
                         is DataState.Loading -> queue
                         is DataState.Error -> queue
                         is DataState.NoData -> queue
-                        is DataState.Data -> other.queue
+                        is DataState.Data -> {
+                            // Preserve queue items if new data doesn't have them loaded
+                            val oldQueueData = queue.data
+                            val newQueueData = other.queue.data
+                            when (newQueueData.items) {
+                                is DataState.NoData -> {
+                                    // Keep old items, but update queue info
+                                    DataState.Data(
+                                        newQueueData.copy(items = oldQueueData.items)
+                                    )
+                                }
+                                else -> other.queue
+                            }
+                        }
                     }
                 }
 
