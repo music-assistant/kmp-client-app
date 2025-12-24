@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,18 +24,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.music_assistant.client.data.model.client.Queue
 import io.music_assistant.client.ui.compose.common.DataState
+import io.music_assistant.client.ui.compose.library.LibraryArgs
+import io.music_assistant.client.utils.NavScreen
 
 @Composable
 fun CollapsibleQueue(
     modifier: Modifier = Modifier,
     queue: DataState<Queue>,
+    libraryArgs: LibraryArgs,
     isQueueExpanded: Boolean,
-    onQueueExpandedSwitch: () -> Unit
+    onQueueExpandedSwitch: () -> Unit,
+    navigateTo: (NavScreen) -> Unit,
 ) {
     Column(
         modifier = modifier
@@ -76,13 +80,13 @@ fun CollapsibleQueue(
             ) {
                 when (queue) {
                     is DataState.Error -> Text(
-                        text = "Error loading",
+                        text = "Error loading queue",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
 
                     is DataState.Loading -> Text(
-                        text = "Loading...",
+                        text = "Loading queue...",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -96,13 +100,13 @@ fun CollapsibleQueue(
                     is DataState.Data -> {
                         when (val items = queue.data.items) {
                             is DataState.Error -> Text(
-                                text = "Error loading",
+                                text = "Error loading queue",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
 
                             is DataState.Loading -> Text(
-                                text = "Loading...",
+                                text = "Loading queue...",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -115,11 +119,16 @@ fun CollapsibleQueue(
 
                             is DataState.Data -> {
                                 if (items.data.isEmpty()) {
-                                    Text(
-                                        text = "No items",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = "Queue is empty",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                        Button(onClick = { navigateTo(NavScreen.Library(libraryArgs)) }) {
+                                            Text(text = "Browse Library")
+                                        }
+                                    }
                                 } else {
                                     val currentItemId = queue.data.info.currentItem?.id
                                     val currentItemIndex = currentItemId?.let { id ->

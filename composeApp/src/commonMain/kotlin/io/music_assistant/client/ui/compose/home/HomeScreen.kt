@@ -215,7 +215,8 @@ fun HomeScreen(
                                                 viewModel.playerAction(playerData, action)
                                             },
                                             showQueue = false,
-                                            onItemMoved = null
+                                            onItemMoved = null,
+                                            navigateTo = navigateTo
                                         )
                                     }
                                 }
@@ -264,7 +265,7 @@ fun HomeScreen(
                                     playerAction = { playerData, action ->
                                         viewModel.playerAction(playerData, action)
                                     },
-                                    onItemMoved = { indexShift ->
+                                    { indexShift ->
                                         val newIndex =
                                             (playerPagerState.currentPage + indexShift).coerceIn(
                                                 0,
@@ -282,7 +283,8 @@ fun HomeScreen(
                                         coroutineScope.launch {
                                             playerPagerState.animateScrollToPage(newIndex)
                                         }
-                                    }
+                                    },
+                                    navigateTo = navigateTo
                                 )
                             }
                         }
@@ -312,6 +314,7 @@ private fun PlayersPager(
     playerAction: (PlayerData, PlayerAction) -> Unit,
     showQueue: Boolean = true,
     onItemMoved: ((Int) -> Unit)?,
+    navigateTo: (NavScreen) -> Unit,
 ) {
     var isQueueExpanded by remember { mutableStateOf(false) }
     Column(modifier = modifier) {
@@ -453,8 +456,10 @@ private fun PlayersPager(
                                 ifFalse = { wrapContentHeight() }
                             ),
                         queue = queue,
+                        libraryArgs = player.libraryArgs,
                         isQueueExpanded = isQueueExpanded,
-                        onQueueExpandedSwitch = { isQueueExpanded = !isQueueExpanded }
+                        onQueueExpandedSwitch = { isQueueExpanded = !isQueueExpanded },
+                        navigateTo = navigateTo,
                     )
                 }
             }
@@ -471,7 +476,8 @@ fun PlayersView(
     playersState: HomeScreenViewModel.PlayersState.Data,
     serverUrl: String?,
     playerAction: (PlayerData, PlayerAction) -> Unit,
-    onItemMoved: ((Int) -> Unit)
+    onItemMoved: ((Int) -> Unit),
+    navigateTo: (NavScreen) -> Unit
 ) {
 
     Column(
@@ -493,6 +499,7 @@ fun PlayersView(
             serverUrl = serverUrl,
             playerAction = playerAction,
             onItemMoved = onItemMoved,
+            navigateTo = navigateTo,
         )
     }
 }
