@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -87,6 +88,7 @@ fun HomeScreen(
     navigateTo: (NavScreen) -> Unit,
 ) {
     var showPlayersView by remember { mutableStateOf(false) }
+    var isQueueExpanded by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
     val recommendationsState = viewModel.recommendationsState.collectAsStateWithLifecycle()
@@ -118,15 +120,14 @@ fun HomeScreen(
         topBar = {
             Surface(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding(),
+                    .fillMaxWidth(),
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 2.dp
             ) {
                 Row(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(8.dp).statusBarsPadding(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Image(
                         painter = painterResource(Res.drawable.ic_ma_logo),
@@ -179,35 +180,29 @@ fun HomeScreen(
                             onRowActionClick = { id -> viewModel.onRowButtonClicked(id) },
                         )
 
-                        Column(
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .wrapContentHeight()
+                                .defaultMinSize(minHeight = 80.dp)
                                 .clickable { showPlayersView = true }
                                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                                 .padding(top = 8.dp),
+                            contentAlignment = Alignment.Center
                         ) {
                             when (val state = playersState) {
                                 is HomeScreenViewModel.PlayersState.Loading -> Text(
-                                    modifier = Modifier.fillMaxWidth().height(80.dp),
                                     text = "Loading players...",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
                                 )
 
                                 is HomeScreenViewModel.PlayersState.Data -> {
                                     if (state.playerData.isEmpty()) {
                                         Text(
-                                            modifier = Modifier.fillMaxWidth().height(80.dp),
                                             text = "No players available",
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            textAlign = TextAlign.Center,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
                                         )
                                     } else {
                                         PlayersPager(
@@ -219,6 +214,10 @@ fun HomeScreen(
                                                 viewModel.playerAction(playerData, action)
                                             },
                                             showQueue = false,
+                                            isQueueExpanded = isQueueExpanded,
+                                            onQueueExpandedSwitch = {
+                                                isQueueExpanded = !isQueueExpanded
+                                            },
                                             onItemMoved = null,
                                             navigateTo = navigateTo
                                         )
@@ -226,82 +225,95 @@ fun HomeScreen(
                                 }
 
                                 else -> Text(
-                                    modifier = Modifier.fillMaxWidth().height(80.dp),
                                     text = "No players available",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
                     }
                 } else {
-                    when (val state = playersState) {
-                        is HomeScreenViewModel.PlayersState.Loading -> Text(
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    ) {
+                        // Close button
+                        IconButton(
+                            onClick = { showPlayersView = false },
+                            modifier = Modifier.fillMaxWidth()
+                                .align(Alignment.CenterHorizontally)
+                        ) {
+                            Icon(
+                                Icons.Default.ExpandMore,
+                                "Collapse",
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                        Box(
                             modifier = Modifier.fillMaxSize(),
-                            text = "Loading players...",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                            contentAlignment = Alignment.Center
+                        ) {
+                            when (val state = playersState) {
+                                is HomeScreenViewModel.PlayersState.Loading -> Text(
+                                    text = "Loading players...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
 
-                        is HomeScreenViewModel.PlayersState.Data -> {
-                            if (state.playerData.isEmpty()) {
-                                Text(
-                                    modifier = Modifier.fillMaxSize(),
+                                is HomeScreenViewModel.PlayersState.Data -> {
+                                    if (state.playerData.isEmpty()) {
+                                        Text(
+                                            text = "No players available",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    } else {
+                                        PlayersPager(
+                                            modifier = Modifier.fillMaxSize(),
+                                            playerPagerState = playerPagerState,
+                                            playersState = state,
+                                            serverUrl = serverUrl,
+                                            playerAction = { playerData, action ->
+                                                viewModel.playerAction(playerData, action)
+                                            },
+                                            showQueue = true,
+                                            isQueueExpanded = isQueueExpanded,
+                                            onQueueExpandedSwitch = {
+                                                isQueueExpanded = !isQueueExpanded
+                                            },
+                                            onItemMoved = { indexShift ->
+                                                val newIndex =
+                                                    (playerPagerState.currentPage + indexShift).coerceIn(
+                                                        0,
+                                                        state.playerData.size - 1
+                                                    )
+                                                val newPlayers =
+                                                    state.playerData.map { it.player.id }
+                                                        .toMutableList()
+                                                        .apply {
+                                                            add(
+                                                                newIndex,
+                                                                removeAt(playerPagerState.currentPage)
+                                                            )
+                                                        }
+                                                viewModel.onPlayersSortChanged(newPlayers)
+                                                coroutineScope.launch {
+                                                    playerPagerState.animateScrollToPage(newIndex)
+                                                }
+                                            },
+                                            navigateTo = navigateTo,
+                                        )
+                                    }
+                                }
+
+                                else -> Text(
                                     text = "No players available",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            } else {
-                                PlayersView(
-                                    onCollapse = { showPlayersView = false },
-                                    playerPagerState = playerPagerState,
-                                    playersState = state,
-                                    serverUrl = serverUrl,
-                                    playerAction = { playerData, action ->
-                                        viewModel.playerAction(playerData, action)
-                                    },
-                                    { indexShift ->
-                                        val newIndex =
-                                            (playerPagerState.currentPage + indexShift).coerceIn(
-                                                0,
-                                                state.playerData.size - 1
-                                            )
-                                        val newPlayers =
-                                            state.playerData.map { it.player.id }.toMutableList()
-                                                .apply {
-                                                    add(
-                                                        newIndex,
-                                                        removeAt(playerPagerState.currentPage)
-                                                    )
-                                                }
-                                        viewModel.onPlayersSortChanged(newPlayers)
-                                        coroutineScope.launch {
-                                            playerPagerState.animateScrollToPage(newIndex)
-                                        }
-                                    },
-                                    navigateTo = navigateTo
                                 )
                             }
                         }
-
-                        else -> Text(
-                            modifier = Modifier.fillMaxSize(),
-                            text = "No players available",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
                     }
                 }
             }
@@ -316,11 +328,12 @@ private fun PlayersPager(
     playersState: HomeScreenViewModel.PlayersState.Data,
     serverUrl: String?,
     playerAction: (PlayerData, PlayerAction) -> Unit,
-    showQueue: Boolean = true,
+    showQueue: Boolean,
+    isQueueExpanded: Boolean,
+    onQueueExpandedSwitch: () -> Unit,
     onItemMoved: ((Int) -> Unit)?,
     navigateTo: (NavScreen) -> Unit,
 ) {
-    var isQueueExpanded by remember { mutableStateOf(false) }
     Column(modifier = modifier) {
         HorizontalPagerIndicator(
             pagerState = playerPagerState,
@@ -356,7 +369,7 @@ private fun PlayersPager(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .wrapContentSize()
-                                .clickable { isQueueExpanded = !isQueueExpanded }) {
+                                .clickable { onQueueExpandedSwitch() }) {
                             CompactPlayerItem(
                                 item = player,
                                 serverUrl = serverUrl,
@@ -462,49 +475,13 @@ private fun PlayersPager(
                         queue = queue,
                         libraryArgs = player.libraryArgs,
                         isQueueExpanded = isQueueExpanded,
-                        onQueueExpandedSwitch = { isQueueExpanded = !isQueueExpanded },
+                        onQueueExpandedSwitch = { onQueueExpandedSwitch() },
                         navigateTo = navigateTo,
                     )
                 }
             }
         }
 
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun PlayersView(
-    onCollapse: () -> Unit,
-    playerPagerState: PagerState,
-    playersState: HomeScreenViewModel.PlayersState.Data,
-    serverUrl: String?,
-    playerAction: (PlayerData, PlayerAction) -> Unit,
-    onItemMoved: ((Int) -> Unit),
-    navigateTo: (NavScreen) -> Unit
-) {
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-    ) {
-        // Close button
-        IconButton(
-            onClick = onCollapse,
-            modifier = Modifier.fillMaxWidth().align(Alignment.CenterHorizontally)
-        ) {
-            Icon(Icons.Default.ExpandMore, "Collapse", modifier = Modifier.size(32.dp))
-        }
-        PlayersPager(
-            modifier = Modifier.fillMaxSize(),
-            playerPagerState = playerPagerState,
-            playersState = playersState,
-            serverUrl = serverUrl,
-            playerAction = playerAction,
-            onItemMoved = onItemMoved,
-            navigateTo = navigateTo,
-        )
     }
 }
 

@@ -25,7 +25,7 @@ import compose.icons.fontawesomeicons.solid.VolumeDown
 import compose.icons.fontawesomeicons.solid.VolumeUp
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.server.RepeatMode
-import io.music_assistant.client.ui.compose.common.ActionIcon
+import io.music_assistant.client.ui.compose.common.ActionButton
 
 @Composable
 fun PlayerControls(
@@ -46,13 +46,13 @@ fun PlayerControls(
         modifier = modifier
             .wrapContentSize(),
         horizontalArrangement = Arrangement.spacedBy(
-            8.dp,
+            16.dp,
             alignment = Alignment.CenterHorizontally
         ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (player.canSetVolume && showVolumeButtons) {
-            ActionIcon(
+            ActionButton(
                 icon = FontAwesomeIcons.Solid.VolumeDown,
                 tint = MaterialTheme.colorScheme.primary,
                 size = smallButtonSize,
@@ -62,7 +62,7 @@ fun PlayerControls(
 
         if (showAdditionalButtons) {
             queue?.let {
-                ActionIcon(
+                ActionButton(
                     icon = if (it.shuffleEnabled)
                         Icons.Default.ShuffleOn
                     else
@@ -79,14 +79,14 @@ fun PlayerControls(
             }
         }
 
-        ActionIcon(
+        ActionButton(
             icon = Icons.Default.SkipPrevious,
             tint = MaterialTheme.colorScheme.primary,
             size = smallButtonSize,
             enabled = enabled && buttonsEnabled,
         ) { playerAction(playerData, PlayerAction.Previous) }
 
-        ActionIcon(
+        ActionButton(
             icon = when (player.isPlaying) {
                 true -> Icons.Default.Pause
                 false -> Icons.Default.PlayArrow
@@ -96,7 +96,7 @@ fun PlayerControls(
             enabled = enabled && buttonsEnabled,
         ) { playerAction(playerData, PlayerAction.TogglePlayPause) }
 
-        ActionIcon(
+        ActionButton(
             icon = Icons.Default.SkipNext,
             tint = MaterialTheme.colorScheme.primary,
             size = smallButtonSize,
@@ -106,7 +106,7 @@ fun PlayerControls(
         if (showAdditionalButtons) {
             queue?.let {
                 val repeatMode = it.repeatMode
-                ActionIcon(
+                ActionButton(
                     icon = when (repeatMode) {
                         RepeatMode.ONE -> Icons.Default.RepeatOne
                         RepeatMode.ALL -> Icons.Default.RepeatOn
@@ -128,7 +128,7 @@ fun PlayerControls(
         }
 
         if (player.canSetVolume && showVolumeButtons) {
-            ActionIcon(
+            ActionButton(
                 icon = FontAwesomeIcons.Solid.VolumeUp,
                 tint = MaterialTheme.colorScheme.primary,
                 size = smallButtonSize,

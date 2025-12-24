@@ -10,7 +10,7 @@ import compose.icons.tablericons.CircleDashed
 import compose.icons.tablericons.CircleX
 import compose.icons.tablericons.PlayerPlay
 import io.music_assistant.client.data.model.client.QueueTrack
-import io.music_assistant.client.ui.compose.common.ActionIcon
+import io.music_assistant.client.ui.compose.common.ActionButton
 
 @Composable
 fun QueueTrackControls(
@@ -21,7 +21,7 @@ fun QueueTrackControls(
     onChosenItemsClear: () -> Unit
 ) {
 
-    ActionIcon(
+    ActionButton(
         icon = TablerIcons.CircleDashed,
         size = 24.dp,
         enabled = enabled
@@ -34,7 +34,7 @@ fun QueueTrackControls(
     )
     queueId?.let {
         if (chosenItems.size == 1) {
-            ActionIcon(
+            ActionButton(
                 icon = TablerIcons.PlayerPlay,
                 size = 24.dp,
                 enabled = enabled
@@ -44,7 +44,7 @@ fun QueueTrackControls(
                 )
             }
         }
-        ActionIcon(
+        ActionButton(
             icon = TablerIcons.CircleX,
             size = 24.dp,
             enabled = enabled

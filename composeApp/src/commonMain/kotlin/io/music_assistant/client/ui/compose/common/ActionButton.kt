@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun ActionIcon(
+fun ActionButton(
     icon: ImageVector,
     size: Dp = 24.dp,
     tint: Color = MaterialTheme.colorScheme.primary,

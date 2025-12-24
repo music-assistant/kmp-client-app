@@ -42,7 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.ArrowLeft
-import io.music_assistant.client.ui.compose.common.ActionIcon
+import io.music_assistant.client.ui.compose.common.ActionButton
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import io.music_assistant.client.ui.theme.ThemeSetting
 import io.music_assistant.client.ui.theme.ThemeViewModel
@@ -93,7 +93,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     .padding(all = 16.dp),
             ) {
                 if (dataConnection == DataConnectionState.Authenticated || dataConnection == DataConnectionState.Anonymous) {
-                    ActionIcon(
+                    ActionButton(
                         icon = FontAwesomeIcons.Solid.ArrowLeft,
                         size = 24.dp
                     ) {

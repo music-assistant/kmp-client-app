@@ -21,7 +21,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderColors
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -210,7 +209,7 @@ fun FullPlayerItem(
             enabled = elapsed?.takeIf { duration != null } != null,
             onValueChange = { playerAction(item, PlayerAction.SeekTo(it.toLong())) },
             modifier = Modifier.fillMaxWidth(),
-            thumb = { state ->
+            thumb = {
                 elapsed?.takeIf { duration != null }?.let {
                     SliderDefaults.Thumb(
                         interactionSource = remember { MutableInteractionSource() },
@@ -235,7 +234,8 @@ fun FullPlayerItem(
             playerData = item,
             playerAction = playerAction,
             enabled = !item.player.isAnnouncing,
-            showVolumeButtons = false
+            showVolumeButtons = false,
+            mainButtonSize = 64.dp
         )
     }
 }

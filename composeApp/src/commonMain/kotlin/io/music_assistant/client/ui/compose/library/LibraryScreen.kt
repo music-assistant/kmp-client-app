@@ -92,7 +92,7 @@ import compose.icons.tablericons.SquareCheck
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
-import io.music_assistant.client.ui.compose.common.ActionIcon
+import io.music_assistant.client.ui.compose.common.ActionButton
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.painters.MusicNotePainter
 import io.music_assistant.client.ui.compose.common.ToastHost
@@ -236,7 +236,7 @@ private fun Library(
                     .padding(all = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                ActionIcon(
+                ActionButton(
                     icon = FontAwesomeIcons.Solid.ArrowLeft,
                 ) { onBack() }
                 if (state.checkedItems.isEmpty()) {
@@ -261,7 +261,7 @@ private fun Library(
                         pair.takeIf { pair.second > 0 }
                             ?.let { "${it.second} ${it.first}${if (it.second > 1) "s" else ""}" }
                     }.joinToString(separator = ", ").capitalize(Locale.current)
-                    ActionIcon(
+                    ActionButton(
                         icon = TablerIcons.CircleDashed,
                         size = 24.dp,
                     ) { onCheckedItemsClear() }
@@ -270,19 +270,19 @@ private fun Library(
                             .basicMarquee(iterations = 100),
                         text = "$chosenItemsDescription, player: ${args.name}",
                     )
-                    ActionIcon(
+                    ActionButton(
                         icon = TablerIcons.PlayerPlay,
                         size = 24.dp
                     ) { onPlaySelectedItems(QueueOption.PLAY) }
-                    ActionIcon(
+                    ActionButton(
                         icon = TablerIcons.PlayerTrackNext,
                         size = 24.dp
                     ) { onPlaySelectedItems(QueueOption.NEXT) }
-                    ActionIcon(
+                    ActionButton(
                         icon = TablerIcons.Plus,
                         size = 24.dp
                     ) { onPlaySelectedItems(QueueOption.ADD) }
-                    ActionIcon(
+                    ActionButton(
                         icon = TablerIcons.Replace,
                         size = 24.dp
                     ) { onPlaySelectedItems(QueueOption.REPLACE) }
