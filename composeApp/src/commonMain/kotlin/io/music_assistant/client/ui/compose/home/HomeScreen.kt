@@ -4,7 +4,6 @@ package io.music_assistant.client.ui.compose.home
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -16,6 +15,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,14 +29,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
@@ -46,6 +44,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -60,22 +59,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import io.music_assistant.client.data.model.client.PlayerData
-import io.music_assistant.client.data.model.client.Queue
 import io.music_assistant.client.data.model.client.QueueTrack
-import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.HorizontalPagerIndicator
 import io.music_assistant.client.ui.compose.main.PlayerAction
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import io.music_assistant.client.utils.NavScreen
-import io.music_assistant.client.utils.SessionState
 import io.music_assistant.client.utils.conditional
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
@@ -354,10 +348,18 @@ private fun PlayersPager(
                                 .fillMaxWidth()
                                 .wrapContentSize()
                                 .clickable { isQueueExpanded = !isQueueExpanded }) {
-                            CompactPlayerItem(item = player, serverUrl = serverUrl)
+                            CompactPlayerItem(
+                                item = player,
+                                serverUrl = serverUrl,
+                                playerAction = playerAction
+                            )
                         }
                     } else {
-                        CompactPlayerItem(item = player, serverUrl = serverUrl)
+                        CompactPlayerItem(
+                            item = player,
+                            serverUrl = serverUrl,
+                            playerAction = playerAction
+                        )
                     }
                 }
 
@@ -385,7 +387,7 @@ private fun PlayersPager(
                 }
 
                 if (showQueue && player.player.canSetVolume && player.player.volumeLevel != null) {
-                    var currentVolume by remember(mutableStateOf(player.player.volumeLevel)) {
+                    var currentVolume by remember(player.player.volumeLevel) {
                         mutableStateOf(player.player.volumeLevel)
                     }
                     Row(
@@ -409,6 +411,21 @@ private fun PlayersPager(
                                     PlayerAction.VolumeSet(it.toDouble())
                                 )
                             },
+                            thumb = {
+                                SliderDefaults.Thumb(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    thumbSize = androidx.compose.ui.unit.DpSize(16.dp, 16.dp)
+                                )
+                            },
+                            track = { sliderState ->
+                                SliderDefaults.Track(
+                                    sliderState = sliderState,
+                                    thumbTrackGapSize = 0.dp,
+                                    trackInsideCornerSize = 0.dp,
+                                    drawStopIndicator = null,
+                                    modifier = Modifier.height(4.dp)
+                                )
+                            }
                         )
                     }
                 }
@@ -417,7 +434,7 @@ private fun PlayersPager(
 
                 player.queue.takeIf { showQueue }?.let { queue ->
                     CollapsibleQueue(
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        modifier = Modifier
                             .conditional(
                                 condition = isQueueExpanded,
                                 ifTrue = { weight(1f) },
@@ -431,152 +448,6 @@ private fun PlayersPager(
             }
         }
 
-    }
-}
-
-@Composable
-fun CollapsibleQueue(
-    modifier: Modifier = Modifier,
-    queue: DataState<Queue>,
-    isQueueExpanded: Boolean,
-    onQueueExpandedSwitch: () -> Unit
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .animateContentSize(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Row(
-            modifier = Modifier
-                .wrapContentSize()
-                .background(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(16.dp)
-                )
-                .clickable(onClick = { onQueueExpandedSwitch() })
-                .padding(vertical = 4.dp, horizontal = 16.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Queue",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Icon(
-                imageVector = if (isQueueExpanded) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
-                contentDescription = "Toggle Queue",
-                tint = MaterialTheme.colorScheme.primary,
-            )
-        }
-
-        if (isQueueExpanded) {
-            when (queue) {
-                is DataState.Error -> Text(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    text = "Error loading",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                is DataState.Loading -> Text(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    text = "Loading...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                is DataState.NoData -> Text(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    text = "No items",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                is DataState.Data -> {
-                    when (val items = queue.data.items) {
-                        is DataState.Error -> Text(
-                            modifier = Modifier.fillMaxWidth().weight(1f),
-                            text = "Error loading",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        is DataState.Loading -> Text(
-                            modifier = Modifier.fillMaxWidth().weight(1f),
-                            text = "Loading...",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        is DataState.NoData -> Text(
-                            modifier = Modifier.fillMaxWidth().weight(1f),
-                            text = "Not loaded",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        is DataState.Data -> {
-                            if (items.data.isEmpty()) {
-                                Text(
-                                    modifier = Modifier.fillMaxWidth().weight(1f),
-                                    text = "No items",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            } else {
-                                val currentItemId = queue.data.info.currentItem?.id
-                                val currentItemIndex = currentItemId?.let { id ->
-                                    items.data.indexOfFirst { it.id == id }
-                                } ?: -1
-
-                                LazyColumn(
-                                    modifier = Modifier.fillMaxWidth().weight(1f),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    items(items.data.size) { index ->
-                                        QueueItemRow(
-                                            item = items.data[index],
-                                            position = index + 1,
-                                            isCurrentItem = index == currentItemIndex,
-                                            isPlayedItem = currentItemIndex >= 0 && index < currentItemIndex
-                                        )
-                                    }
-                                }
-                            }
-
-                        }
-                    }
-
-                }
-            }
-        }
     }
 }
 

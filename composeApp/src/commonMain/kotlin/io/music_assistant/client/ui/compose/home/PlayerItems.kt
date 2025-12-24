@@ -3,6 +3,7 @@
 package io.music_assistant.client.ui.compose.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,20 +11,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Album
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -41,7 +39,7 @@ import io.music_assistant.client.ui.compose.main.PlayerAction
 import io.music_assistant.client.ui.compose.main.PlayerControls
 
 @Composable
-fun CompactPlayerItem(item: PlayerData, serverUrl: String?) {
+fun CompactPlayerItem(item: PlayerData, serverUrl: String?, playerAction: (PlayerData, PlayerAction) -> Unit) {
     val track = item.queueInfo?.currentItem?.track
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
@@ -111,25 +109,13 @@ fun CompactPlayerItem(item: PlayerData, serverUrl: String?) {
                 }
             }
 
-            // Compact controls
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = { /* TODO */ }) {
-                    Icon(Icons.Default.SkipPrevious, "Previous")
-                }
-                IconButton(onClick = { /* TODO */ }) {
-                    Icon(
-                        Icons.Default.PlayArrow,
-                        "Play/Pause",
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-                IconButton(onClick = { /* TODO */ }) {
-                    Icon(Icons.Default.SkipNext, "Next")
-                }
-            }
+            PlayerControls(
+                playerData = item,
+                playerAction = playerAction,
+                enabled = !item.player.isAnnouncing,
+                showVolumeButtons = false,
+                showAdditionalButtons = false,
+            )
         }
     }
 }
@@ -220,20 +206,28 @@ fun FullPlayerItem(
             modifier = Modifier.fillMaxWidth(),
             thumb = {
                 elapsed?.takeIf { duration != null }?.let {
-                    Box(
-                        modifier = Modifier
-                            .size(16.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary)
+                    SliderDefaults.Thumb(
+                        interactionSource = remember { MutableInteractionSource() },
+                        thumbSize = androidx.compose.ui.unit.DpSize(16.dp, 16.dp)
                     )
                 }
             },
+            track = { sliderState ->
+                SliderDefaults.Track(
+                    sliderState = sliderState,
+                    thumbTrackGapSize = 0.dp,
+                    trackInsideCornerSize = 0.dp,
+                    drawStopIndicator = null,
+                    modifier = Modifier.height(8.dp)
+                )
+            }
         )
 
         PlayerControls(
             playerData = item,
             playerAction = playerAction,
-            enabled = !item.player.isAnnouncing
+            enabled = !item.player.isAnnouncing,
+            showVolumeButtons = false
         )
     }
 }
