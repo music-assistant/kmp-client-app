@@ -28,10 +28,10 @@ data class ClientHelloPayload(
     @SerialName("device_info") val deviceInfo: DeviceInfo?,
     val version: Int,
     @SerialName("supported_roles") val supportedRoles: List<VersionedRole>,
-    @SerialName("player@v1_support") val playerV1Support: PlayerSupport?,
-    @SerialName("metadata@v1_support") val metadataV1Support: MetadataSupport?,
-    @SerialName("artwork@v1_support") val artworkV1Support: ArtworkSupport?,
-    @SerialName("visualizer@v1_support") val visualizerV1Support: VisualizerSupport?
+    @SerialName("player_support") val playerV1Support: PlayerSupport?,
+    @SerialName("metadata_support") val metadataV1Support: MetadataSupport?,
+    @SerialName("artwork_support") val artworkV1Support: ArtworkSupport?,
+    @SerialName("visualizer_support") val visualizerV1Support: VisualizerSupport?
 )
 
 @Serializable
@@ -166,8 +166,8 @@ data class StreamStartMessage(
 @Serializable
 data class StreamStartPayload(
     val player: StreamStartPlayer?,
-    val artwork: StreamStartArtwork?,
-    val visualizer: StreamStartVisualizer?
+    val artwork: StreamStartArtwork? = null,
+    val visualizer: StreamStartVisualizer? = null
 )
 
 @Serializable
@@ -176,7 +176,7 @@ data class StreamStartPlayer(
     @SerialName("sample_rate") val sampleRate: Int,
     val channels: Int,
     @SerialName("bit_depth") val bitDepth: Int,
-    @SerialName("codec_header") val codecHeader: String?
+    @SerialName("codec_header") val codecHeader: String? = null
 )
 
 @Serializable
@@ -198,9 +198,9 @@ data class GroupUpdateMessage(
 
 @Serializable
 data class GroupUpdatePayload(
-    @SerialName("playback_state") val playbackState: String?,
-    @SerialName("group_id") val groupId: String?,
-    @SerialName("group_name") val groupName: String?
+    @SerialName("playback_state") val playbackState: String? = null,
+    @SerialName("group_id") val groupId: String? = null,
+    @SerialName("group_name") val groupName: String? = null
 )
 
 // MARK: - Metadata Messages

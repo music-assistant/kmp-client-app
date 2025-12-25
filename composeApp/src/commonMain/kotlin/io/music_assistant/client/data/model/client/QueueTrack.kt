@@ -11,7 +11,7 @@ data class QueueTrack(
         fun ServerQueueItem.toQueueTrack(): QueueTrack? {
             return QueueTrack(
                 id = queueItemId,
-                track = (mediaItem.toAppMediaItem()
+                track = (mediaItem?.toAppMediaItem()
                     .takeIf { it is AppMediaItem.Track } as? AppMediaItem.Track)
                     ?: return null
             )

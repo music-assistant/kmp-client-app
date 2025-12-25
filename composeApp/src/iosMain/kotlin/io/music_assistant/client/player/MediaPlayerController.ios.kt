@@ -59,6 +59,29 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
         callback = null
     }
 
+    // Raw PCM streaming methods for Sendspin (stub)
+
+    actual fun prepareRawPcmStream(
+        sampleRate: Int,
+        channels: Int,
+        bitDepth: Int,
+        listener: MediaPlayerListener
+    ) {
+        // TODO: Implement using AVAudioEngine or AudioQueue
+        callback = listener
+        isPrepared = true
+        callback?.onReady()
+    }
+
+    actual fun writeRawPcm(data: ByteArray): Int {
+        // TODO: Implement raw PCM playback
+        return data.size // Pretend we wrote everything
+    }
+
+    actual fun stopRawPcmStream() {
+        // TODO: Implement
+        isPrepared = false
+    }
 }
 
 actual class PlatformContext

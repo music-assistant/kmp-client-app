@@ -9,7 +9,7 @@ import kotlinx.coroutines.launch
 
 class SettingsViewModel(
     private val apiClient: ServiceClient,
-    settings: SettingsRepository
+    private val settings: SettingsRepository
 ) : ViewModel() {
 
     val savedConnectionInfo = settings.connectionInfo
@@ -26,4 +26,16 @@ class SettingsViewModel(
     fun logout() {
         viewModelScope.launch { apiClient.logout() }
     }
+
+    // Sendspin settings
+    val sendspinEnabled = settings.sendspinEnabled
+    val sendspinClientId = settings.sendspinClientId
+    val sendspinDeviceName = settings.sendspinDeviceName
+    val sendspinPort = settings.sendspinPort
+    val sendspinPath = settings.sendspinPath
+
+    fun setSendspinEnabled(enabled: Boolean) = settings.setSendspinEnabled(enabled)
+    fun setSendspinDeviceName(name: String) = settings.setSendspinDeviceName(name)
+    fun setSendspinPort(port: Int) = settings.setSendspinPort(port)
+    fun setSendspinPath(path: String) = settings.setSendspinPath(path)
 }

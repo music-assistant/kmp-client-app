@@ -221,6 +221,10 @@ fun SettingsScreen(onBack: () -> Unit) {
                 onLoginClick = viewModel::login,
                 onLogoutClick = viewModel::logout
             )
+            SendspinSection(
+                viewModel = viewModel,
+                enabled = sessionState is SessionState.Connected
+            )
         }
     }
 }
@@ -338,5 +342,97 @@ fun AuthSection(
 
         DataConnectionState.Anonymous,
         DataConnectionState.AwaitingServerInfo -> Unit
+    }
+}
+
+@Composable
+fun SendspinSection(
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel,
+    enabled: Boolean
+) {
+    val sendspinEnabled by viewModel.sendspinEnabled.collectAsStateWithLifecycle()
+    val sendspinDeviceName by viewModel.sendspinDeviceName.collectAsStateWithLifecycle()
+    val sendspinPort by viewModel.sendspinPort.collectAsStateWithLifecycle()
+    val sendspinPath by viewModel.sendspinPath.collectAsStateWithLifecycle()
+    val savedConnectionInfo by viewModel.savedConnectionInfo.collectAsStateWithLifecycle()
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = 32.dp, start = 16.dp, end = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            modifier = Modifier.padding(bottom = 16.dp),
+            text = "Sendspin Player",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Enable Sendspin",
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Checkbox(
+                enabled = enabled,
+                checked = sendspinEnabled,
+                onCheckedChange = { viewModel.setSendspinEnabled(it) }
+            )
+        }
+
+        if (sendspinEnabled) {
+            TextField(
+                modifier = Modifier.padding(bottom = 16.dp),
+                value = sendspinDeviceName,
+                onValueChange = { viewModel.setSendspinDeviceName(it) },
+                label = { Text("Device Name") },
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                )
+            )
+
+            TextField(
+                modifier = Modifier.padding(bottom = 16.dp),
+                value = sendspinPort.toString(),
+                onValueChange = { it.toIntOrNull()?.let { port -> viewModel.setSendspinPort(port) } },
+                label = { Text("Sendspin Port") },
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                )
+            )
+
+            TextField(
+                modifier = Modifier.padding(bottom = 16.dp),
+                value = sendspinPath,
+                onValueChange = { viewModel.setSendspinPath(it) },
+                label = { Text("Sendspin Path") },
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                )
+            )
+
+            savedConnectionInfo?.let { conn ->
+                Text(
+                    modifier = Modifier.padding(top = 8.dp),
+                    text = "Will connect to: ws://${conn.host}:$sendspinPort$sendspinPath",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }

@@ -20,6 +20,18 @@ expect class MediaPlayerController(platformContext: PlatformContext) {
     fun isPlaying(): Boolean
 
     fun release()
+
+    // Raw PCM streaming for Sendspin
+    fun prepareRawPcmStream(
+        sampleRate: Int,
+        channels: Int,
+        bitDepth: Int,
+        listener: MediaPlayerListener
+    )
+
+    fun writeRawPcm(data: ByteArray): Int
+
+    fun stopRawPcmStream()
 }
 
 expect class PlatformContext

@@ -98,6 +98,30 @@ fun FeatureScreen(viewModel: FeatureViewModel = koinViewModel()) {
 - Display errors via Toast or inline error states
 - Log with context: `Logger.withTag("Component").e { "message" }`
 
+## UI Architecture
+
+**IMPORTANT**: The project is transitioning from the old MainScreen/MainViewModel to the new HomeScreen/HomeScreenViewModel architecture.
+
+- **Deprecated (do NOT use)**: `MainScreen.kt`, `MainViewModel.kt`
+- **Current (use these)**: `HomeScreen.kt`, `HomeScreenViewModel.kt`
+
+When implementing new features or integrations:
+- Use `HomeScreenViewModel` as reference for architecture patterns
+- Add dependencies to `HomeScreenViewModel` in `SharedModule.kt`
+- Do NOT modify `MainViewModel` - it's legacy code being phased out
+
+### Sendspin Integration
+
+The built-in player functionality uses the Sendspin multi-room audio protocol:
+- **Integration point**: `HomeScreenViewModel` manages Sendspin lifecycle
+- **Configuration**: Sendspin settings in `SettingsRepository` and `SettingsScreen`
+- **Connection**: Direct WebSocket to Music Assistant server (same IP as main connection)
+- **Platform-specific**: `MediaPlayerController` has expect/actual for raw PCM streaming
+  - Android: Uses `AudioTrack` for low-latency playback
+  - iOS/Desktop: Stubs for future implementation
+
+See `.claude/sendspin-integration-design.md` for detailed technical documentation.
+
 ## Misc rules
 
 - Don't ever use non-null assertions in live code (!!). Always handle nulls safely.

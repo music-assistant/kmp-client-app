@@ -80,4 +80,53 @@ class SettingsRepository(
         settings.getStringOrNull("local_player_id") ?: Uuid.random().toString().also {
             settings.putString("local_player_id", it)
         }
+
+    // Sendspin settings
+    private val _sendspinEnabled = MutableStateFlow(
+        settings.getBoolean("sendspin_enabled", false)
+    )
+    val sendspinEnabled = _sendspinEnabled.asStateFlow()
+
+    fun setSendspinEnabled(enabled: Boolean) {
+        settings.putBoolean("sendspin_enabled", enabled)
+        _sendspinEnabled.update { enabled }
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    private val _sendspinClientId = MutableStateFlow(
+        settings.getStringOrNull("sendspin_client_id") ?: Uuid.random().toString().also {
+            settings.putString("sendspin_client_id", it)
+        }
+    )
+    val sendspinClientId = _sendspinClientId.asStateFlow()
+
+    private val _sendspinDeviceName = MutableStateFlow(
+        settings.getStringOrNull("sendspin_device_name") ?: "My Phone"
+    )
+    val sendspinDeviceName = _sendspinDeviceName.asStateFlow()
+
+    fun setSendspinDeviceName(name: String) {
+        settings.putString("sendspin_device_name", name)
+        _sendspinDeviceName.update { name }
+    }
+
+    private val _sendspinPort = MutableStateFlow(
+        settings.getInt("sendspin_port", 8927)
+    )
+    val sendspinPort = _sendspinPort.asStateFlow()
+
+    fun setSendspinPort(port: Int) {
+        settings.putInt("sendspin_port", port)
+        _sendspinPort.update { port }
+    }
+
+    private val _sendspinPath = MutableStateFlow(
+        settings.getString("sendspin_path", "/sendspin")
+    )
+    val sendspinPath = _sendspinPath.asStateFlow()
+
+    fun setSendspinPath(path: String) {
+        settings.putString("sendspin_path", path)
+        _sendspinPath.update { path }
+    }
 }

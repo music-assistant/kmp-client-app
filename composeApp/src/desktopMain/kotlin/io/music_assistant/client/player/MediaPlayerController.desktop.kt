@@ -92,6 +92,28 @@ actual class MediaPlayerController actual constructor(val platformContext: Platf
         mediaPlayer?.release()
     }
 
+    // Raw PCM streaming methods for Sendspin (stub)
+
+    actual fun prepareRawPcmStream(
+        sampleRate: Int,
+        channels: Int,
+        bitDepth: Int,
+        listener: MediaPlayerListener
+    ) {
+        // TODO: Implement using javax.sound SourceDataLine or similar
+        this.listener = listener
+        listener.onReady()
+    }
+
+    actual fun writeRawPcm(data: ByteArray): Int {
+        // TODO: Implement raw PCM playback
+        return data.size // Pretend we wrote everything
+    }
+
+    actual fun stopRawPcmStream() {
+        // TODO: Implement
+    }
+
     private fun Any.mediaPlayer(): MediaPlayer {
         return when (this) {
             is CallbackMediaPlayerComponent -> mediaPlayer()
