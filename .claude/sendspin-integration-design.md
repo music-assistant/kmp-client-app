@@ -8,6 +8,67 @@ This document outlines the technical design for integrating the Sendspin multi-r
 
 **Target Platforms**: Android (primary), iOS, Desktop (JVM)
 
+**Status:** ✅ Basic playback working (2025-12-26)
+
+---
+
+## ⚠️ Critical Implementation Notes
+
+### Clock Synchronization Must Use Monotonic Time
+
+**CRITICAL:** The Sendspin protocol requires monotonic relative time, NOT Unix epoch time.
+
+**Problem:** Using `System.currentTimeMillis()` creates massive offsets because:
+- Client sends Unix epoch time (billions of microseconds since 1970)
+- Server sends relative time (microseconds since server start)
+- Results in 20+ day offset, making all audio chunks appear "too early"
+
+**Solution:** Use `System.nanoTime()` for all timing operations:
+```kotlin
+// ✅ CORRECT
+private val startTimeNanos = System.nanoTime()
+private fun getCurrentTimeMicros(): Long {
+    val elapsedNanos = System.nanoTime() - startTimeNanos
+    return elapsedNanos / 1000
+}
+
+// ❌ WRONG - Don't use this!
+private fun getCurrentTimeMicros(): Long {
+    return System.currentTimeMillis() * 1000
+}
+```
+
+**Files affected:**
+- `MessageDispatcher.kt` - Client time messages
+- `AudioStreamManager.kt` - Playback timing
+- `Sync.kt` - Time conversions
+
+### State Reporting Must Be Periodic
+
+**CRITICAL:** Server needs regular state updates or it will advance the queue.
+
+**Problem:** Only sending state after commands causes server to think client is stalled.
+
+**Solution:** Send `client/state` with `SYNCHRONIZED` every 2 seconds during playback:
+```kotlin
+private fun startStateReporting() {
+    stateReportingJob = launch {
+        while (isActive) {
+            delay(2000)
+            if (isPlaying) {
+                reportState(PlayerStateValue.SYNCHRONIZED)
+            }
+        }
+    }
+}
+```
+
+**When to report:**
+- Every 2 seconds during active playback
+- After volume/mute changes
+- After stream start/end
+- On error conditions
+
 ---
 
 ## 1. Architecture Overview
@@ -772,74 +833,83 @@ Show Sendspin connection status, metadata, and playback state in player UI.
 
 ## 7. Implementation Phases
 
-### Phase 1: Foundation (Week 1)
+### Phase 1: Foundation ✅ COMPLETE (2025-12-24)
 
 **Goal**: Establish basic protocol communication
 
 **Tasks**:
-- [ ] Create `WebSocketHandler` with Ktor
-- [ ] Implement `MessageDispatcher` with message parsing
-- [ ] Add message serialization tests
-- [ ] Implement handshake flow (client/hello ↔ server/hello)
-- [ ] Unit tests for message handling
+- [x] Create `WebSocketHandler` with Ktor
+- [x] Implement `MessageDispatcher` with message parsing
+- [x] Add message serialization tests
+- [x] Implement handshake flow (client/hello ↔ server/hello)
+- [ ] Unit tests for message handling (TODO)
 
-**Deliverable**: Can connect to Sendspin server and complete handshake
+**Deliverable**: ✅ Can connect to Sendspin server and complete handshake
 
-### Phase 2: Clock Synchronization (Week 2)
+### Phase 2: Clock Synchronization ✅ COMPLETE (2025-12-26)
 
 **Goal**: Integrate existing clock sync with protocol
 
 **Tasks**:
-- [ ] Integrate `ClockSynchronizer` with `MessageDispatcher`
-- [ ] Implement periodic `client/time` / `server/time` exchange
-- [ ] Add clock quality monitoring
-- [ ] Unit tests for timestamp conversion
-- [ ] Log sync statistics (offset, RTT, drift)
+- [x] Integrate `ClockSynchronizer` with `MessageDispatcher`
+- [x] Implement periodic `client/time` / `server/time` exchange
+- [x] Add clock quality monitoring
+- [x] **FIX: Changed to monotonic time base (critical fix)**
+- [x] Log sync statistics (offset, RTT, drift)
+- [ ] Unit tests for timestamp conversion (TODO)
 
-**Deliverable**: Maintains accurate clock sync with server
+**Deliverable**: ✅ Maintains accurate clock sync with server (<20ms offset)
 
-### Phase 3: mDNS Discovery - Android (Week 3)
+**Critical Fix:** Changed from Unix epoch time to monotonic relative time throughout
+
+### Phase 3: mDNS Discovery ⏭️ SKIPPED
 
 **Goal**: Service advertising on Android
 
-**Tasks**:
-- [ ] Create `MdnsAdvertiser` expect/actual interface
-- [ ] Implement Android version using `NsdManager`
-- [ ] Handle service registration lifecycle
-- [ ] Test discovery with Sendspin server
-- [ ] Handle errors and retries
+**Decision**: Using direct connection via settings instead of mDNS discovery
+- Simpler architecture
+- Reuses existing MA server IP
+- No need for service discovery
+- Can add mDNS later if needed
 
-**Deliverable**: Android device advertises on network, server can discover and connect
-
-### Phase 4: Audio Streaming - PCM Only (Weeks 4-5)
+### Phase 4: Audio Streaming - PCM Only ✅ COMPLETE (2025-12-26)
 
 **Goal**: Receive and play audio
 
 **Tasks**:
-- [ ] Implement `AudioStreamManager`
-- [ ] Create `TimestampOrderedBuffer`
-- [ ] Implement `PcmDecoder` (pass-through)
-- [ ] Extend `MediaPlayerController.android.kt` with `writeRawPcm()`
-- [ ] Implement `PlaybackThread` with timestamp-based scheduling
-- [ ] Handle `stream/start`, `stream/end`, `stream/clear`
-- [ ] Buffer underrun/overrun handling
-- [ ] Integration tests with real audio
+- [x] Implement `AudioStreamManager`
+- [x] Create `TimestampOrderedBuffer`
+- [x] Implement `PcmDecoder` (pass-through)
+- [x] Extend `MediaPlayerController.android.kt` with `writeRawPcm()`
+- [x] Implement playback thread with timestamp-based scheduling
+- [x] Handle `stream/start`, `stream/end`, `stream/clear`
+- [x] Buffer underrun/overrun handling
+- [x] **Added extensive debugging logs**
+- [ ] Integration tests with real audio (TODO)
 
-**Deliverable**: Can play PCM audio streams with synchronized timing
+**Deliverable**: ✅ Can play PCM audio streams with synchronized timing
 
-### Phase 5: State Management & Commands (Week 6)
+**Working Features:**
+- Playback, pause, resume
+- Seek forward/backward
+- Next/previous track
+- Synchronized chunk playback
+
+### Phase 5: State Management & Commands ⚠️ PARTIAL (2025-12-26)
 
 **Goal**: Full player role implementation
 
 **Tasks**:
-- [ ] Implement volume control (local + server commands)
-- [ ] Implement mute control
-- [ ] Send `client/state` updates
-- [ ] Handle `server/command` messages
-- [ ] Metadata display integration
-- [ ] Error reporting and recovery
+- [ ] Implement volume control UI (receives commands, no UI)
+- [ ] Implement mute control UI (receives commands, no UI)
+- [x] **Send `client/state` updates periodically (every 2s)**
+- [x] Handle `server/command` messages
+- [x] Metadata display integration
+- [ ] Comprehensive error reporting and recovery (TODO)
 
-**Deliverable**: Full functional Sendspin player with volume/mute control
+**Deliverable**: ⚠️ Partial - receives commands but no UI controls
+
+**Critical Fix:** Added periodic state reporting to prevent songs from skipping
 
 ### Phase 6: Additional Codecs (Week 7+)
 
@@ -1167,15 +1237,15 @@ Add capability to:
 
 ### 13.1 Functional Requirements
 
-- ✅ Device advertises via mDNS
-- ✅ Server can discover and connect
+- ⏭️ Device advertises via mDNS (SKIPPED - using direct connection)
+- ✅ Server can discover and connect (via settings-based URL)
 - ✅ Handshake completes successfully
-- ✅ Clock synchronization achieves <50ms accuracy
+- ✅ Clock synchronization achieves <50ms accuracy (FIXED: monotonic time)
 - ✅ Audio plays with <100ms latency
 - ✅ No audible glitches under normal network conditions
-- ✅ Volume and mute controls work
+- ⚠️ Volume and mute controls work (receives commands, no UI)
 - ✅ Metadata displays correctly
-- ✅ Graceful error handling and recovery
+- ⚠️ Graceful error handling and recovery (basic only)
 
 ### 13.2 Performance Requirements
 

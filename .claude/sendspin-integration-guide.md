@@ -7,6 +7,23 @@ The Sendspin protocol integration has been simplified for the Music Assistant Cl
 - **Direct WebSocket connection** - connects to `ws://{ma-server-ip}:{port}/sendspin`
 - **Simple settings integration** - just add Sendspin port/path to existing settings
 
+**Status:** ✅ **WORKING** - Basic playback functional (2025-12-26)
+- ✅ Playback, pause, resume, seek
+- ✅ Next/previous track
+- ✅ Metadata display
+- ⚠️ Volume/mute (receives commands, no UI yet)
+
+---
+
+## ⚠️ Important: Implementation Prerequisites
+
+Before using this guide, ensure you understand the critical fixes documented in `sendspin-integration-design.md`:
+
+1. **Clock sync MUST use monotonic time** (`System.nanoTime()`), not epoch time
+2. **State reporting MUST be periodic** (every 2 seconds during playback)
+
+See `sendspin-status.md` for full details on current implementation status and known issues.
+
 ---
 
 ## Architecture
@@ -503,14 +520,18 @@ viewModelScope.launch {
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| WebSocket connection | ✅ Complete | Ktor client |
-| Protocol handshake | ✅ Complete | client/hello ↔ server/hello |
-| Clock synchronization | ✅ Complete | NTP-style with Kalman filter |
-| PCM audio streaming | ✅ Complete | AudioTrack playback |
-| Timestamp buffering | ✅ Complete | Priority queue, sync'd playback |
-| Metadata display | ✅ Complete | Title, artist, album |
+| WebSocket connection | ✅ Working | Ktor client |
+| Protocol handshake | ✅ Working | client/hello ↔ server/hello |
+| Clock synchronization | ✅ Working | NTP-style with Kalman filter, **FIXED: monotonic time** |
+| PCM audio streaming | ✅ Working | AudioTrack playback |
+| Timestamp buffering | ✅ Working | Priority queue, sync'd playback |
+| Metadata display | ✅ Working | Title, artist, album |
+| State reporting | ✅ Working | **FIXED: Periodic updates every 2s** |
+| Playback control | ✅ Working | Play, pause, seek, next/prev |
 | Volume control | ⚠️ Partial | Receives commands, needs UI |
 | Mute control | ⚠️ Partial | Receives commands, needs UI |
+| Error recovery | ⚠️ Partial | Basic error handling only |
+| Auto-reconnect | ❌ TODO | Manual reconnect only |
 | FLAC codec | ❌ TODO | Placeholder implemented |
 | OPUS codec | ❌ TODO | Placeholder implemented |
 | Artwork display | ❌ TODO | Not implemented |
@@ -546,12 +567,31 @@ viewModelScope.launch {
 
 ## Summary
 
-The Sendspin integration is now **production-ready for Android** with PCM codec support:
+The Sendspin integration is **working for Android** with PCM codec support:
 
-✅ **Simple configuration** - Reuses MA server IP, just add port/path
-✅ **Automatic connection** - Connects when enabled in settings
-✅ **Full protocol support** - Handshake, clock sync, streaming
-✅ **Low-latency playback** - AudioTrack with synchronized timing
-✅ **Rich UI integration** - Connection status, metadata, playback state
+### ✅ Working
+- Simple configuration - Reuses MA server IP, just add port/path
+- Automatic connection - Connects when enabled in settings
+- Full protocol support - Handshake, clock sync, streaming
+- Low-latency playback - AudioTrack with synchronized timing
+- Rich UI integration - Connection status, metadata, playback state
+- Playback controls - Play, pause, seek, next/previous
+- State reporting - Periodic updates keep server in sync
 
-Just add settings UI and integrate with MainViewModel to start using Sendspin!
+### ⚠️ Known Issues
+- No volume/mute UI controls (receives commands but can't send)
+- No auto-reconnect on network failures
+- Many minor bugs (see `sendspin-status.md`)
+
+### 📋 Next Steps
+1. Add volume/mute UI controls
+2. Implement auto-reconnect
+3. Add comprehensive error handling
+4. Test long playback sessions
+5. Implement FLAC/OPUS codecs
+
+---
+
+**See also:**
+- `sendspin-integration-design.md` - Full technical design
+- `sendspin-status.md` - Current implementation status and known issues
