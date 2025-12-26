@@ -97,12 +97,24 @@ class AudioStreamManager(
     }
 
     private fun createDecoder(config: StreamStartPlayer): AudioDecoder {
-        return when (config.codec.lowercase()) {
-            "pcm" -> PcmDecoder()
-            "flac" -> FlacDecoder()
-            "opus" -> OpusDecoder()
+        val codec = config.codec.lowercase()
+        logger.i { "Creating decoder for codec: $codec" }
+
+        return when (codec) {
+            "pcm" -> {
+                logger.i { "Using PCM decoder (passthrough)" }
+                PcmDecoder()
+            }
+            "flac" -> {
+                logger.w { "FLAC decoder not yet implemented, server should send PCM" }
+                FlacDecoder()
+            }
+            "opus" -> {
+                logger.w { "OPUS decoder not yet implemented, server should send PCM" }
+                OpusDecoder()
+            }
             else -> {
-                logger.w { "Unknown codec ${config.codec}, using PCM decoder" }
+                logger.w { "Unknown codec $codec, using PCM decoder" }
                 PcmDecoder()
             }
         }
@@ -126,6 +138,8 @@ class AudioStreamManager(
             return
         }
 
+        logger.d { "Received audio chunk: timestamp=${binaryMessage.timestamp}, size=${binaryMessage.data.size} bytes" }
+
         // Convert server timestamp to local time
         val localTimestamp = clockSynchronizer.serverTimeToLocal(binaryMessage.timestamp)
 
@@ -138,6 +152,7 @@ class AudioStreamManager(
 
         // Add to buffer
         audioBuffer.add(chunk)
+        logger.d { "Buffer now has ${audioBuffer.size()} chunks, ${audioBuffer.getBufferedDuration()}μs buffered" }
 
         // Update buffer state
         updateBufferState()
@@ -150,6 +165,9 @@ class AudioStreamManager(
 
             // Wait for pre-buffer
             waitForPrebuffer()
+
+            var chunksPlayed = 0
+            var lastLogTime = getCurrentTimeMicros()
 
             while (isActive && isStreaming) {
                 try {
@@ -174,18 +192,20 @@ class AudioStreamManager(
 
                     val currentLocalTime = getCurrentTimeMicros()
                     val chunkPlaybackTime = chunk.localTimestamp
+                    val timeDiff = chunkPlaybackTime - currentLocalTime
 
                     when {
                         chunkPlaybackTime < currentLocalTime - LATE_THRESHOLD -> {
                             // Chunk is too late, drop it
                             audioBuffer.poll()
                             droppedChunksCount++
-                            logger.d { "Dropped late chunk: ${currentLocalTime - chunkPlaybackTime}μs late" }
+                            logger.w { "Dropped late chunk: ${(currentLocalTime - chunkPlaybackTime) / 1000}ms late" }
                             updateBufferState()
                         }
                         chunkPlaybackTime > currentLocalTime + EARLY_THRESHOLD -> {
                             // Chunk is too early, wait
                             val delayMs = ((chunkPlaybackTime - currentLocalTime) / 1000).coerceAtMost(100)
+                            logger.d { "Chunk too early, waiting ${delayMs}ms (diff=${timeDiff / 1000}ms)" }
                             delay(delayMs)
                         }
                         else -> {
@@ -194,6 +214,14 @@ class AudioStreamManager(
                             audioBuffer.poll()
                             _playbackPosition.value = chunk.timestamp
                             updateBufferState()
+                            chunksPlayed++
+
+                            // Log progress every 5 seconds
+                            val now = getCurrentTimeMicros()
+                            if (now - lastLogTime > 5_000_000) {
+                                logger.i { "Playback progress: $chunksPlayed chunks played, position=${chunk.timestamp}μs, buffer=${audioBuffer.getBufferedDuration() / 1000}ms" }
+                                lastLogTime = now
+                            }
                         }
                     }
                 } catch (e: CancellationException) {
@@ -203,7 +231,7 @@ class AudioStreamManager(
                 }
             }
 
-            logger.i { "Playback thread stopped" }
+            logger.i { "Playback thread stopped, total chunks played: $chunksPlayed" }
         }
     }
 
@@ -221,10 +249,14 @@ class AudioStreamManager(
             val decoder = audioDecoder ?: return
             val decodedData = decoder.decode(chunk.data)
 
+            logger.d { "Decoded chunk: ${chunk.data.size} -> ${decodedData.size} PCM bytes" }
+
             // Write to MediaPlayerController
             val written = mediaPlayerController.writeRawPcm(decodedData)
             if (written < decodedData.size) {
                 logger.w { "Only wrote $written/${decodedData.size} bytes to AudioTrack" }
+            } else {
+                logger.d { "Wrote $written bytes to AudioTrack successfully" }
             }
 
         } catch (e: Exception) {
@@ -270,8 +302,14 @@ class AudioStreamManager(
         )
     }
 
+    // Use monotonic time for playback timing instead of wall clock time
+    // This matches the server's relative time base
+    private val startTimeNanos = System.nanoTime()
+
     private fun getCurrentTimeMicros(): Long {
-        return System.currentTimeMillis() * 1000
+        // Use relative time since stream start, not Unix epoch time
+        val elapsedNanos = System.nanoTime() - startTimeNanos
+        return elapsedNanos / 1000 // Convert to microseconds
     }
 
     fun close() {

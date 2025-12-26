@@ -296,8 +296,14 @@ class MessageDispatcher(
         // Store group info if needed later
     }
 
+    // Use monotonic time for clock sync instead of wall clock time
+    // This matches the server's relative time base
+    private val startTimeNanos = System.nanoTime()
+
     private fun getCurrentTimeMicros(): Long {
-        return System.currentTimeMillis() * 1000
+        // Use relative time since client start, not Unix epoch time
+        val elapsedNanos = System.nanoTime() - startTimeNanos
+        return elapsedNanos / 1000 // Convert to microseconds
     }
 
     fun close() {

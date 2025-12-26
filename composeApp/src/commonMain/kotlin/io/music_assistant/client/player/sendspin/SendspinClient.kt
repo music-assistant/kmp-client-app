@@ -34,6 +34,9 @@ class SendspinClient(
     private val _playbackState = MutableStateFlow<SendspinPlaybackState>(SendspinPlaybackState.Idle)
     val playbackState: StateFlow<SendspinPlaybackState> = _playbackState.asStateFlow()
 
+    // State reporting
+    private var stateReportingJob: Job? = null
+
     val metadata: StateFlow<StreamMetadataPayload?>
         get() = messageDispatcher?.streamMetadata ?: MutableStateFlow(null)
 
@@ -139,6 +142,8 @@ class SendspinClient(
                 event.payload.player?.let { playerConfig ->
                     audioStreamManager.startStream(playerConfig)
                     _playbackState.value = SendspinPlaybackState.Buffering
+                    // Start periodic state reporting
+                    startStateReporting()
                 }
             }
         }
@@ -148,6 +153,8 @@ class SendspinClient(
                 logger.i { "Stream ended" }
                 audioStreamManager.stopStream()
                 _playbackState.value = SendspinPlaybackState.Idle
+                // Stop periodic state reporting
+                stopStateReporting()
             }
         }
 
@@ -233,8 +240,45 @@ class SendspinClient(
         messageDispatcher?.sendState(playerState)
     }
 
+    private fun startStateReporting() {
+        logger.i { "Starting periodic state reporting" }
+        stateReportingJob?.cancel()
+        stateReportingJob = launch {
+            while (isActive) {
+                try {
+                    // Wait before reporting (report every 2 seconds)
+                    delay(2000)
+
+                    // Only report if we're still streaming and synchronized
+                    if (_playbackState.value == SendspinPlaybackState.Synchronized ||
+                        _playbackState.value is SendspinPlaybackState.Playing) {
+
+                        logger.d { "Periodic state report: SYNCHRONIZED" }
+                        reportState(PlayerStateValue.SYNCHRONIZED)
+                    } else if (_playbackState.value == SendspinPlaybackState.Buffering) {
+                        logger.d { "Periodic state report: SYNCHRONIZED (buffering)" }
+                        reportState(PlayerStateValue.SYNCHRONIZED)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    logger.e(e) { "Error in state reporting" }
+                }
+            }
+        }
+    }
+
+    private fun stopStateReporting() {
+        logger.i { "Stopping periodic state reporting" }
+        stateReportingJob?.cancel()
+        stateReportingJob = null
+    }
+
     suspend fun stop() {
         logger.i { "Stopping Sendspin client" }
+
+        // Stop state reporting
+        stopStateReporting()
 
         // Send goodbye if connected
         if (_connectionState.value is SendspinConnectionState.Connected) {

@@ -30,10 +30,9 @@ class ClockSynchronizer {
     private var sampleCount: Int = 0
     private val smoothingRate: Double = 0.1
 
-    // Server loop origin tracking
-    private val clientProcessStartAbsolute: Long =
-        Clock.System.now().toEpochMilliseconds() * 1000
-    private var serverLoopOriginAbsolute: Long = 0
+    // Server loop origin tracking - use monotonic time base
+    // This represents the local time (in microseconds since start) when server time was 0
+    private var serverLoopOriginLocal: Long = 0
 
     val currentOffset: Long get() = offset
     val currentQuality: SyncQuality get() = quality
@@ -62,7 +61,13 @@ class ClockSynchronizer {
         if (sampleCount == 0) {
             offset = measuredOffset
             lastSyncMicros = clientReceived
-            serverLoopOriginAbsolute = clientProcessStartAbsolute - offset
+            // Calculate where server time 0 would be in local time
+            // serverLoopOriginLocal = clientReceived - (serverReceived - offset/2)
+            // But offset = (serverRx - clientTx + serverTx - clientRx) / 2
+            // We want: local_time = serverLoopOriginLocal + server_time
+            // So: serverLoopOriginLocal = local_time - server_time
+            // At clientReceived time, server was at serverTransmitted
+            serverLoopOriginLocal = clientReceived - serverTransmitted
             sampleCount++
             quality = SyncQuality.GOOD
             return
@@ -76,7 +81,7 @@ class ClockSynchronizer {
             }
             offset = measuredOffset
             lastSyncMicros = clientReceived
-            serverLoopOriginAbsolute = clientProcessStartAbsolute - offset
+            serverLoopOriginLocal = clientReceived - serverTransmitted
             sampleCount++
             quality = SyncQuality.GOOD
             return
@@ -99,7 +104,7 @@ class ClockSynchronizer {
 
         lastSyncMicros = clientReceived
         sampleCount++
-        serverLoopOriginAbsolute = clientProcessStartAbsolute - offset
+        serverLoopOriginLocal = clientReceived - serverTransmitted
 
         quality = if (calculatedRtt < 50_000) SyncQuality.GOOD else SyncQuality.DEGRADED
     }
@@ -117,16 +122,18 @@ class ClockSynchronizer {
 
     fun serverTimeToLocal(serverTime: Long): Long {
         if (sampleCount == 0) {
-            return clientProcessStartAbsolute + serverTime
+            // Before first sync, can't convert accurately
+            return 0
         }
-        return serverLoopOriginAbsolute + serverTime
+        return serverLoopOriginLocal + serverTime
     }
 
     fun localTimeToServer(localTime: Long): Long {
         if (sampleCount == 0) {
-            return localTime - clientProcessStartAbsolute
+            // Before first sync, can't convert accurately
+            return 0
         }
-        return localTime - serverLoopOriginAbsolute
+        return localTime - serverLoopOriginLocal
     }
 
     fun checkQuality(): SyncQuality {
@@ -147,7 +154,7 @@ class ClockSynchronizer {
         quality = SyncQuality.LOST
         lastSyncTime = null
         lastSyncMicros = 0
-        serverLoopOriginAbsolute = 0
+        serverLoopOriginLocal = 0
         sampleCount = 0
     }
 }

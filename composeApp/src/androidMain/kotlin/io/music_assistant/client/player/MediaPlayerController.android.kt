@@ -146,7 +146,8 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
         val minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, encoding)
         val bufferSize = minBufferSize * 4 // Use 4x min buffer for smoother playback
 
-        logger.d { "AudioTrack buffer size: $bufferSize bytes (min: $minBufferSize)" }
+        logger.i { "AudioTrack config: sampleRate=$sampleRate, channels=$channels, bitDepth=$bitDepth" }
+        logger.i { "AudioTrack buffer: $bufferSize bytes (min: $minBufferSize)" }
 
         try {
             audioTrack = AudioTrack.Builder()
@@ -167,8 +168,15 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build()
 
+            val state = audioTrack?.state
+            val playState = audioTrack?.playState
+            logger.i { "AudioTrack created: state=$state (${if (state == AudioTrack.STATE_INITIALIZED) "INITIALIZED" else "UNINITIALIZED"}), playState=$playState" }
+
             audioTrack?.play()
-            logger.i { "AudioTrack started successfully" }
+
+            val newPlayState = audioTrack?.playState
+            logger.i { "AudioTrack started: playState=$newPlayState (${if (newPlayState == AudioTrack.PLAYSTATE_PLAYING) "PLAYING" else "NOT_PLAYING"})" }
+
             listener.onReady()
 
         } catch (e: Exception) {
@@ -190,11 +198,25 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
         }
 
         return try {
+            val playState = track.playState
+            val state = track.state
+
+            if (playState != AudioTrack.PLAYSTATE_PLAYING) {
+                logger.w { "AudioTrack not playing! playState=$playState, state=$state" }
+            }
+
             val written = track.write(data, 0, data.size)
             if (written < 0) {
-                logger.w { "AudioTrack write error: $written" }
+                val errorName = when (written) {
+                    AudioTrack.ERROR_INVALID_OPERATION -> "ERROR_INVALID_OPERATION"
+                    AudioTrack.ERROR_BAD_VALUE -> "ERROR_BAD_VALUE"
+                    AudioTrack.ERROR_DEAD_OBJECT -> "ERROR_DEAD_OBJECT"
+                    else -> "UNKNOWN_ERROR($written)"
+                }
+                logger.w { "AudioTrack write error: $errorName" }
                 0
             } else {
+                logger.d { "AudioTrack wrote $written/${data.size} bytes" }
                 written
             }
         } catch (e: Exception) {
