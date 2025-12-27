@@ -34,6 +34,10 @@ class SendspinClient(
     private val _playbackState = MutableStateFlow<SendspinPlaybackState>(SendspinPlaybackState.Idle)
     val playbackState: StateFlow<SendspinPlaybackState> = _playbackState.asStateFlow()
 
+    // Track current volume/mute state
+    private var currentVolume: Int = 100
+    private var currentMuted: Boolean = false
+
     // State reporting
     private var stateReportingJob: Job? = null
 
@@ -191,34 +195,28 @@ class SendspinClient(
     }
 
     private suspend fun handleServerCommand(command: ServerCommandMessage) {
-        logger.i { "Handling server command: ${command.payload.command}" }
+        val playerCmd = command.payload.player
+        logger.i { "Handling server command: ${playerCmd.command}" }
 
-        when (command.payload.command) {
+        when (playerCmd.command) {
             "volume" -> {
-                val volume = when (val value = command.payload.value) {
-                    is CommandValue.IntValue -> value.value
-                    is CommandValue.DoubleValue -> value.value.toInt()
-                    else -> null
-                }
-                if (volume != null) {
-                    // TODO: Set volume on MediaPlayerController
+                playerCmd.volume?.let { volume ->
                     logger.i { "Setting volume to $volume" }
-                    reportState(PlayerStateValue.SYNCHRONIZED, volume = volume)
+                    currentVolume = volume
+                    mediaPlayerController.setVolume(volume)
+                    reportState(PlayerStateValue.SYNCHRONIZED)
                 }
             }
             "mute" -> {
-                val muted = when (val value = command.payload.value) {
-                    is CommandValue.BoolValue -> value.value
-                    else -> null
-                }
-                if (muted != null) {
-                    // TODO: Set mute on MediaPlayerController
+                playerCmd.mute?.let { muted ->
                     logger.i { "Setting mute to $muted" }
-                    reportState(PlayerStateValue.SYNCHRONIZED, muted = muted)
+                    currentMuted = muted
+                    mediaPlayerController.setMuted(muted)
+                    reportState(PlayerStateValue.SYNCHRONIZED)
                 }
             }
             else -> {
-                logger.w { "Unknown server command: ${command.payload.command}" }
+                logger.w { "Unknown server command: ${playerCmd.command}" }
             }
         }
     }
@@ -227,16 +225,13 @@ class SendspinClient(
         messageDispatcher?.sendCommand(command, value)
     }
 
-    private suspend fun reportState(
-        state: PlayerStateValue,
-        volume: Int? = null,
-        muted: Boolean? = null
-    ) {
+    private suspend fun reportState(state: PlayerStateValue) {
         val playerState = PlayerStateObject(
             state = state,
-            volume = volume,
-            muted = muted
+            volume = currentVolume,
+            muted = currentMuted
         )
+        logger.d { "Reporting state: state=$state, volume=$currentVolume, muted=$currentMuted" }
         messageDispatcher?.sendState(playerState)
     }
 

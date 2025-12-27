@@ -2,24 +2,68 @@ package io.music_assistant.client.services
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.media.AudioManager
 import android.media.session.PlaybackState
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import androidx.media.VolumeProviderCompat
 import io.music_assistant.client.R
 import io.music_assistant.client.data.model.server.RepeatMode
 
-class MediaSessionHelper(tag: String, context: Context, callback: MediaSessionCompat.Callback) {
+class MediaSessionHelper(
+    tag: String,
+    context: Context,
+    callback: MediaSessionCompat.Callback,
+    private val onVolumeChange: (Int) -> Unit
+) {
     private val mediaSession: MediaSessionCompat = MediaSessionCompat(context, tag)
+    private var currentVolume: Int = 100 // Default to 100%
+
+    private val volumeProvider = object : VolumeProviderCompat(
+        VolumeProviderCompat.VOLUME_CONTROL_ABSOLUTE,
+        100, // Max volume
+        100  // Initial volume
+    ) {
+        override fun onSetVolumeTo(volume: Int) {
+            currentVolume = volume.coerceIn(0, 100)
+            onVolumeChange(currentVolume)
+            // Update the current volume for the provider
+            currentVolume = volume.coerceIn(0, 100)
+        }
+
+        override fun onAdjustVolume(direction: Int) {
+            val delta = when (direction) {
+                AudioManager.ADJUST_RAISE -> 5  // Increase by 5%
+                AudioManager.ADJUST_LOWER -> -5 // Decrease by 5%
+                else -> 0
+            }
+            val newVolume = (currentVolume + delta).coerceIn(0, 100)
+            currentVolume = newVolume
+            onVolumeChange(newVolume)
+            // Update the current volume for the provider
+            currentVolume = newVolume
+        }
+    }
 
     init {
         mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_QUEUE_COMMANDS)
         mediaSession.setCallback(callback)
+        mediaSession.setPlaybackToRemote(volumeProvider)
         mediaSession.isActive = true
     }
 
     fun getSessionToken(): MediaSessionCompat.Token {
         return mediaSession.sessionToken
+    }
+
+    /**
+     * Update volume from server (when server sends volume command)
+     * This keeps the VolumeProvider in sync without triggering a callback
+     */
+    fun updateVolumeFromServer(volume: Int) {
+        currentVolume = volume.coerceIn(0, 100)
+        volumeProvider.currentVolume = currentVolume
     }
 
     fun updatePlaybackState(

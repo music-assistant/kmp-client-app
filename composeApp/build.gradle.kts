@@ -45,8 +45,6 @@ kotlin {
             implementation(libs.androidx.media)
 
             implementation(libs.coil)
-
-            implementation(libs.androidx.media3.exoplayer)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -96,8 +94,6 @@ kotlin {
             implementation(libs.kotlinx.coroutines.swing)
 
             implementation(libs.ktor.client.java)
-
-            implementation(libs.vlcj)
         }
 
         iosMain.dependencies {

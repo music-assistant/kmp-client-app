@@ -2,26 +2,15 @@
 
 package io.music_assistant.client.player
 
+/**
+ * MediaPlayerController - Sendspin audio player
+ *
+ * Handles raw PCM audio streaming for Sendspin protocol.
+ * Built-in player (ExoPlayer) has been removed - Sendspin is now the only playback method.
+ */
 expect class MediaPlayerController(platformContext: PlatformContext) {
-    fun prepare(pathSource: String, listener: MediaPlayerListener)
 
-    fun start()
-
-    fun pause()
-
-    fun stop()
-
-    fun getCurrentPosition(): Long?
-
-    fun getDuration(): Long?
-
-    fun seekTo(seconds: Long)
-
-    fun isPlaying(): Boolean
-
-    fun release()
-
-    // Raw PCM streaming for Sendspin
+    // Sendspin raw PCM streaming
     fun prepareRawPcmStream(
         sampleRate: Int,
         channels: Int,
@@ -32,6 +21,14 @@ expect class MediaPlayerController(platformContext: PlatformContext) {
     fun writeRawPcm(data: ByteArray): Int
 
     fun stopRawPcmStream()
+
+    // Volume control (0-100)
+    fun setVolume(volume: Int)
+
+    // Mute control
+    fun setMuted(muted: Boolean)
+
+    fun release()
 }
 
 expect class PlatformContext

@@ -160,11 +160,11 @@ class MessageDispatcher(
     }
 
     suspend fun sendState(state: PlayerStateObject) {
-        logger.d { "Sending client/state: $state" }
         val message = ClientStateMessage(
             payload = ClientStatePayload(player = state)
         )
         val json = myJson.encodeToString(message)
+        logger.d { "Sending client/state: $json" }
         webSocketHandler.sendText(json)
     }
 
@@ -287,7 +287,7 @@ class MessageDispatcher(
     }
 
     private suspend fun handleServerCommand(message: ServerCommandMessage) {
-        logger.d { "Received server/command: ${message.payload.command}" }
+        logger.d { "Received server/command: ${message.payload.player.command}" }
         _serverCommandEvent.emit(message)
     }
 

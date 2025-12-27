@@ -37,12 +37,10 @@ import kotlinx.coroutines.launch
 class HomeScreenViewModel(
     private val apiClient: ServiceClient,
     private val dataSource: MainDataSource,
-    private val settings: SettingsRepository,
-    private val mediaPlayerController: io.music_assistant.client.player.MediaPlayerController
+    private val settings: SettingsRepository
 ) : ViewModel() {
 
     private val jobs = mutableListOf<Job>()
-    private var sendspinClient: io.music_assistant.client.player.sendspin.SendspinClient? = null
 
     val serverUrl =
         apiClient.sessionState.map { (it as? SessionState.Connected)?.serverInfo?.baseUrl }
@@ -79,9 +77,6 @@ class HomeScreenViewModel(
                                 stopJobs()
                                 jobs.add(watchPlayersData())
                                 jobs.add(watchSelectedPlayerData())
-
-                                // Start Sendspin if enabled
-                                manageSendspinConnection()
                             }
 
                             is DataConnectionState.AwaitingAuth -> {
@@ -119,9 +114,6 @@ class HomeScreenViewModel(
                             SessionState.Disconnected.ByUser -> {
                                 _playersState.update { PlayersState.Disconnected }
                                 stopJobs()
-
-                                // Stop Sendspin on disconnect
-                                stopSendspin()
                             }
 
                             SessionState.Disconnected.NoServerData -> {
@@ -134,88 +126,11 @@ class HomeScreenViewModel(
                 }
             }
         }
-
-        // Monitor Sendspin settings changes
-        viewModelScope.launch {
-            kotlinx.coroutines.flow.combine(
-                settings.sendspinEnabled,
-                settings.connectionInfo
-            ) { enabled, _ ->
-                enabled
-            }.collect { _ ->
-                if (apiClient.sessionState.value is SessionState.Connected) {
-                    manageSendspinConnection()
-                }
-            }
-        }
-    }
-
-    private fun manageSendspinConnection() {
-        viewModelScope.launch {
-            val enabled = settings.sendspinEnabled.value
-            val connectionInfo = settings.connectionInfo.value
-
-            if (!enabled || connectionInfo == null) {
-                Logger.i("HomeScreenViewModel") { "Sendspin disabled or no connection info" }
-                stopSendspin()
-                return@launch
-            }
-
-            Logger.i("HomeScreenViewModel") { "Starting Sendspin client" }
-
-            // Stop existing client
-            stopSendspin()
-
-            // Build config
-            val config = io.music_assistant.client.player.sendspin.SendspinConfig(
-                clientId = settings.sendspinClientId.value,
-                deviceName = settings.sendspinDeviceName.value,
-                enabled = true,
-                serverHost = connectionInfo.host,
-                serverPort = settings.sendspinPort.value,
-                serverPath = settings.sendspinPath.value
-            )
-
-            Logger.i("HomeScreenViewModel") { "Sendspin config: $config" }
-
-            if (!config.isValid) {
-                Logger.w("HomeScreenViewModel") { "Sendspin config invalid" }
-                return@launch
-            }
-
-            // Create and start client
-            val client = io.music_assistant.client.player.sendspin.SendspinClient(config, mediaPlayerController)
-            sendspinClient = client
-
-            try {
-                client.start()
-                Logger.i("HomeScreenViewModel") { "Sendspin client started" }
-            } catch (e: Exception) {
-                Logger.e("HomeScreenViewModel", e) { "Failed to start Sendspin client" }
-            }
-        }
-    }
-
-    private fun stopSendspin() {
-        sendspinClient?.let { client ->
-            Logger.i("HomeScreenViewModel") { "Stopping Sendspin client" }
-            viewModelScope.launch {
-                try {
-                    client.stop()
-                    client.close()
-                } catch (e: Exception) {
-                    Logger.e("HomeScreenViewModel", e) { "Error stopping Sendspin client" }
-                }
-            }
-            sendspinClient = null
-        }
     }
 
     override fun onCleared() {
         super.onCleared()
-        kotlinx.coroutines.runBlocking {
-            stopSendspin()
-        }
+        // Sendspin cleanup is now handled by MainDataSource
     }
 
     private fun loadRecommendations() {

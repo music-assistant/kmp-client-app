@@ -18,11 +18,11 @@ val sharedModule = module {
     single { provideSettings() }
     singleOf(::SettingsRepository)
     singleOf(::ServiceClient)
-    singleOf(::MainDataSource)
-    singleOf(::MediaPlayerController)
+    singleOf(::MediaPlayerController)  // Used by MainDataSource for Sendspin
+    singleOf(::MainDataSource)          // Singleton - held by foreground service
     viewModelOf(::ThemeViewModel)
     factory { MainViewModel(get(), get(), get()) }
     factory { SettingsViewModel(get(), get()) }
     factory { LibraryViewModel(get()) }
-    factory { HomeScreenViewModel(get(), get(), get(), get()) }
+    factory { HomeScreenViewModel(get(), get(), get()) }
 }

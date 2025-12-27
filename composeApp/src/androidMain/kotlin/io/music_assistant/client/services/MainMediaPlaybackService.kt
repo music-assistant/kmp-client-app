@@ -46,6 +46,7 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
     private lateinit var imageLoader: ImageLoader
 
     private val dataSource: MainDataSource by inject()
+    // Note: Sendspin is managed by MainDataSource (singleton, shared across app)
     private val players = dataSource.playersData
         .map { list -> list.filter { it.queueInfo?.currentItem != null } }
         .stateIn(scope, SharingStarted.Eagerly, emptyList())
@@ -78,7 +79,17 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
 
     override fun onCreate() {
         super.onCreate()
-        mediaSessionHelper = MediaSessionHelper("MainMediaSession", this, createCallback())
+        mediaSessionHelper = MediaSessionHelper(
+            tag = "MainMediaSession",
+            context = this,
+            callback = createCallback(),
+            onVolumeChange = { volume ->
+                // Send volume change to Music Assistant server
+                currentPlayerData.value?.let { playerData ->
+                    dataSource.playerAction(playerData, PlayerAction.VolumeSet(volume.toDouble()))
+                }
+            }
+        )
         mediaNotificationManager = MediaNotificationManager(this, mediaSessionHelper)
         startForeground(
             MediaNotificationManager.NOTIFICATION_ID,
@@ -94,6 +105,14 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
                 if (!it) {
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
+                }
+            }
+        }
+        scope.launch {
+            // Sync volume from server to MediaSession
+            currentPlayerData.filterNotNull().collect { playerData ->
+                playerData.player.volumeLevel?.toInt()?.let {
+                    mediaSessionHelper.updateVolumeFromServer(it)
                 }
             }
         }

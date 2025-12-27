@@ -61,7 +61,17 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
 
     override fun onCreate() {
         super.onCreate()
-        mediaSessionHelper = MediaSessionHelper("AutoMediaSession", this, createCallback())
+        // TODO: Implement proper volume integration for Android Auto
+        // For now, use stub callback to satisfy MediaSessionHelper signature
+        mediaSessionHelper = MediaSessionHelper(
+            tag = "AutoMediaSession",
+            context = this,
+            callback = createCallback(),
+            onVolumeChange = { volume ->
+                // TODO: Implement volume control for Android Auto
+                // Should send to server like MainMediaPlaybackService does
+            }
+        )
         sessionToken = mediaSessionHelper.getSessionToken()
         imageLoader = ImageLoader(this)
         defaultIconUri = R.drawable.baseline_library_music_24.toUri(this)

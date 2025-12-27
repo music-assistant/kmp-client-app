@@ -32,9 +32,6 @@ fontIconsVersion = "1.1.1"
 navigationComposeVersion = "2.9.1" # required by compose-multiplatform version 1.9.3
 settingsMultiplatform = "1.3.0"
 reorderable = "3.0.0"
-media3="1.8.0"
-
-vlcj = "4.12.1"
 
 androidxNavigation3UI = "1.0.0-alpha06"
 androidxNavigation3Material = "1.3.0-alpha02"
@@ -56,8 +53,6 @@ androidx-media = { group = "androidx.media", name = "media", version.ref = "andr
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
 androidx-lifecycle-viewmodel = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-runtime-compose = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
-androidx-media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
-
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-coroutines-swing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
 
@@ -88,8 +83,6 @@ icons-tabler = { module = "br.com.devsrsouza.compose.icons:tabler-icons", versio
 
 settings-multiplatform = { module = "com.russhwolf:multiplatform-settings-no-arg", version.ref = "settingsMultiplatform" }
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
-
-vlcj = { module = "uk.co.caprica:vlcj", version.ref = "vlcj" }
 
 androidx-navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "androidxNavigation3UI" }
 androidx-navigation3-material3-adaptive = { module = "org.jetbrains.compose.material3.adaptive:adaptive-navigation3", version.ref = "androidxNavigation3Material" }

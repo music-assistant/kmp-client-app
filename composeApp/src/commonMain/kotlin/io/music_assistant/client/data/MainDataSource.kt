@@ -13,12 +13,10 @@ import io.music_assistant.client.data.model.client.QueueInfo
 import io.music_assistant.client.data.model.client.QueueInfo.Companion.toQueue
 import io.music_assistant.client.data.model.client.QueueTrack
 import io.music_assistant.client.data.model.client.QueueTrack.Companion.toQueueTrack
-import io.music_assistant.client.data.model.server.BuiltinPlayerEventType
 import io.music_assistant.client.data.model.server.RepeatMode
 import io.music_assistant.client.data.model.server.ServerPlayer
 import io.music_assistant.client.data.model.server.ServerQueue
 import io.music_assistant.client.data.model.server.ServerQueueItem
-import io.music_assistant.client.data.model.server.events.BuiltinPlayerEvent
 import io.music_assistant.client.data.model.server.events.MediaItemAddedEvent
 import io.music_assistant.client.data.model.server.events.MediaItemDeletedEvent
 import io.music_assistant.client.data.model.server.events.MediaItemUpdatedEvent
@@ -27,7 +25,8 @@ import io.music_assistant.client.data.model.server.events.QueueItemsUpdatedEvent
 import io.music_assistant.client.data.model.server.events.QueueTimeUpdatedEvent
 import io.music_assistant.client.data.model.server.events.QueueUpdatedEvent
 import io.music_assistant.client.player.MediaPlayerController
-import io.music_assistant.client.player.MediaPlayerListener
+import io.music_assistant.client.player.sendspin.SendspinClient
+import io.music_assistant.client.player.sendspin.SendspinConfig
 import io.music_assistant.client.settings.SettingsRepository
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.main.PlayerAction
@@ -58,12 +57,14 @@ import kotlin.coroutines.CoroutineContext
 class MainDataSource(
     private val settings: SettingsRepository,
     val apiClient: ServiceClient,
-    private val localPlayerController: MediaPlayerController,
-) : CoroutineScope, MediaPlayerListener {
+    private val mediaPlayerController: MediaPlayerController,
+) : CoroutineScope {
 
     private val log = Logger.withTag("MainDataSource")
-    private val localPlayerId = settings.getLocalPlayerId()
-    //private var localPlayerUpdateInterval = 20000L
+
+    // Sendspin client (singleton - shared across UI, service, Android Auto, etc.)
+    // Background-safe: MainDataSource is singleton held by foreground service
+    private var sendspinClient: SendspinClient? = null
 
     override val coroutineContext: CoroutineContext
         get() = SupervisorJob() + Dispatchers.IO
@@ -73,17 +74,14 @@ class MainDataSource(
 
     private val _players =
         combine(_serverPlayers, settings.playersSorting) { players, sortedIds ->
-            val filtered = players.filter { !it.isBuiltin || it.id == localPlayerId }
+            // Filter out built-in players (deprecated, replaced by Sendspin)
+            val filtered = players.filter { !it.isBuiltin }
             sortedIds?.let {
                 filtered.sortedBy { player ->
                     sortedIds.indexOf(player.id).takeIf { it >= 0 }
                         ?: Int.MAX_VALUE
                 }
-            } ?: filtered.sortedBy { player ->
-                if (player.isBuiltin)
-                    "A" // putting it first
-                else player.name
-            }
+            } ?: filtered.sortedBy { player -> player.name }
         }
 
     private val _playersData = MutableStateFlow<List<PlayerData>>(emptyList())
@@ -144,9 +142,10 @@ class MainDataSource(
                     is SessionState.Connected -> {
                         watchJob = watchApiEvents()
                         if (it.dataConnectionState == DataConnectionState.Authenticated || it.dataConnectionState == DataConnectionState.Anonymous) {
-                            //initBuiltinPlayer() TODO Sendspin
+                            initSendspinIfEnabled()
                             updatePlayersAndQueues()
                         } else {
+                            stopSendspin()
                             _serverPlayers.update { emptyList() }
                             _queueInfos.update { emptyList() }
                             updateJob?.cancel()
@@ -157,6 +156,7 @@ class MainDataSource(
                     }
 
                     SessionState.Connecting -> {
+                        stopSendspin()
                         updateJob?.cancel()
                         updateJob = null
                         watchJob?.cancel()
@@ -164,6 +164,7 @@ class MainDataSource(
                     }
 
                     is SessionState.Disconnected -> {
+                        stopSendspin()
                         _serverPlayers.update { emptyList() }
                         _queueInfos.update { emptyList() }
                         updateJob?.cancel()
@@ -190,28 +191,93 @@ class MainDataSource(
                 refreshPlayerQueueItems(playersData.value[it])
             }
         }
-//        launch {
-//            playersData.filter { it.isNotEmpty() }.first {
-//                it.first().player.id == localPlayerId && _selectedPlayerData.value == null
-//            }.let { selectPlayer(it.first().player) }
-//        }
+
+        // Watch for Sendspin settings changes
+        launch {
+            settings.sendspinEnabled.collect { enabled ->
+                if (apiClient.sessionState.value is SessionState.Connected) {
+                    if (enabled) {
+                        initSendspinIfEnabled()
+                    } else {
+                        stopSendspin()
+                    }
+                }
+            }
+        }
     }
 
-//    private fun initBuiltinPlayer() {
-//        updateJob?.cancel()
-//        updateJob = launch {
-//            apiClient.sendRequest(
-//                Request.Player.registerBuiltIn(
-//                    Player.LOCAL_PLAYER_NAME,
-//                    localPlayerId
-//                )
-//            )
-//            while (isActive) {
-//                updateLocalPlayerState()
-//                delay(localPlayerUpdateInterval)
-//            }
-//        }
-//    }
+    /**
+     * Initialize Sendspin player if enabled in settings.
+     * Safe for background: MainDataSource is singleton held by foreground service.
+     */
+    private suspend fun initSendspinIfEnabled() {
+        if (!settings.sendspinEnabled.value) {
+            log.i { "Sendspin disabled in settings, skipping initialization" }
+            return
+        }
+
+        val serverHost = settings.connectionInfo.value?.webUrl?.let { url ->
+            try {
+                val uri = java.net.URI(url)
+                uri.host
+            } catch (e: Exception) {
+                log.e(e) { "Failed to parse server URL: $url" }
+                null
+            }
+        }
+
+        if (serverHost == null) {
+            log.w { "No server host available, cannot initialize Sendspin" }
+            return
+        }
+
+        // Stop existing client if any
+        sendspinClient?.let { existing ->
+            if (existing.connectionState.value is io.music_assistant.client.player.sendspin.SendspinConnectionState.Connected) {
+                // Already connected, don't reconnect
+                return
+            }
+            existing.stop()
+            existing.close()
+        }
+
+        // Build Sendspin config
+        val config = SendspinConfig(
+            clientId = settings.sendspinClientId.value,
+            deviceName = settings.sendspinDeviceName.value,
+            enabled = true,
+            bufferCapacityMicros = 500_000, // 500ms
+            serverHost = serverHost,
+            serverPort = settings.sendspinPort.value,
+            serverPath = settings.sendspinPath.value
+        )
+
+        log.i { "Initializing Sendspin client: $serverHost:${config.serverPort}" }
+
+        try {
+            val client = SendspinClient(config, mediaPlayerController)
+            sendspinClient = client
+            client.start()
+        } catch (e: Exception) {
+            log.e(e) { "Failed to initialize Sendspin client" }
+        }
+    }
+
+    /**
+     * Stop Sendspin player if running.
+     */
+    private suspend fun stopSendspin() {
+        sendspinClient?.let { client ->
+            log.i { "Stopping Sendspin client" }
+            try {
+                client.stop()
+                client.close()
+            } catch (e: Exception) {
+                log.e(e) { "Error stopping Sendspin client" }
+            }
+            sendspinClient = null
+        }
+    }
 
 
     fun selectPlayer(player: Player) {
@@ -442,59 +508,6 @@ class MainDataSource(
                                 }
                         }
 
-                        is BuiltinPlayerEvent -> {
-                            if (event.objectId != localPlayerId) return@collect
-                            log.i { "Builtin player: $event" }
-                            settings.connectionInfo.value?.webUrl?.let { url ->
-                                when (event.data.type) {
-                                    BuiltinPlayerEventType.PLAY_MEDIA -> {
-                                        event.data.mediaUrl?.let { media ->
-                                            withContext(Dispatchers.Main) {
-                                                localPlayerController.prepare(
-                                                    "$url/${media}",
-                                                    this@MainDataSource
-                                                )
-                                            }
-                                            //updateLocalPlayerState(false)
-                                        }
-                                    }
-
-                                    BuiltinPlayerEventType.PLAY,
-                                    BuiltinPlayerEventType.RESUME -> {
-                                        withContext(Dispatchers.Main) {
-                                            localPlayerController.start()
-                                        }
-                                        //updateLocalPlayerState(true)
-                                    }
-
-                                    BuiltinPlayerEventType.PAUSE -> {
-                                        withContext(Dispatchers.Main) {
-                                            localPlayerController.pause()
-                                        }
-                                        //updateLocalPlayerState(false)
-                                    }
-
-                                    BuiltinPlayerEventType.STOP -> {
-                                        withContext(Dispatchers.Main) {
-                                            localPlayerController.stop()
-                                        }
-                                        //updateLocalPlayerState(false)
-                                    }
-
-                                    BuiltinPlayerEventType.TIMEOUT -> {/*updateLocalPlayerState()*/
-                                    }
-
-                                    BuiltinPlayerEventType.MUTE,
-                                    BuiltinPlayerEventType.UNMUTE,
-                                    BuiltinPlayerEventType.SET_VOLUME,
-                                    BuiltinPlayerEventType.POWER_OFF,
-                                    BuiltinPlayerEventType.POWER_ON -> {
-                                        log.i { "Builtin player event unhandled" }
-                                    }
-                                }
-                            }
-                        }
-
                         else -> log.i { "Unhandled event: $event" }
                     }
                 }
@@ -571,47 +584,6 @@ class MainDataSource(
             }
 
         }
-    }
-
-//    private suspend fun updateLocalPlayerState(isPlaying: Boolean? = null) {
-//        log.i { "Updating local player state" }
-//        val isPlayerPlaying = withContext(Dispatchers.Main) { localPlayerController.isPlaying() }
-//        val position = withContext(Dispatchers.Main) {
-//            (localPlayerController.getCurrentPosition()
-//                ?: 0).toDouble() / 1000
-//        }
-//        val playing = isPlaying ?: isPlayerPlaying
-//        apiClient.sendRequest(
-//            Request.Player.updateBuiltInState(
-//                localPlayerId,
-//                BuiltinPlayerState(
-//                    powered = true,
-//                    playing = playing,
-//                    paused = !playing,
-//                    position = position,
-//                    volume = 100.0,
-//                    muted = false
-//                )
-//            )
-//        )
-//        val newUpdateInterval = if (playing) 5000L else 20000L
-//        if (newUpdateInterval != localPlayerUpdateInterval) {
-//            localPlayerUpdateInterval = newUpdateInterval
-//        }
-//    }
-
-    override fun onReady() {
-//        localPlayerController.start()
-//        launch { updateLocalPlayerState(true) }
-    }
-
-    override fun onAudioCompleted() {
-//        launch { updateLocalPlayerState(false) }
-    }
-
-    override fun onError(error: Throwable?) {
-//        log.i(error ?: Exception("Unknown")) { "Media player error $error" }
-//        launch { updateLocalPlayerState(false) }
     }
 
 }

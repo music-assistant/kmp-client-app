@@ -5,99 +5,25 @@ package io.music_assistant.client.player
 import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioTrack
-import androidx.media3.common.AudioAttributes
-import androidx.media3.common.C
-import androidx.media3.common.MediaItem
-import androidx.media3.common.PlaybackException
-import androidx.media3.common.Player
-import androidx.media3.common.Player.STATE_ENDED
-import androidx.media3.common.Player.STATE_READY
-import androidx.media3.exoplayer.ExoPlayer
 import co.touchlab.kermit.Logger
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 
+/**
+ * MediaPlayerController - Sendspin audio player
+ *
+ * Handles raw PCM audio streaming for Sendspin protocol.
+ * Built-in player (ExoPlayer) has been removed - Sendspin is now the only playback method.
+ */
 actual class MediaPlayerController actual constructor(platformContext: PlatformContext) {
     private val logger = Logger.withTag("MediaPlayerController")
 
-    private val player = ExoPlayer.Builder(platformContext.applicationContext).build().apply {
-        setAudioAttributes(
-            AudioAttributes.Builder()
-                .setUsage(C.USAGE_MEDIA)
-                .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                .build(),
-            true
-        )
-    }
-
-    // Raw PCM streaming
+    // AudioTrack for raw PCM streaming (Sendspin)
     private var audioTrack: AudioTrack? = null
-    private var isPcmStreamMode = false
 
-    actual fun prepare(pathSource: String, listener: MediaPlayerListener) {
-        val mediaItem = MediaItem.fromUri(pathSource)
-        player.addListener(object : Player.Listener {
-            override fun onPlayerError(error: PlaybackException) {
-                super.onPlayerError(error)
-                listener.onError(error)
-            }
+    // Volume state (0-100)
+    private var currentVolume: Int = 100
+    private var isMuted: Boolean = false
 
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                super.onPlaybackStateChanged(playbackState)
-                when (playbackState) {
-                    STATE_READY -> listener.onReady()
-                    STATE_ENDED -> listener.onAudioCompleted()
-                    Player.STATE_BUFFERING,
-                    Player.STATE_IDLE -> Unit
-                }
-            }
-
-            override fun onPlayerErrorChanged(error: PlaybackException?) {
-                super.onPlayerErrorChanged(error)
-                listener.onError(error)
-            }
-        })
-        player.setMediaItem(mediaItem)
-        player.prepare()
-        player.play()
-    }
-
-    actual fun start() {
-        player.play()
-    }
-
-    actual fun pause() {
-        if (player.isPlaying)
-            player.pause()
-    }
-
-    actual fun seekTo(seconds: Long) {
-        if (player.isPlaying)
-            player.seekTo(seconds)
-    }
-
-    actual fun getCurrentPosition(): Long? {
-        return player.currentPosition
-    }
-
-    actual fun getDuration(): Long? {
-        return player.duration
-    }
-
-    actual fun stop() {
-        player.stop()
-    }
-
-    actual fun release() {
-        player.release()
-    }
-
-    actual fun isPlaying(): Boolean {
-        return player.isPlaying
-    }
-
-    // Raw PCM streaming methods for Sendspin
+    // Sendspin raw PCM streaming methods
 
     actual fun prepareRawPcmStream(
         sampleRate: Int,
@@ -107,18 +33,7 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
     ) {
         logger.i { "Preparing raw PCM stream: ${sampleRate}Hz, ${channels}ch, ${bitDepth}bit" }
 
-        isPcmStreamMode = true
-
-        // Stop ExoPlayer if running
-        runBlocking {
-            withContext(Dispatchers.Main) {
-                if (player.isPlaying) {
-                    player.stop()
-                }
-            }
-        }
-
-        // Release existing AudioTrack
+        // Release existing AudioTrack if any
         audioTrack?.release()
 
         // Convert parameters to Android AudioFormat constants
@@ -177,6 +92,9 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
             val newPlayState = audioTrack?.playState
             logger.i { "AudioTrack started: playState=$newPlayState (${if (newPlayState == AudioTrack.PLAYSTATE_PLAYING) "PLAYING" else "NOT_PLAYING"})" }
 
+            // Apply current volume/mute state
+            applyVolume()
+
             listener.onReady()
 
         } catch (e: Exception) {
@@ -189,11 +107,6 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
         val track = audioTrack
         if (track == null) {
             logger.w { "AudioTrack not initialized" }
-            return 0
-        }
-
-        if (!isPcmStreamMode) {
-            logger.w { "Not in PCM stream mode" }
             return 0
         }
 
@@ -242,7 +155,41 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
         }
 
         audioTrack = null
-        isPcmStreamMode = false
+    }
+
+    actual fun setVolume(volume: Int) {
+        currentVolume = volume.coerceIn(0, 100)
+        logger.i { "Setting volume to $currentVolume" }
+        applyVolume()
+    }
+
+    actual fun setMuted(muted: Boolean) {
+        isMuted = muted
+        logger.i { "Setting muted to $muted (audioTrack=${if (audioTrack != null) "initialized" else "null"})" }
+        applyVolume()
+    }
+
+    private fun applyVolume() {
+        val track = audioTrack ?: return
+
+        // AudioTrack uses 0.0 to 1.0 scale
+        val volumeFloat = if (isMuted) {
+            0f
+        } else {
+            (currentVolume / 100f).coerceIn(0f, 1f)
+        }
+
+        try {
+            track.setVolume(volumeFloat)
+            logger.d { "Applied volume: $volumeFloat (volume=$currentVolume, muted=$isMuted)" }
+        } catch (e: Exception) {
+            logger.e(e) { "Error setting volume" }
+        }
+    }
+
+    actual fun release() {
+        logger.i { "Releasing MediaPlayerController" }
+        stopRawPcmStream()
     }
 }
 

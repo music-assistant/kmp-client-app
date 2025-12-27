@@ -264,8 +264,20 @@ data class ClientCommandMessage(
 @Serializable
 data class ServerCommandMessage(
     override val type: String = "server/command",
-    val payload: CommandPayload
+    val payload: ServerCommandPayload
 ) : SendspinMessage
+
+@Serializable
+data class ServerCommandPayload(
+    val player: PlayerCommandObject
+)
+
+@Serializable
+data class PlayerCommandObject(
+    val command: String,
+    val volume: Int? = null,
+    val mute: Boolean? = null  // Server sends "mute", not "muted"
+)
 
 @Serializable
 data class CommandPayload(
