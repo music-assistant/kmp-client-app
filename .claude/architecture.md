@@ -113,14 +113,35 @@ When implementing new features or integrations:
 ### Sendspin Integration
 
 The built-in player functionality uses the Sendspin multi-room audio protocol:
-- **Integration point**: `HomeScreenViewModel` manages Sendspin lifecycle
+- **Management**: `MainDataSource` singleton manages Sendspin lifecycle (not individual services)
+- **Integration point**: `HomeScreenViewModel` interacts with Sendspin via MainDataSource
 - **Configuration**: Sendspin settings in `SettingsRepository` and `SettingsScreen`
 - **Connection**: Direct WebSocket to Music Assistant server (same IP as main connection)
 - **Platform-specific**: `MediaPlayerController` has expect/actual for raw PCM streaming
   - Android: Uses `AudioTrack` for low-latency playback
   - iOS/Desktop: Stubs for future implementation
 
-See `.claude/sendspin-integration-design.md` for detailed technical documentation.
+### Android Services Integration
+
+Android foreground services integrate with Sendspin through MainDataSource:
+
+**MainMediaPlaybackService**:
+- Handles notifications and lock screen controls
+- Shows all active players (excluding deprecated builtin players)
+- Accesses player state via `MainDataSource.playersData`
+- Uses `MediaSessionHelper` for MediaSession management
+
+**AndroidAutoPlaybackService**:
+- Provides Android Auto support via `MediaBrowserServiceCompat`
+- Shows first player with active playback (`queueInfo?.currentItem != null`)
+- Uses `playerData.queue` for queue access (not deprecated `builtinPlayerQueue`)
+- When Sendspin is playing locally, it appears in Android Auto
+- Supports library browsing via `AutoLibrary`
+- All actions go through `MainDataSource.playerAction()` and `queueAction()`
+
+**Key Pattern**: Services do NOT create or manage Sendspin directly. They access player data through MainDataSource's playersData StateFlow, maintaining a single source of truth.
+
+See `.claude/sendspin-integration-design.md` and `.claude/sendspin-android-services-integration.md` for detailed technical documentation.
 
 ## Misc rules
 

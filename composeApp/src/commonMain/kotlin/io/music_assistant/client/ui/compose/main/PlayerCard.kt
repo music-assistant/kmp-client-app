@@ -13,6 +13,11 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -27,6 +32,8 @@ import coil3.compose.AsyncImage
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.ui.compose.common.OverflowMenuOption
 import io.music_assistant.client.ui.compose.common.OverflowMenuThreeDots
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 @Composable
 fun PlayerCard(
@@ -40,8 +47,28 @@ fun PlayerCard(
 ) {
     val player = playerData.player
     val queue = playerData.queueInfo
-    val currentProgress = queue?.currentItem?.track?.duration
-        ?.let { (queue.elapsedTime?.toFloat() ?: 0f) / it.toFloat() }
+    val duration = queue?.currentItem?.track?.duration?.toFloat()
+    val serverElapsed = queue?.elapsedTime?.toFloat()
+
+    // Track progress locally for smooth updates while playing
+    var localElapsed by remember(queue?.currentItem?.track?.uri) {
+        mutableFloatStateOf(serverElapsed ?: 0f)
+    }
+
+    // Sync with server updates
+    LaunchedEffect(serverElapsed) {
+        serverElapsed?.let { localElapsed = it }
+    }
+
+    // Update progress every second while playing
+    LaunchedEffect(player.isPlaying, queue?.currentItem?.track?.uri) {
+        while (isActive && player.isPlaying && duration != null && duration > 0f) {
+            delay(1000L)
+            localElapsed = (localElapsed + 1f).coerceAtMost(duration)
+        }
+    }
+
+    val currentProgress = duration?.let { localElapsed / it }
 
     Box(
         modifier = modifier

@@ -18,6 +18,7 @@ import io.music_assistant.client.auto.MediaIds
 import io.music_assistant.client.auto.toMediaDescription
 import io.music_assistant.client.auto.toUri
 import io.music_assistant.client.data.MainDataSource
+import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.main.PlayerAction
 import io.music_assistant.client.ui.compose.main.QueueAction
 import io.music_assistant.client.utils.SessionState
@@ -45,8 +46,10 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
     private val dataSource: MainDataSource by inject()
     private val library: AutoLibrary by inject()
     private val currentPlayerData =
-        dataSource.playersData.map { it.firstOrNull { playerData -> playerData.player.isBuiltin } }
-            .stateIn(scope, SharingStarted.Eagerly, null)
+        dataSource.playersData.map { players ->
+            // Show first player with active playback (Sendspin when playing locally)
+            players.firstOrNull { it.queueInfo?.currentItem != null }
+        }.stateIn(scope, SharingStarted.Eagerly, null)
     private val mediaNotificationData = currentPlayerData.filterNotNull()
         .map {
             MediaNotificationData.from(
@@ -61,15 +64,15 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
 
     override fun onCreate() {
         super.onCreate()
-        // TODO: Implement proper volume integration for Android Auto
-        // For now, use stub callback to satisfy MediaSessionHelper signature
         mediaSessionHelper = MediaSessionHelper(
             tag = "AutoMediaSession",
             context = this,
             callback = createCallback(),
             onVolumeChange = { volume ->
-                // TODO: Implement volume control for Android Auto
-                // Should send to server like MainMediaPlaybackService does
+                // Send volume change to Music Assistant server
+                currentPlayerData.value?.let { playerData ->
+                    dataSource.playerAction(playerData, PlayerAction.VolumeSet(volume.toDouble()))
+                }
             }
         )
         sessionToken = mediaSessionHelper.getSessionToken()
@@ -79,15 +82,33 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
             mediaNotificationData.debounce(200).collect { updatePlaybackState(it) }
         }
         scope.launch {
-            dataSource.builtinPlayerQueue.collect { list ->
-                mediaSessionHelper.updateQueue(list.map {
-                    QueueItem(
-                        it.track.toMediaDescription(
-                            (dataSource.apiClient.sessionState.value as? SessionState.Connected)?.serverInfo?.baseUrl,
-                            defaultIconUri
-                        ), it.track.longId
-                    )
-                })
+            currentPlayerData.filterNotNull().collect { playerData ->
+                // Get queue items from the player's queue data
+                when (val queueData = playerData.queue) {
+                    is DataState.Data -> {
+                        when (val queueItems = queueData.data.items) {
+                            is DataState.Data -> {
+                                val baseUrl = (dataSource.apiClient.sessionState.value as? SessionState.Connected)?.serverInfo?.baseUrl
+                                mediaSessionHelper.updateQueue(queueItems.data.map { queueTrack ->
+                                    QueueItem(
+                                        queueTrack.track.toMediaDescription(baseUrl, defaultIconUri),
+                                        queueTrack.track.longId
+                                    )
+                                })
+                            }
+                            else -> mediaSessionHelper.updateQueue(emptyList())
+                        }
+                    }
+                    else -> mediaSessionHelper.updateQueue(emptyList())
+                }
+            }
+        }
+        scope.launch {
+            // Sync volume from server to MediaSession
+            currentPlayerData.filterNotNull().collect { playerData ->
+                playerData.player.volumeLevel?.toInt()?.let { volume ->
+                    mediaSessionHelper.updateVolumeFromServer(volume)
+                }
             }
         }
     }
@@ -130,15 +151,25 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
 
             override fun onSkipToQueueItem(id: Long) {
                 currentPlayerData.value?.let { playerData ->
-                    dataSource.builtinPlayerQueue.value.find { it.track.longId == id }?.id
-                        ?.let { queueItemId ->
-                            dataSource.queueAction(
-                                QueueAction.PlayQueueItem(
-                                    playerData.queueInfo?.id ?: playerData.player.id, queueItemId
-                                )
-
-                            )
+                    // Get queue items from player's queue data
+                    when (val queueData = playerData.queue) {
+                        is DataState.Data -> {
+                            when (val queueItems = queueData.data.items) {
+                                is DataState.Data -> {
+                                    queueItems.data.find { it.track.longId == id }?.id?.let { queueItemId ->
+                                        dataSource.queueAction(
+                                            QueueAction.PlayQueueItem(
+                                                playerData.queueInfo?.id ?: playerData.player.id,
+                                                queueItemId
+                                            )
+                                        )
+                                    }
+                                }
+                                else -> {} // No queue items available
+                            }
                         }
+                        else -> {} // No queue data available
+                    }
                 }
             }
 

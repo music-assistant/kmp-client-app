@@ -484,3 +484,100 @@ This makes Sendspin work with:
 - ✅ System media controls
 
 Would you like me to implement any of these files?
+
+---
+
+## Android Auto Integration (Actual Implementation)
+
+The AndroidAutoPlaybackService integrates with Sendspin using the same architectural pattern as MainMediaPlaybackService:
+
+### Architecture
+
+- **Sendspin Management**: Handled by MainDataSource singleton (not by AndroidAutoPlaybackService directly)
+- **Player Access**: Via `dataSource.playersData` StateFlow
+- **Player Filter**: Shows first player with active playback (`queueInfo?.currentItem != null`)
+- **Queue Access**: Uses `playerData.queue` instead of deprecated `builtinPlayerQueue`
+- **Actions**: All go through `dataSource.playerAction()` and `dataSource.queueAction()` (server API calls)
+
+### Key Implementation Details
+
+1. **Player Selection** (AndroidAutoPlaybackService.kt:47-51)
+   ```kotlin
+   private val currentPlayerData =
+       dataSource.playersData.map { players ->
+           // Show first player with active playback (Sendspin when playing locally)
+           players.firstOrNull { it.queueInfo?.currentItem != null }
+       }.stateIn(scope, SharingStarted.Eagerly, null)
+   ```
+   - Filters for any player with current playback
+   - When Sendspin is playing locally, it will be shown
+   - Follows MainMediaPlaybackService pattern exactly
+
+2. **Queue Handling** (AndroidAutoPlaybackService.kt:84-104)
+   ```kotlin
+   scope.launch {
+       currentPlayerData.filterNotNull().collect { playerData ->
+           when (val queueData = playerData.queue) {
+               is DataState.Data -> {
+                   when (val queueItems = queueData.data.items) {
+                       is DataState.Data -> {
+                           val baseUrl = (dataSource.apiClient.sessionState.value as? SessionState.Connected)?.serverInfo?.baseUrl
+                           mediaSessionHelper.updateQueue(queueItems.data.map { queueTrack ->
+                               QueueItem(
+                                   queueTrack.track.toMediaDescription(baseUrl, defaultIconUri),
+                                   queueTrack.track.longId
+                               )
+                           })
+                       }
+                       else -> mediaSessionHelper.updateQueue(emptyList())
+                   }
+               }
+               else -> mediaSessionHelper.updateQueue(emptyList())
+           }
+       }
+   }
+   ```
+   - Accesses queue from `playerData.queue.items`
+   - Handles DataState properly (Data, Error, NoData)
+   - Updates MediaSession queue for Android Auto display
+
+3. **No Direct Sendspin Integration**
+   - AndroidAutoPlaybackService does NOT create/manage SendspinClient
+   - Sendspin lifecycle managed by MainDataSource
+   - Service simply displays active player's state via playersData
+
+### Android Auto Behavior
+
+With Sendspin enabled and playing:
+- ✅ Shows current track in Android Auto
+- ✅ Displays queue for browsing
+- ✅ Play/pause/next/previous controls work
+- ✅ Seek and volume controls work
+- ✅ Audio plays through car speakers (local playback via Sendspin)
+- ✅ Metadata and artwork display correctly
+
+Without active playback:
+- Service shows no player (currentPlayerData = null)
+- Android Auto shows empty/no media state
+
+### Removed Deprecated Code
+
+- **Removed**: `isBuiltin` player filter (builtin players are deprecated)
+- **Removed**: `builtinPlayerQueue` usage (replaced with `playerData.queue`)
+- **Updated**: All queue access now uses DataState pattern
+
+### Differences from Design Document
+
+The design document (earlier in this file) proposed creating a separate SendspinService. This was NOT implemented. Instead:
+
+**What we actually did**: Follow MainMediaPlaybackService pattern
+- Sendspin managed centrally by MainDataSource
+- Services access via playersData StateFlow
+- No service-specific Sendspin management
+
+**Why this is better**:
+- Single source of truth (MainDataSource)
+- No lifecycle synchronization issues
+- Simpler architecture
+- Consistent with rest of app
+- Works with any player, not just Sendspin

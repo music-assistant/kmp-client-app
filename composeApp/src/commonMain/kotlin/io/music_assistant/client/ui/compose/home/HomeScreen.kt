@@ -347,6 +347,9 @@ private fun PlayersPager(
     onItemMoved: ((Int) -> Unit)?,
     navigateTo: (NavScreen) -> Unit,
 ) {
+    // Extract playerData list to ensure proper recomposition
+    val playerDataList = playersState.playerData
+
     Column(modifier = modifier) {
         HorizontalPagerIndicator(
             pagerState = playerPagerState,
@@ -354,10 +357,11 @@ private fun PlayersPager(
         )
         HorizontalPager(
             modifier = Modifier.wrapContentHeight(),
-            state = playerPagerState
+            state = playerPagerState,
+            key = { page -> playerDataList.getOrNull(page)?.player?.id ?: page }
         ) { page ->
 
-            val player = playersState.playerData.getOrNull(page) ?: return@HorizontalPager
+            val player = playerDataList.getOrNull(page) ?: return@HorizontalPager
 
             Column {
                 Text(
@@ -426,7 +430,7 @@ private fun PlayersPager(
                         mutableStateOf(player.player.volumeLevel)
                     }
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 64.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(

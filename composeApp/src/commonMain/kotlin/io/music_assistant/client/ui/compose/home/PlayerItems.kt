@@ -24,7 +24,11 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +42,8 @@ import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.ui.compose.common.painters.MusicNotePainter
 import io.music_assistant.client.ui.compose.main.PlayerAction
 import io.music_assistant.client.ui.compose.main.PlayerControls
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 @Composable
 fun CompactPlayerItem(
@@ -200,17 +206,38 @@ fun FullPlayerItem(
         }
 
         val duration = track?.duration?.takeIf { it > 0 }?.toFloat()
-        val elapsed = item.queueInfo?.elapsedTime?.toFloat()
+        val serverElapsed = item.queueInfo?.elapsedTime?.toFloat()
+
+        // Track progress locally for smooth updates while playing
+        var localElapsed by remember(item.queueInfo?.currentItem?.track?.uri) {
+            mutableStateOf(serverElapsed ?: 0f)
+        }
+
+        // Sync with server updates
+        LaunchedEffect(serverElapsed) {
+            serverElapsed?.let { localElapsed = it }
+        }
+
+        // Update progress every second while playing
+        LaunchedEffect(item.player.isPlaying, item.queueInfo?.currentItem?.track?.uri) {
+            while (isActive && item.player.isPlaying && duration != null && duration > 0f) {
+                delay(1000L)
+                localElapsed = (localElapsed + 1f).coerceAtMost(duration)
+            }
+        }
 
         // Progress bar
         Slider(
-            value = elapsed ?: 0f,
+            value = localElapsed,
             valueRange = duration?.let { 0f..it } ?: 0f..1f,
-            enabled = elapsed?.takeIf { duration != null } != null,
-            onValueChange = { playerAction(item, PlayerAction.SeekTo(it.toLong())) },
+            enabled = localElapsed.takeIf { duration != null } != null,
+            onValueChange = {
+                localElapsed = it
+                playerAction(item, PlayerAction.SeekTo(it.toLong()))
+            },
             modifier = Modifier.fillMaxWidth(),
             thumb = {
-                elapsed?.takeIf { duration != null }?.let {
+                localElapsed.takeIf { duration != null }?.let {
                     SliderDefaults.Thumb(
                         interactionSource = remember { MutableInteractionSource() },
                         thumbSize = DpSize(16.dp, 16.dp),
