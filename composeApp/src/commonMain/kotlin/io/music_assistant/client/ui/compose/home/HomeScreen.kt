@@ -95,7 +95,6 @@ fun HomeScreen(
     val recommendationsState = viewModel.recommendationsState.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
     val playersState by viewModel.playersState.collectAsStateWithLifecycle()
-    val chosenItemsIds by viewModel.chosenItemsIds.collectAsStateWithLifecycle()
     // Single pager state used across all views
     val data = playersState as? HomeScreenViewModel.PlayersState.Data
     val playerPagerState = rememberPagerState(
@@ -234,10 +233,7 @@ fun HomeScreen(
                                             },
                                             onItemMoved = null,
                                             navigateTo = navigateTo,
-                                            chosenItemsIds = chosenItemsIds,
                                             queueAction = { action -> viewModel.queueAction(action) },
-                                            onItemChosenChanged = { id -> viewModel.onQueueItemChosenChanged(id) },
-                                            onChosenItemsClear = { viewModel.onQueueChosenItemsClear() }
                                         )
                                     }
                                 }
@@ -321,10 +317,7 @@ fun HomeScreen(
                                                 }
                                             },
                                             navigateTo = navigateTo,
-                                            chosenItemsIds = chosenItemsIds,
                                             queueAction = { action -> viewModel.queueAction(action) },
-                                            onItemChosenChanged = { id -> viewModel.onQueueItemChosenChanged(id) },
-                                            onChosenItemsClear = { viewModel.onQueueChosenItemsClear() }
                                         )
                                     }
                                 }
@@ -355,10 +348,7 @@ private fun PlayersPager(
     onQueueExpandedSwitch: () -> Unit,
     onItemMoved: ((Int) -> Unit)?,
     navigateTo: (NavScreen) -> Unit,
-    chosenItemsIds: Set<String>,
     queueAction: (QueueAction) -> Unit,
-    onItemChosenChanged: (String) -> Unit,
-    onChosenItemsClear: () -> Unit,
 ) {
     // Extract playerData list to ensure proper recomposition
     val playerDataList = playersState.playerData
@@ -508,10 +498,7 @@ private fun PlayersPager(
                         onQueueExpandedSwitch = { onQueueExpandedSwitch() },
                         navigateTo = navigateTo,
                         serverUrl = serverUrl,
-                        chosenItemsIds = chosenItemsIds,
                         queueAction = queueAction,
-                        onItemChosenChanged = onItemChosenChanged,
-                        onChosenItemsClear = onChosenItemsClear,
                     )
                 }
             }

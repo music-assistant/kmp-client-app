@@ -45,7 +45,6 @@ class HomeScreenViewModel(
     val serverUrl =
         apiClient.sessionState.map { (it as? SessionState.Connected)?.serverInfo?.baseUrl }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
-    val chosenItemsIds = dataSource.chosenItemsIds
     private val _links = MutableSharedFlow<String>()
     val links = _links.asSharedFlow()
 
@@ -179,8 +178,6 @@ class HomeScreenViewModel(
     fun selectPlayer(player: Player) = dataSource.selectPlayer(player)
     fun playerAction(data: PlayerData, action: PlayerAction) = dataSource.playerAction(data, action)
     fun queueAction(action: QueueAction) = dataSource.queueAction(action)
-    fun onQueueItemChosenChanged(id: String) = dataSource.onItemChosenChanged(id)
-    fun onQueueChosenItemsClear() = dataSource.onChosenItemsClear()
     fun onPlayersSortChanged(newSort: List<String>) = dataSource.onPlayersSortChanged(newSort)
     fun openPlayerSettings(id: String) = settings.connectionInfo.value?.webUrl?.let { url ->
         onOpenExternalLink("$url/#/settings/editplayer/$id")

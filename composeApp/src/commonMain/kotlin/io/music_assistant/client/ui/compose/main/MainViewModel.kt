@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.data.MainDataSource
-import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.client.Player
+import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.settings.SettingsRepository
 import io.music_assistant.client.utils.AuthProcessState
 import io.music_assistant.client.utils.DataConnectionState
@@ -109,12 +109,11 @@ class MainViewModel(
         combine(
             dataSource.playersData.filter { it.isNotEmpty() || _state.value is PlayersState.Data },
             dataSource.selectedPlayerIndex,
-            dataSource.chosenItemsIds
-        ) { playerData, selectedPlayerIndex, chosenIds ->
+        ) { playerData, selectedPlayerIndex ->
             PlayersState.Data(
                 playerData = playerData,
                 selectedPlayerIndex = selectedPlayerIndex,
-                chosenIds = chosenIds,
+                chosenIds = emptySet(),
             )
         }.collect { _state.update { it } }
     }
@@ -124,8 +123,8 @@ class MainViewModel(
         dataSource.playerAction(data, action)
 
     fun queueAction(action: QueueAction) = dataSource.queueAction(action)
-    fun onQueueItemChosenChanged(id: String) = dataSource.onItemChosenChanged(id)
-    fun onQueueChosenItemsClear() = dataSource.onChosenItemsClear()
+    fun onQueueItemChosenChanged(id: String) = Unit
+    fun onQueueChosenItemsClear() = Unit
     fun onPlayersSortChanged(newSort: List<String>) = dataSource.onPlayersSortChanged(newSort)
     fun openPlayerSettings(id: String) = settings.connectionInfo.value?.webUrl?.let { url ->
         onOpenExternalLink("$url/#/settings/editplayer/$id")

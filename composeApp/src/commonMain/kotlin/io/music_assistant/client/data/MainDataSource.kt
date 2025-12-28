@@ -1,6 +1,7 @@
 package io.music_assistant.client.data
 
 import co.touchlab.kermit.Logger
+import io.ktor.http.Url
 import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.data.model.client.AppMediaItem
@@ -27,6 +28,7 @@ import io.music_assistant.client.data.model.server.events.QueueUpdatedEvent
 import io.music_assistant.client.player.MediaPlayerController
 import io.music_assistant.client.player.sendspin.SendspinClient
 import io.music_assistant.client.player.sendspin.SendspinConfig
+import io.music_assistant.client.player.sendspin.SendspinConnectionState
 import io.music_assistant.client.settings.SettingsRepository
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.main.PlayerAction
@@ -50,7 +52,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 
 @OptIn(FlowPreview::class)
@@ -100,11 +101,6 @@ class MainDataSource(
             list.indexOfFirst { it.playerId == id }.takeIf { it >= 0 }
         }
     }.stateIn(this, SharingStarted.Eagerly, null)
-
-    private val _chosenItemsIds = MutableStateFlow<Set<String>>(emptySet())
-    val chosenItemsIds = _chosenItemsIds.asStateFlow()
-
-    val builtinPlayerQueue = MutableStateFlow<List<QueueTrack>>(emptyList())
 
     private var watchJob: Job? = null
     private var updateJob: Job? = null
@@ -218,8 +214,7 @@ class MainDataSource(
 
         val serverHost = settings.connectionInfo.value?.webUrl?.let { url ->
             try {
-                val uri = java.net.URI(url)
-                uri.host
+                Url(url).host
             } catch (e: Exception) {
                 log.e(e) { "Failed to parse server URL: $url" }
                 null
@@ -233,7 +228,7 @@ class MainDataSource(
 
         // Stop existing client if any
         sendspinClient?.let { existing ->
-            if (existing.connectionState.value is io.music_assistant.client.player.sendspin.SendspinConnectionState.Connected) {
+            if (existing.connectionState.value is SendspinConnectionState.Connected) {
                 // Already connected, don't reconnect
                 return
             }
@@ -282,19 +277,6 @@ class MainDataSource(
 
     fun selectPlayer(player: Player) {
         _selectedPlayerId.update { player.id }
-    }
-
-    fun onItemChosenChanged(id: String) {
-        _chosenItemsIds.update {
-            if (it.contains(id))
-                it - id
-            else
-                it + id
-        }
-    }
-
-    fun onChosenItemsClear() {
-        _chosenItemsIds.update { emptySet() }
     }
 
     fun playerAction(data: PlayerData, action: PlayerAction) {

@@ -26,10 +26,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -52,7 +51,6 @@ import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.DotCircle
 import compose.icons.tablericons.GripVertical
 import io.music_assistant.client.data.model.client.Queue
-import io.music_assistant.client.data.model.client.QueueTrack
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.painters.MusicNotePainter
 import io.music_assistant.client.ui.compose.library.LibraryArgs
@@ -73,10 +71,7 @@ fun CollapsibleQueue(
     onQueueExpandedSwitch: () -> Unit,
     navigateTo: (NavScreen) -> Unit,
     serverUrl: String?,
-    chosenItemsIds: Set<String>,
     queueAction: (QueueAction) -> Unit,
-    onItemChosenChanged: (String) -> Unit,
-    onChosenItemsClear: () -> Unit,
 ) {
     Column(
         modifier = modifier
@@ -172,7 +167,6 @@ fun CollapsibleQueue(
                                 }
                                 dragEndIndex = to.index
                             }
-                        val isInChooseMode = chosenItemsIds.isNotEmpty()
 
                         LazyColumn(
                             modifier = Modifier.fillMaxSize()
@@ -191,7 +185,6 @@ fun CollapsibleQueue(
                                 items = internalItems,
                                 key = { _, item -> item.id }) { index, item ->
                                 val isCurrent = item.id == currentItemId
-                                val isChosen = chosenItemsIds.contains(item.id)
                                 val isPlayed = index < currentItemIndex
 
                                 ReorderableItem(
@@ -202,19 +195,13 @@ fun CollapsibleQueue(
                                     Row(
                                         modifier = Modifier
                                             .padding(vertical = 1.dp)
-                                            .alpha(if (isPlayed && !isChosen) 0.5f else 1f)
+                                            .alpha(if (isPlayed) 0.5f else 1f)
                                             .fillMaxWidth()
                                             .clip(shape = RoundedCornerShape(8.dp))
-                                            .background(
-                                                when {
-                                                    isChosen -> MaterialTheme.colorScheme.primary
-                                                    else -> androidx.compose.ui.graphics.Color.Transparent
-                                                }
-                                            )
                                             .conditional(
                                                 condition = isPlayed,
                                                 ifTrue = {
-                                                    clickable(!isInChooseMode) {
+                                                    clickable {
                                                         queueAction(
                                                             QueueAction.PlayQueueItem(
                                                                 queueData.info.id, item.id
@@ -226,9 +213,7 @@ fun CollapsibleQueue(
                                                     combinedClickable(
                                                         enabled = true,
                                                         onClick = {
-                                                            if (isInChooseMode) {
-                                                                onItemChosenChanged(item.id)
-                                                            } else if (!isCurrent) {
+                                                            if (!isCurrent) {
                                                                 queueAction(
                                                                     QueueAction.PlayQueueItem(
                                                                         queueData.info.id, item.id
@@ -237,7 +222,7 @@ fun CollapsibleQueue(
                                                             }
                                                         },
                                                         onLongClick = {
-                                                            onItemChosenChanged(item.id)
+                                                            // TODO menu for delete
                                                         },
                                                     )
                                                 }
@@ -248,10 +233,7 @@ fun CollapsibleQueue(
                                     ) {
                                         val placeholder = MusicNotePainter(
                                             backgroundColor = MaterialTheme.colorScheme.background,
-                                            iconColor = when {
-                                                isChosen -> MaterialTheme.colorScheme.onPrimary
-                                                else -> MaterialTheme.colorScheme.secondary
-                                            }
+                                            iconColor = MaterialTheme.colorScheme.secondary
                                         )
                                         AsyncImage(
                                             modifier = Modifier
@@ -269,10 +251,7 @@ fun CollapsibleQueue(
                                                 modifier = Modifier.padding(end = 8.dp).size(12.dp),
                                                 imageVector = FontAwesomeIcons.Solid.DotCircle,
                                                 contentDescription = null,
-                                                tint = when {
-                                                    isChosen -> MaterialTheme.colorScheme.onPrimary
-                                                    else -> MaterialTheme.colorScheme.secondary
-                                                },
+                                                tint = MaterialTheme.colorScheme.secondary,
                                             )
                                         }
                                         Column(
@@ -283,10 +262,7 @@ fun CollapsibleQueue(
                                                 text = item.track.subtitle ?: "Unknown",
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
-                                                color = when {
-                                                    isChosen -> MaterialTheme.colorScheme.onPrimary
-                                                    else -> MaterialTheme.colorScheme.secondary
-                                                },
+                                                color = MaterialTheme.colorScheme.onPrimary,
                                                 style = MaterialTheme.typography.bodyMedium,
                                             )
                                             Text(
@@ -294,10 +270,7 @@ fun CollapsibleQueue(
                                                 text = item.track.name,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
-                                                color = when {
-                                                    isChosen -> MaterialTheme.colorScheme.onPrimary
-                                                    else -> MaterialTheme.colorScheme.secondary
-                                                },
+                                                color = MaterialTheme.colorScheme.secondary,
                                                 style = MaterialTheme.typography.bodyLarge,
                                                 fontWeight = when {
                                                     isCurrent -> FontWeight.Bold
@@ -305,7 +278,7 @@ fun CollapsibleQueue(
                                                 }
                                             )
                                         }
-                                        if (chosenItemsIds.isEmpty() && !isCurrent && !isPlayed) {
+                                        if (!isCurrent && !isPlayed) {
                                             Icon(
                                                 modifier = Modifier
                                                     .draggableHandle(
