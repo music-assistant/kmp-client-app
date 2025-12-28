@@ -2,7 +2,10 @@
 
 package io.music_assistant.client.player
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioFormat
@@ -25,6 +28,7 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
     // AudioTrack for raw PCM streaming (Sendspin)
     private var audioTrack: AudioTrack? = null
     private var audioTrackCreationTime: Long = 0 // Timestamp when AudioTrack was created
+    private var currentListener: MediaPlayerListener? = null // Track listener to signal errors
 
     // AudioFocus management for Android Auto
     private var audioFocusRequest: AudioFocusRequest? = null
@@ -36,6 +40,18 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
     // Volume state (0-100)
     private var currentVolume: Int = 100
     private var isMuted: Boolean = false
+
+    // BroadcastReceiver for detecting audio becoming noisy (headphone disconnection)
+    // Backup mechanism in addition to audio focus handling
+    private val noisyAudioReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
+                logger.w { "Audio becoming noisy (headphones unplugged) - stopping playback" }
+                handleAudioOutputDisconnected()
+            }
+        }
+    }
+    private var isNoisyReceiverRegistered = false
 
     // AudioFocus listener for handling focus changes (Android Auto, phone calls, etc.)
     private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
@@ -58,11 +74,11 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
                 applyVolume()
             }
             AudioManager.AUDIOFOCUS_LOSS -> {
-                logger.i { "AudioFocus lost permanently" }
+                logger.w { "AudioFocus lost permanently (Android Auto connected, another app took focus, etc.)" }
                 hasAudioFocus = false
-                shouldPlayAudio = false
-                // Pause playback
-                audioTrack?.pause()
+                // Stop playback completely when we permanently lose audio focus
+                // This happens when Android Auto connects or another app takes over audio
+                handleAudioOutputDisconnected()
             }
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
                 // Check if AudioTrack was just created (track transition)
@@ -142,6 +158,39 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
 
     // Sendspin raw PCM streaming methods
 
+    /**
+     * Handle audio output disconnection (Android Auto, headphones, Bluetooth).
+     * Stop playback locally and signal error to stop the sendspin stream.
+     */
+    private fun handleAudioOutputDisconnected() {
+        logger.w { "Handling audio output disconnection - stopping sendspin stream" }
+
+        // Stop playback
+        shouldPlayAudio = false
+
+        // Pause the AudioTrack
+        audioTrack?.let { track ->
+            try {
+                if (track.playState == AudioTrack.PLAYSTATE_PLAYING) {
+                    track.pause()
+                    track.flush() // Clear buffer
+                    logger.i { "AudioTrack paused and flushed due to output disconnection" }
+                }
+            } catch (e: Exception) {
+                logger.e(e) { "Error pausing AudioTrack on disconnection" }
+            }
+        }
+
+        // Release audio focus - we don't need it anymore since output is disconnected
+        releaseAudioFocus()
+
+        // Signal error to stop the sendspin stream
+        // This will propagate up to AudioStreamManager which will call stopStream()
+        currentListener?.onError(Exception("Audio output disconnected (Android Auto, headphones, or Bluetooth)"))
+
+        logger.i { "Sent error signal to stop sendspin stream. User should press play to resume on phone speakers." }
+    }
+
     actual fun prepareRawPcmStream(
         sampleRate: Int,
         channels: Int,
@@ -150,10 +199,16 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
     ) {
         logger.i { "Preparing raw PCM stream: ${sampleRate}Hz, ${channels}ch, ${bitDepth}bit" }
 
+        // Store listener so we can signal errors (e.g., audio output disconnection)
+        currentListener = listener
+
         // Request audio focus before creating AudioTrack
         if (!requestAudioFocus()) {
             logger.w { "Failed to gain audio focus, but continuing anyway" }
         }
+
+        // Register noisy audio receiver (headphone unplug detection)
+        registerNoisyAudioReceiver()
 
         // Release existing AudioTrack if any
         audioTrack?.release()
@@ -278,6 +333,7 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
         logger.i { "Stopping raw PCM stream" }
 
         shouldPlayAudio = false
+        currentListener = null // Clear listener reference
 
         audioTrack?.let { track ->
             try {
@@ -327,8 +383,30 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
         }
     }
 
+    private fun registerNoisyAudioReceiver() {
+        if (!isNoisyReceiverRegistered) {
+            val filter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
+            context.registerReceiver(noisyAudioReceiver, filter)
+            isNoisyReceiverRegistered = true
+            logger.d { "Registered noisy audio receiver" }
+        }
+    }
+
+    private fun unregisterNoisyAudioReceiver() {
+        if (isNoisyReceiverRegistered) {
+            try {
+                context.unregisterReceiver(noisyAudioReceiver)
+                isNoisyReceiverRegistered = false
+                logger.d { "Unregistered noisy audio receiver" }
+            } catch (e: Exception) {
+                logger.e(e) { "Error unregistering noisy audio receiver" }
+            }
+        }
+    }
+
     actual fun release() {
         logger.i { "Releasing MediaPlayerController" }
+        unregisterNoisyAudioReceiver()
         stopRawPcmStream()
         releaseAudioFocus()
     }

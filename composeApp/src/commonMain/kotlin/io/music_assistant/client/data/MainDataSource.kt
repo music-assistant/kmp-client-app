@@ -253,6 +253,22 @@ class MainDataSource(
         try {
             val client = SendspinClient(config, mediaPlayerController)
             sendspinClient = client
+
+            // Monitor for playback errors (e.g., Android Auto disconnect, audio output changed)
+            // and pause the MA server player when they occur
+            launch {
+                client.playbackStoppedDueToError.filterNotNull().collect { error ->
+                    log.w(error) { "Sendspin playback stopped due to error - pausing MA server player" }
+                    // Pause the local sendspin player on the MA server
+                    localPlayer.value?.let { playerData ->
+                        if (playerData.player.isPlaying) {
+                            log.i { "Sending pause command to MA server for player ${playerData.player.name}" }
+                            playerAction(playerData, PlayerAction.TogglePlayPause)
+                        }
+                    }
+                }
+            }
+
             client.start()
         } catch (e: Exception) {
             log.e(e) { "Failed to initialize Sendspin client" }

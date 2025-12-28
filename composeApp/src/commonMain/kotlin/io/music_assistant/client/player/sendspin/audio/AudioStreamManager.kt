@@ -40,6 +40,10 @@ class AudioStreamManager(
     private val _playbackPosition = MutableStateFlow(0L)
     val playbackPosition: StateFlow<Long> = _playbackPosition.asStateFlow()
 
+    // Error state - emits when stream encounters an error
+    private val _streamError = MutableStateFlow<Throwable?>(null)
+    val streamError: StateFlow<Throwable?> = _streamError.asStateFlow()
+
     private var streamConfig: StreamStartPlayer? = null
     private var isStreaming = false
     private var droppedChunksCount = 0
@@ -86,7 +90,13 @@ class AudioStreamManager(
                 }
 
                 override fun onError(error: Throwable?) {
-                    logger.e(error) { "MediaPlayer error" }
+                    logger.e(error) { "MediaPlayer error - stopping stream" }
+                    // When MediaPlayer encounters an error (e.g., audio output disconnected),
+                    // emit the error and stop the stream to prevent zombie playback
+                    launch {
+                        _streamError.value = error
+                        stopStream()
+                    }
                 }
             }
         )
@@ -122,7 +132,9 @@ class AudioStreamManager(
 
     suspend fun processBinaryMessage(data: ByteArray) {
         if (!isStreaming) {
-            logger.w { "Received audio chunk but not streaming" }
+            // Server is still sending chunks after we stopped - this is normal
+            // (server doesn't know we stopped until timeout or explicit notification)
+            logger.d { "Received audio chunk but not streaming (ignoring)" }
             return
         }
 
@@ -300,6 +312,8 @@ class AudioStreamManager(
             isUnderrun = false,
             droppedChunks = 0
         )
+        // Clear any error state
+        _streamError.value = null
     }
 
     // Use monotonic time for playback timing instead of wall clock time

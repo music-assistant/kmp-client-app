@@ -34,6 +34,11 @@ class SendspinClient(
     private val _playbackState = MutableStateFlow<SendspinPlaybackState>(SendspinPlaybackState.Idle)
     val playbackState: StateFlow<SendspinPlaybackState> = _playbackState.asStateFlow()
 
+    // Exposed event for when playback stops due to error (e.g., audio output disconnected)
+    // MainDataSource should monitor this to pause the MA server player
+    private val _playbackStoppedDueToError = MutableStateFlow<Throwable?>(null)
+    val playbackStoppedDueToError: StateFlow<Throwable?> = _playbackStoppedDueToError.asStateFlow()
+
     // Track current volume/mute state
     private var currentVolume: Int = 100
     private var currentMuted: Boolean = false
@@ -166,6 +171,22 @@ class SendspinClient(
             messageDispatcher?.streamClearEvent?.collect {
                 logger.i { "Stream cleared" }
                 audioStreamManager.clearStream()
+            }
+        }
+
+        // Monitor AudioStreamManager for errors (e.g., audio output disconnected)
+        launch {
+            audioStreamManager.streamError.filterNotNull().collect { error ->
+                logger.w(error) { "AudioStreamManager error - stopping playback" }
+                // Update playback state to Idle so UI reflects stopped state
+                _playbackState.value = SendspinPlaybackState.Idle
+                // Stop periodic state reporting
+                stopStateReporting()
+                // Notify that playback stopped due to error (so MainDataSource can pause the MA server)
+                _playbackStoppedDueToError.value = error
+                // Clear the error after handling
+                delay(100)
+                _playbackStoppedDueToError.value = null
             }
         }
     }
