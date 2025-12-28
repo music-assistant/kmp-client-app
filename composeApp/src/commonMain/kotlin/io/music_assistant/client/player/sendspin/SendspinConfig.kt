@@ -5,7 +5,7 @@ import kotlin.uuid.Uuid
 
 @OptIn(ExperimentalUuidApi::class)
 data class SendspinConfig(
-    val clientId: String = Uuid.random().toString(),
+    val clientId: String,
     val deviceName: String,
     val enabled: Boolean = true,
     val bufferCapacityMicros: Int = 500_000, // 500ms

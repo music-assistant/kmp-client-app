@@ -81,6 +81,7 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
         super.onCreate()
         mediaSessionHelper = MediaSessionHelper(
             tag = "MainMediaSession",
+            multiPlayer = true,
             context = this,
             callback = createCallback(),
             onVolumeChange = { volume ->

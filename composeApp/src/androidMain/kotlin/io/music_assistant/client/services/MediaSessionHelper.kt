@@ -16,6 +16,7 @@ import io.music_assistant.client.data.model.server.RepeatMode
 
 class MediaSessionHelper(
     tag: String,
+    private val multiPlayer: Boolean,
     private val context: Context,
     callback: MediaSessionCompat.Callback,
     private val onVolumeChange: (Int) -> Unit
@@ -182,7 +183,11 @@ class MediaSessionHelper(
             )
             .putString(
                 MediaMetadataCompat.METADATA_KEY_ARTIST,
-                "${data.artist} (on ${data.playerName})"
+                if (multiPlayer) {
+                    "${data.artist ?: "Unknown Artist"} (on ${data.playerName})"
+                } else {
+                    data.artist ?: "Unknown Artist"
+                }
             )
             .putString(
                 MediaMetadataCompat.METADATA_KEY_ALBUM,

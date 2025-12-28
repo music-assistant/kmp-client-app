@@ -15,25 +15,21 @@ data class Player(
     val queueId: String?,
     val isPlaying: Boolean,
     val isAnnouncing: Boolean,
-    val isBuiltin: Boolean,
 ) {
     companion object {
-        const val LOCAL_PLAYER_NAME = "This device"
-        private const val BUILTIN_PLAYER = "builtin_player"
         private const val PLAYER_CONTROL_NONE = "none"
 
         fun ServerPlayer.toPlayer() = Player(
             id = playerId,
             name = displayName,
             shouldBeShown = available && enabled && (hidden != true),
-            canSetVolume = supportedFeatures.contains(PlayerFeature.VOLUME_SET) && provider != BUILTIN_PLAYER,
+            canSetVolume = supportedFeatures.contains(PlayerFeature.VOLUME_SET),
             volumeLevel = volumeLevel?.toFloat(),
             volumeMuted = volumeMuted == true,
             canMute = muteControl != null && muteControl != PLAYER_CONTROL_NONE,
             queueId = currentMedia?.queueId ?: activeSource,
             isPlaying = state == PlayerState.PLAYING,
             isAnnouncing = announcementInProgress == true,
-            isBuiltin = provider == BUILTIN_PLAYER
         )
     }
 }

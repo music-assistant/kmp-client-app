@@ -45,11 +45,7 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
 
     private val dataSource: MainDataSource by inject()
     private val library: AutoLibrary by inject()
-    private val currentPlayerData =
-        dataSource.playersData.map { players ->
-            // Show first player with active playback (Sendspin when playing locally)
-            players.firstOrNull { it.queueInfo?.currentItem != null }
-        }.stateIn(scope, SharingStarted.Eagerly, null)
+    private val currentPlayerData = dataSource.localPlayer
     private val mediaNotificationData = currentPlayerData.filterNotNull()
         .map {
             MediaNotificationData.from(
@@ -66,6 +62,7 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
         super.onCreate()
         mediaSessionHelper = MediaSessionHelper(
             tag = "AutoMediaSession",
+            multiPlayer = false,
             context = this,
             callback = createCallback(),
             onVolumeChange = { volume ->

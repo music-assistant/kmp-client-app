@@ -12,7 +12,6 @@ import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.client.Queue
 import io.music_assistant.client.data.model.client.QueueInfo
 import io.music_assistant.client.data.model.client.QueueInfo.Companion.toQueue
-import io.music_assistant.client.data.model.client.QueueTrack
 import io.music_assistant.client.data.model.client.QueueTrack.Companion.toQueueTrack
 import io.music_assistant.client.data.model.server.RepeatMode
 import io.music_assistant.client.data.model.server.ServerPlayer
@@ -75,18 +74,20 @@ class MainDataSource(
 
     private val _players =
         combine(_serverPlayers, settings.playersSorting) { players, sortedIds ->
-            // Filter out built-in players (deprecated, replaced by Sendspin)
-            val filtered = players.filter { !it.isBuiltin }
             sortedIds?.let {
-                filtered.sortedBy { player ->
+                players.sortedBy { player ->
                     sortedIds.indexOf(player.id).takeIf { it >= 0 }
                         ?: Int.MAX_VALUE
                 }
-            } ?: filtered.sortedBy { player -> player.name }
+            } ?: players.sortedBy { player -> player.name }
         }
 
     private val _playersData = MutableStateFlow<List<PlayerData>>(emptyList())
     val playersData = _playersData.asStateFlow()
+
+    val localPlayer = playersData.map { list ->
+        list.firstOrNull { it.player.id == settings.sendspinClientId.value }
+    }.stateIn(this, SharingStarted.Eagerly, null)
 
     val isAnythingPlaying =
         playersData.map { it.any { data -> data.player.isPlaying } }
