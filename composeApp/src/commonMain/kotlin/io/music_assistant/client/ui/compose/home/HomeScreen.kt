@@ -40,7 +40,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeMute
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -73,6 +72,7 @@ import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.client.QueueTrack
 import io.music_assistant.client.ui.compose.common.HorizontalPagerIndicator
 import io.music_assistant.client.ui.compose.main.PlayerAction
+import io.music_assistant.client.ui.compose.main.QueueAction
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import io.music_assistant.client.utils.NavScreen
 import io.music_assistant.client.utils.conditional
@@ -95,6 +95,7 @@ fun HomeScreen(
     val recommendationsState = viewModel.recommendationsState.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
     val playersState by viewModel.playersState.collectAsStateWithLifecycle()
+    val chosenItemsIds by viewModel.chosenItemsIds.collectAsStateWithLifecycle()
     // Single pager state used across all views
     val data = playersState as? HomeScreenViewModel.PlayersState.Data
     val playerPagerState = rememberPagerState(
@@ -232,7 +233,11 @@ fun HomeScreen(
                                                 isQueueExpanded = !isQueueExpanded
                                             },
                                             onItemMoved = null,
-                                            navigateTo = navigateTo
+                                            navigateTo = navigateTo,
+                                            chosenItemsIds = chosenItemsIds,
+                                            queueAction = { action -> viewModel.queueAction(action) },
+                                            onItemChosenChanged = { id -> viewModel.onQueueItemChosenChanged(id) },
+                                            onChosenItemsClear = { viewModel.onQueueChosenItemsClear() }
                                         )
                                     }
                                 }
@@ -316,6 +321,10 @@ fun HomeScreen(
                                                 }
                                             },
                                             navigateTo = navigateTo,
+                                            chosenItemsIds = chosenItemsIds,
+                                            queueAction = { action -> viewModel.queueAction(action) },
+                                            onItemChosenChanged = { id -> viewModel.onQueueItemChosenChanged(id) },
+                                            onChosenItemsClear = { viewModel.onQueueChosenItemsClear() }
                                         )
                                     }
                                 }
@@ -346,6 +355,10 @@ private fun PlayersPager(
     onQueueExpandedSwitch: () -> Unit,
     onItemMoved: ((Int) -> Unit)?,
     navigateTo: (NavScreen) -> Unit,
+    chosenItemsIds: Set<String>,
+    queueAction: (QueueAction) -> Unit,
+    onItemChosenChanged: (String) -> Unit,
+    onChosenItemsClear: () -> Unit,
 ) {
     // Extract playerData list to ensure proper recomposition
     val playerDataList = playersState.playerData
@@ -494,71 +507,15 @@ private fun PlayersPager(
                         isQueueExpanded = isQueueExpanded,
                         onQueueExpandedSwitch = { onQueueExpandedSwitch() },
                         navigateTo = navigateTo,
+                        serverUrl = serverUrl,
+                        chosenItemsIds = chosenItemsIds,
+                        queueAction = queueAction,
+                        onItemChosenChanged = onItemChosenChanged,
+                        onChosenItemsClear = onChosenItemsClear,
                     )
                 }
             }
         }
 
-    }
-}
-
-@Composable
-fun QueueItemRow(
-    item: QueueTrack,
-    position: Int,
-    isCurrentItem: Boolean,
-    isPlayedItem: Boolean
-) {
-    val alpha = if (isPlayedItem) 0.4f else 1f
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = Color.Transparent,
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .clickable(enabled = !isCurrentItem) { /* TODO */ }
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Show play icon for current item, number for others
-            if (isCurrentItem) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Currently playing",
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
-                    modifier = Modifier.size(16.dp)
-                )
-            } else {
-                Text(
-                    text = position.toString(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
-                    modifier = Modifier.width(16.dp),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = item.track.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = if (isCurrentItem) FontWeight.Bold else FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = item.track.subtitle ?: "",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
     }
 }

@@ -1,8 +1,14 @@
 package io.music_assistant.client.ui.compose.home
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,8 +16,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
@@ -22,16 +32,38 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import compose.icons.FontAwesomeIcons
+import compose.icons.TablerIcons
+import compose.icons.fontawesomeicons.Solid
+import compose.icons.fontawesomeicons.solid.DotCircle
+import compose.icons.tablericons.GripVertical
 import io.music_assistant.client.data.model.client.Queue
+import io.music_assistant.client.data.model.client.QueueTrack
 import io.music_assistant.client.ui.compose.common.DataState
+import io.music_assistant.client.ui.compose.common.painters.MusicNotePainter
 import io.music_assistant.client.ui.compose.library.LibraryArgs
+import io.music_assistant.client.ui.compose.main.QueueAction
 import io.music_assistant.client.utils.NavScreen
+import io.music_assistant.client.utils.conditional
+import kotlinx.coroutines.launch
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CollapsibleQueue(
     modifier: Modifier = Modifier,
@@ -40,6 +72,11 @@ fun CollapsibleQueue(
     isQueueExpanded: Boolean,
     onQueueExpandedSwitch: () -> Unit,
     navigateTo: (NavScreen) -> Unit,
+    serverUrl: String?,
+    chosenItemsIds: Set<String>,
+    queueAction: (QueueAction) -> Unit,
+    onItemChosenChanged: (String) -> Unit,
+    onChosenItemsClear: () -> Unit,
 ) {
     Column(
         modifier = modifier
@@ -102,7 +139,10 @@ fun CollapsibleQueue(
                     val items = (queueData.items as DataState.Data).data
 
                     if (items.isEmpty()) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
                             Text(
                                 text = "Queue is empty",
                                 style = MaterialTheme.typography.bodyMedium,
@@ -118,17 +158,178 @@ fun CollapsibleQueue(
                             items.indexOfFirst { it.id == id }
                         } ?: -1
 
+                        var internalItems by remember(items) { mutableStateOf(items) }
+                        var dragEndIndex by remember { mutableStateOf<Int?>(null) }
+                        val listState = rememberLazyListState()
+                        val coroutineScope = rememberCoroutineScope()
+                        val reorderableLazyListState =
+                            rememberReorderableLazyListState(listState) { from, to ->
+                                if (to.index <= currentItemIndex) {
+                                    return@rememberReorderableLazyListState
+                                }
+                                internalItems = internalItems.toMutableList().apply {
+                                    add(to.index, removeAt(from.index))
+                                }
+                                dragEndIndex = to.index
+                            }
+                        val isInChooseMode = chosenItemsIds.isNotEmpty()
+
                         LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize()
+                                .draggable(
+                                    orientation = Orientation.Vertical,
+                                    state = rememberDraggableState { delta ->
+                                        coroutineScope.launch {
+                                            listState.scrollBy(-delta)
+                                        }
+                                    },
+                                ),
+                            state = listState,
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            items(items.size) { index ->
-                                QueueItemRow(
-                                    item = items[index],
-                                    position = index + 1,
-                                    isCurrentItem = index == currentItemIndex,
-                                    isPlayedItem = currentItemIndex >= 0 && index < currentItemIndex
-                                )
+                            itemsIndexed(
+                                items = internalItems,
+                                key = { _, item -> item.id }) { index, item ->
+                                val isCurrent = item.id == currentItemId
+                                val isChosen = chosenItemsIds.contains(item.id)
+                                val isPlayed = index < currentItemIndex
+
+                                ReorderableItem(
+                                    state = reorderableLazyListState,
+                                    key = item.id,
+                                    enabled = true,
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .padding(vertical = 1.dp)
+                                            .alpha(if (isPlayed && !isChosen) 0.5f else 1f)
+                                            .fillMaxWidth()
+                                            .clip(shape = RoundedCornerShape(8.dp))
+                                            .background(
+                                                when {
+                                                    isChosen -> MaterialTheme.colorScheme.primary
+                                                    else -> androidx.compose.ui.graphics.Color.Transparent
+                                                }
+                                            )
+                                            .conditional(
+                                                condition = isPlayed,
+                                                ifTrue = {
+                                                    clickable(!isInChooseMode) {
+                                                        queueAction(
+                                                            QueueAction.PlayQueueItem(
+                                                                queueData.info.id, item.id
+                                                            )
+                                                        )
+                                                    }
+                                                },
+                                                ifFalse = {
+                                                    combinedClickable(
+                                                        enabled = true,
+                                                        onClick = {
+                                                            if (isInChooseMode) {
+                                                                onItemChosenChanged(item.id)
+                                                            } else if (!isCurrent) {
+                                                                queueAction(
+                                                                    QueueAction.PlayQueueItem(
+                                                                        queueData.info.id, item.id
+                                                                    )
+                                                                )
+                                                            }
+                                                        },
+                                                        onLongClick = {
+                                                            onItemChosenChanged(item.id)
+                                                        },
+                                                    )
+                                                }
+                                            )
+                                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Start
+                                    ) {
+                                        val placeholder = MusicNotePainter(
+                                            backgroundColor = MaterialTheme.colorScheme.background,
+                                            iconColor = when {
+                                                isChosen -> MaterialTheme.colorScheme.onPrimary
+                                                else -> MaterialTheme.colorScheme.secondary
+                                            }
+                                        )
+                                        AsyncImage(
+                                            modifier = Modifier
+                                                .padding(end = 8.dp)
+                                                .size(48.dp)
+                                                .clip(RoundedCornerShape(size = 4.dp)),
+                                            placeholder = placeholder,
+                                            fallback = placeholder,
+                                            model = item.track.imageInfo?.url(serverUrl),
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
+                                        )
+                                        if (isCurrent) {
+                                            Icon(
+                                                modifier = Modifier.padding(end = 8.dp).size(12.dp),
+                                                imageVector = FontAwesomeIcons.Solid.DotCircle,
+                                                contentDescription = null,
+                                                tint = when {
+                                                    isChosen -> MaterialTheme.colorScheme.onPrimary
+                                                    else -> MaterialTheme.colorScheme.secondary
+                                                },
+                                            )
+                                        }
+                                        Column(
+                                            modifier = Modifier.weight(1f).wrapContentHeight()
+                                        ) {
+                                            Text(
+                                                modifier = Modifier.fillMaxWidth().alpha(0.7f),
+                                                text = item.track.subtitle ?: "Unknown",
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                color = when {
+                                                    isChosen -> MaterialTheme.colorScheme.onPrimary
+                                                    else -> MaterialTheme.colorScheme.secondary
+                                                },
+                                                style = MaterialTheme.typography.bodyMedium,
+                                            )
+                                            Text(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                text = item.track.name,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                color = when {
+                                                    isChosen -> MaterialTheme.colorScheme.onPrimary
+                                                    else -> MaterialTheme.colorScheme.secondary
+                                                },
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                fontWeight = when {
+                                                    isCurrent -> FontWeight.Bold
+                                                    else -> FontWeight.Normal
+                                                }
+                                            )
+                                        }
+                                        if (chosenItemsIds.isEmpty() && !isCurrent && !isPlayed) {
+                                            Icon(
+                                                modifier = Modifier
+                                                    .draggableHandle(
+                                                        onDragStopped = {
+                                                            dragEndIndex?.let { to ->
+                                                                queueAction(
+                                                                    QueueAction.MoveItem(
+                                                                        queueData.info.id,
+                                                                        item.id,
+                                                                        from = index,
+                                                                        to = to
+                                                                    )
+                                                                )
+                                                            }
+                                                        }
+                                                    )
+                                                    .size(16.dp),
+                                                imageVector = TablerIcons.GripVertical,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.secondary,
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

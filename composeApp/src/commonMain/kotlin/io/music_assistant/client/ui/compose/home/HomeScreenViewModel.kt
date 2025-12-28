@@ -45,6 +45,7 @@ class HomeScreenViewModel(
     val serverUrl =
         apiClient.sessionState.map { (it as? SessionState.Connected)?.serverInfo?.baseUrl }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
+    val chosenItemsIds = dataSource.chosenItemsIds
     private val _links = MutableSharedFlow<String>()
     val links = _links.asSharedFlow()
 
