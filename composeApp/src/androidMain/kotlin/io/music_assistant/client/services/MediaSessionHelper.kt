@@ -1,56 +1,75 @@
 package io.music_assistant.client.services
 
 import android.content.Context
+import android.database.ContentObserver
 import android.graphics.Bitmap
 import android.media.AudioManager
 import android.media.session.PlaybackState
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
-import androidx.media.VolumeProviderCompat
 import io.music_assistant.client.R
 import io.music_assistant.client.data.model.server.RepeatMode
 
 class MediaSessionHelper(
     tag: String,
-    context: Context,
+    private val context: Context,
     callback: MediaSessionCompat.Callback,
     private val onVolumeChange: (Int) -> Unit
 ) {
     private val mediaSession: MediaSessionCompat = MediaSessionCompat(context, tag)
-    private var currentVolume: Int = 100 // Default to 100%
+    private val audioManager: AudioManager =
+        context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private val handler = Handler(Looper.getMainLooper())
 
-    private val volumeProvider = object : VolumeProviderCompat(
-        VolumeProviderCompat.VOLUME_CONTROL_ABSOLUTE,
-        100, // Max volume
-        100  // Initial volume
-    ) {
-        override fun onSetVolumeTo(volume: Int) {
-            currentVolume = volume.coerceIn(0, 100)
-            onVolumeChange(currentVolume)
-            // Update the current volume for the provider
-            currentVolume = volume.coerceIn(0, 100)
-        }
+    private var currentVolumePercent: Int = 100 // Current volume in 0-100 scale
+    private var lastSystemVolume: Int = -1 // Track actual system volume to detect real changes
+    private var updatingFromServer = false // Prevent circular updates
 
-        override fun onAdjustVolume(direction: Int) {
-            val delta = when (direction) {
-                AudioManager.ADJUST_RAISE -> 5  // Increase by 5%
-                AudioManager.ADJUST_LOWER -> -5 // Decrease by 5%
-                else -> 0
+    // ContentObserver to monitor system volume changes
+    private val volumeObserver = object : ContentObserver(handler) {
+        override fun onChange(selfChange: Boolean) {
+            if (!updatingFromServer) {
+                val systemVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+
+                // Only process if system volume actually changed
+                if (systemVolume != lastSystemVolume) {
+                    lastSystemVolume = systemVolume
+
+                    val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                    val volumePercent = if (maxVolume > 0) {
+                        (systemVolume * 100 / maxVolume).coerceIn(0, 100)
+                    } else {
+                        0
+                    }
+
+                    if (volumePercent != currentVolumePercent) {
+                        currentVolumePercent = volumePercent
+                        onVolumeChange(volumePercent)
+                    }
+                }
             }
-            val newVolume = (currentVolume + delta).coerceIn(0, 100)
-            currentVolume = newVolume
-            onVolumeChange(newVolume)
-            // Update the current volume for the provider
-            currentVolume = newVolume
         }
     }
 
     init {
         mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_QUEUE_COMMANDS)
         mediaSession.setCallback(callback)
-        mediaSession.setPlaybackToRemote(volumeProvider)
+        mediaSession.setPlaybackToLocal(AudioManager.STREAM_MUSIC)
         mediaSession.isActive = true
+
+        // Initialize with current system volume
+        lastSystemVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+
+        // Register volume observer to monitor system volume changes
+        context.contentResolver.registerContentObserver(
+            Settings.System.CONTENT_URI,
+            true,
+            volumeObserver
+        )
     }
 
     fun getSessionToken(): MediaSessionCompat.Token {
@@ -59,11 +78,44 @@ class MediaSessionHelper(
 
     /**
      * Update volume from server (when server sends volume command)
-     * This keeps the VolumeProvider in sync without triggering a callback
+     * This updates the system volume without triggering a callback loop
      */
     fun updateVolumeFromServer(volume: Int) {
-        currentVolume = volume.coerceIn(0, 100)
-        volumeProvider.currentVolume = currentVolume
+        currentVolumePercent = volume.coerceIn(0, 100)
+
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val targetSystemVolume = if (maxVolume > 0) {
+            (currentVolumePercent * maxVolume / 100).coerceIn(0, maxVolume)
+        } else {
+            0
+        }
+
+        // Only update if the system volume would actually change
+        val currentSystemVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        if (targetSystemVolume != currentSystemVolume) {
+            updatingFromServer = true
+            lastSystemVolume = targetSystemVolume
+
+            audioManager.setStreamVolume(
+                AudioManager.STREAM_MUSIC,
+                targetSystemVolume,
+                0 // No flags (silent update)
+            )
+
+            // Delay clearing the flag to account for ContentObserver latency
+            handler.postDelayed({
+                updatingFromServer = false
+            }, 100)
+        }
+    }
+
+    /**
+     * Release resources and unregister observers
+     */
+    fun release() {
+        handler.removeCallbacksAndMessages(null) // Cancel any pending callbacks
+        context.contentResolver.unregisterContentObserver(volumeObserver)
+        mediaSession.release()
     }
 
     fun updatePlaybackState(

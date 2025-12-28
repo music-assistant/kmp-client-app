@@ -221,6 +221,7 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
     ) = library.search(query, result)
 
     override fun onDestroy() {
+        mediaSessionHelper.release()
         scope.cancel()
         super.onDestroy()
     }

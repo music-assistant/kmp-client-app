@@ -3,8 +3,12 @@
 package io.music_assistant.client.player
 
 import android.content.Context
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
 import android.media.AudioFormat
+import android.media.AudioManager
 import android.media.AudioTrack
+import android.os.Build
 import co.touchlab.kermit.Logger
 
 /**
@@ -15,13 +19,107 @@ import co.touchlab.kermit.Logger
  */
 actual class MediaPlayerController actual constructor(platformContext: PlatformContext) {
     private val logger = Logger.withTag("MediaPlayerController")
+    private val context: Context = platformContext.applicationContext
+    private val audioManager: AudioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
     // AudioTrack for raw PCM streaming (Sendspin)
     private var audioTrack: AudioTrack? = null
 
+    // AudioFocus management for Android Auto
+    private var audioFocusRequest: AudioFocusRequest? = null
+    private var hasAudioFocus = false
+
     // Volume state (0-100)
     private var currentVolume: Int = 100
     private var isMuted: Boolean = false
+
+    // AudioFocus listener for handling focus changes (Android Auto, phone calls, etc.)
+    private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
+        when (focusChange) {
+            AudioManager.AUDIOFOCUS_GAIN -> {
+                logger.i { "AudioFocus gained" }
+                hasAudioFocus = true
+                // Resume playback if it was paused
+                audioTrack?.let { track ->
+                    if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
+                        track.play()
+                    }
+                }
+                // Restore volume if it was ducked
+                applyVolume()
+            }
+            AudioManager.AUDIOFOCUS_LOSS -> {
+                logger.i { "AudioFocus lost permanently" }
+                hasAudioFocus = false
+                // Pause playback
+                audioTrack?.pause()
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                logger.i { "AudioFocus lost temporarily" }
+                hasAudioFocus = false
+                // Pause playback
+                audioTrack?.pause()
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                logger.i { "AudioFocus lost temporarily (can duck)" }
+                // Lower volume (duck)
+                audioTrack?.setVolume(0.2f)
+            }
+        }
+    }
+
+    // Request audio focus for playback (critical for Android Auto)
+    private fun requestAudioFocus(): Boolean {
+        if (hasAudioFocus) {
+            logger.d { "Already have audio focus" }
+            return true
+        }
+
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_MEDIA)
+            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+            .build()
+
+        val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                .setAudioAttributes(audioAttributes)
+                .setOnAudioFocusChangeListener(audioFocusChangeListener)
+                .build()
+            audioFocusRequest = request
+            audioManager.requestAudioFocus(request)
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.requestAudioFocus(
+                audioFocusChangeListener,
+                AudioManager.STREAM_MUSIC,
+                AudioManager.AUDIOFOCUS_GAIN
+            )
+        }
+
+        hasAudioFocus = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+        logger.i { "Audio focus request: ${if (hasAudioFocus) "GRANTED" else "DENIED"}" }
+        return hasAudioFocus
+    }
+
+    // Release audio focus
+    private fun releaseAudioFocus() {
+        if (!hasAudioFocus) {
+            return
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            audioFocusRequest?.let {
+                audioManager.abandonAudioFocusRequest(it)
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.abandonAudioFocus(audioFocusChangeListener)
+        }
+
+        hasAudioFocus = false
+        audioFocusRequest = null
+        logger.i { "Audio focus released" }
+    }
 
     // Sendspin raw PCM streaming methods
 
@@ -32,6 +130,11 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
         listener: MediaPlayerListener
     ) {
         logger.i { "Preparing raw PCM stream: ${sampleRate}Hz, ${channels}ch, ${bitDepth}bit" }
+
+        // Request audio focus before creating AudioTrack
+        if (!requestAudioFocus()) {
+            logger.w { "Failed to gain audio focus, but continuing anyway" }
+        }
 
         // Release existing AudioTrack if any
         audioTrack?.release()
@@ -46,11 +149,11 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
             }
         }
 
-        val encoding = when (bitDepth) {
-            8 -> AudioFormat.ENCODING_PCM_8BIT
-            16 -> AudioFormat.ENCODING_PCM_16BIT
-            24 -> AudioFormat.ENCODING_PCM_24BIT_PACKED
-            32 -> AudioFormat.ENCODING_PCM_32BIT
+        val encoding = when {
+            bitDepth == 8 -> AudioFormat.ENCODING_PCM_8BIT
+            bitDepth == 16 -> AudioFormat.ENCODING_PCM_16BIT
+            bitDepth == 24 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> AudioFormat.ENCODING_PCM_24BIT_PACKED
+            bitDepth == 32 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> AudioFormat.ENCODING_PCM_32BIT
             else -> {
                 logger.w { "Unsupported bit depth: $bitDepth, using 16-bit" }
                 AudioFormat.ENCODING_PCM_16BIT
@@ -155,6 +258,7 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
         }
 
         audioTrack = null
+        releaseAudioFocus()
     }
 
     actual fun setVolume(volume: Int) {
@@ -190,6 +294,7 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
     actual fun release() {
         logger.i { "Releasing MediaPlayerController" }
         stopRawPcmStream()
+        releaseAudioFocus()
     }
 }
 

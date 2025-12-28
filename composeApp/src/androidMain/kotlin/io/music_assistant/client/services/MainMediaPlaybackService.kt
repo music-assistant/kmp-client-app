@@ -219,6 +219,7 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
 
     override fun onDestroy() {
         unregisterReceiver(notificationDismissReceiver)
+        mediaSessionHelper.release()
         scope.cancel()
         super.onDestroy()
     }

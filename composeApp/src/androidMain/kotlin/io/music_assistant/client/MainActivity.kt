@@ -1,6 +1,7 @@
 package io.music_assistant.client
 
 import android.content.Intent
+import android.media.AudioManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -21,6 +22,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+
+        // Bind hardware volume keys to media stream
+        volumeControlStream = AudioManager.STREAM_MUSIC
+
         dataSource.isAnythingPlaying.asLiveData()
             .observe(this) {
                 if (it) {

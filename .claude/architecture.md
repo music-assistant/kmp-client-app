@@ -129,7 +129,7 @@ Android foreground services integrate with Sendspin through MainDataSource:
 - Handles notifications and lock screen controls
 - Shows all active players (excluding deprecated builtin players)
 - Accesses player state via `MainDataSource.playersData`
-- Uses `MediaSessionHelper` for MediaSession management
+- Uses `MediaSessionHelper` for MediaSession management and volume control (see `.claude/volume-control.md`)
 
 **AndroidAutoPlaybackService**:
 - Provides Android Auto support via `MediaBrowserServiceCompat`
