@@ -30,6 +30,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -94,7 +96,7 @@ import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.ui.compose.common.ActionButton
 import io.music_assistant.client.ui.compose.common.DataState
-import io.music_assistant.client.ui.compose.common.painters.MusicNotePainter
+import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
 import io.music_assistant.client.ui.compose.common.ToastHost
 import io.music_assistant.client.ui.compose.common.ToastState
 import io.music_assistant.client.ui.compose.common.VerticalHidingContainer
@@ -632,9 +634,10 @@ private fun ItemsList(
                         .size(48.dp)
                 ) {
                     val placeholder =
-                        MusicNotePainter(
+                        rememberPlaceholderPainter(
                             backgroundColor = MaterialTheme.colorScheme.background,
-                            iconColor = MaterialTheme.colorScheme.secondary
+                            iconColor = MaterialTheme.colorScheme.secondary,
+                            icon = Icons.Default.MusicNote
                         )
 
                     AsyncImage(

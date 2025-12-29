@@ -22,6 +22,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -57,7 +59,7 @@ import io.music_assistant.client.data.model.client.QueueInfo
 import io.music_assistant.client.data.model.client.QueueTrack
 import io.music_assistant.client.ui.compose.common.OverflowMenu
 import io.music_assistant.client.ui.compose.common.OverflowMenuOption
-import io.music_assistant.client.ui.compose.common.painters.MusicNotePainter
+import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
 import io.music_assistant.client.utils.conditional
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
@@ -305,12 +307,14 @@ private fun QueueUI(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Start
                 ) {
-                    val placeholder = MusicNotePainter(
+                    val placeholder = rememberPlaceholderPainter(
                         backgroundColor = MaterialTheme.colorScheme.background,
                         iconColor = when {
                             isChosen -> MaterialTheme.colorScheme.onPrimary
                             else -> MaterialTheme.colorScheme.secondary
-                        }
+                        },
+                        icon = Icons.Default.MusicNote
+
                     )
                     AsyncImage(
                         modifier = Modifier

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -39,7 +40,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.music_assistant.client.data.model.client.PlayerData
-import io.music_assistant.client.ui.compose.common.painters.MusicNotePainter
+import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
 import io.music_assistant.client.ui.compose.main.PlayerAction
 import io.music_assistant.client.ui.compose.main.PlayerControls
 import kotlinx.coroutines.delay
@@ -73,12 +74,11 @@ fun CompactPlayerItem(
                 contentAlignment = Alignment.Center
             ) {
                 if (track != null) {
-                    val placeholder = remember(primaryContainer, onPrimaryContainer) {
-                        MusicNotePainter(
-                            backgroundColor = primaryContainer,
-                            iconColor = onPrimaryContainer
-                        )
-                    }
+                    val placeholder = rememberPlaceholderPainter(
+                        backgroundColor = primaryContainer,
+                        iconColor = onPrimaryContainer,
+                        icon = Icons.Default.MusicNote
+                    )
                     AsyncImage(
                         placeholder = placeholder,
                         fallback = placeholder,
@@ -158,12 +158,11 @@ fun FullPlayerItem(
             contentAlignment = Alignment.Center
         ) {
             if (track != null) {
-                val placeholder = remember(primaryContainer, onPrimaryContainer) {
-                    MusicNotePainter(
-                        backgroundColor = primaryContainer,
-                        iconColor = onPrimaryContainer
-                    )
-                }
+                val placeholder = rememberPlaceholderPainter(
+                    backgroundColor = primaryContainer,
+                    iconColor = onPrimaryContainer,
+                    icon = Icons.Default.MusicNote
+                )
                 AsyncImage(
                     placeholder = placeholder,
                     fallback = placeholder,

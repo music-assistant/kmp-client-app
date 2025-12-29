@@ -2,7 +2,6 @@ package io.music_assistant.client.ui.compose.home
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
@@ -18,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -26,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -52,14 +51,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import compose.icons.FontAwesomeIcons
 import compose.icons.TablerIcons
-import compose.icons.fontawesomeicons.Solid
-import compose.icons.fontawesomeicons.solid.DotCircle
 import compose.icons.tablericons.GripVertical
 import io.music_assistant.client.data.model.client.Queue
 import io.music_assistant.client.ui.compose.common.DataState
-import io.music_assistant.client.ui.compose.common.painters.MusicNotePainter
+import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
 import io.music_assistant.client.ui.compose.library.LibraryArgs
 import io.music_assistant.client.ui.compose.main.QueueAction
 import io.music_assistant.client.utils.NavScreen
@@ -299,9 +295,10 @@ fun CollapsibleQueue(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.Start
                                         ) {
-                                            val placeholder = MusicNotePainter(
+                                            val placeholder = rememberPlaceholderPainter(
                                                 backgroundColor = MaterialTheme.colorScheme.background,
-                                                iconColor = MaterialTheme.colorScheme.secondary
+                                                iconColor = MaterialTheme.colorScheme.secondary,
+                                                icon = Icons.Default.MusicNote
                                             )
                                             AsyncImage(
                                                 modifier = Modifier
