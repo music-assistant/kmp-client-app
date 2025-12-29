@@ -88,8 +88,7 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
                 val connState = (sessionState as SessionState.Connected).dataConnectionState
                 when {
                     // If authenticated or anonymous, navigate to Home (clear Settings from backstack)
-                    connState == DataConnectionState.Authenticated ||
-                    connState == DataConnectionState.Anonymous -> {
+                    connState == DataConnectionState.Authenticated -> {
                         if (backStack.last() !is NavScreen.Home) {
                             backStack.clear()
                             backStack.add(NavScreen.Home)
