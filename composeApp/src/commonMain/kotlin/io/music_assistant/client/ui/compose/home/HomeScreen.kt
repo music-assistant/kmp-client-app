@@ -381,14 +381,10 @@ private fun PlayersPager(
 
             Column {
                 Box(
-                    modifier = Modifier
-                        .padding(top = 8.dp)
-                        .fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(horizontal = 48.dp),
+                        modifier = Modifier.align(Alignment.Center),
                         text = player.player.name,
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center,

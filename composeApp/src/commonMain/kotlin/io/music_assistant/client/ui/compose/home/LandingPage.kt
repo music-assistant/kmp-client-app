@@ -48,8 +48,8 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -294,7 +294,8 @@ fun TrackItem(
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.width(itemSize)
+            modifier = Modifier.width(itemSize),
+            textAlign = TextAlign.Center,
         )
         Text(
             text = item.subtitle.orEmpty(),
@@ -302,7 +303,8 @@ fun TrackItem(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.width(itemSize)
+            modifier = Modifier.width(itemSize),
+            textAlign = TextAlign.Center,
         )
     }
 }
@@ -344,6 +346,7 @@ fun ArtistItem(
             modifier = Modifier.width(itemSize),
             text = item.name,
             style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -416,7 +419,8 @@ fun AlbumItem(
             text = item.name,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
         )
         Text(
             modifier = Modifier.width(itemSize),
@@ -424,7 +428,8 @@ fun AlbumItem(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
         )
     }
 }
@@ -464,7 +469,8 @@ fun PlaylistItem(
             text = item.name,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
         )
     }
 }
