@@ -26,6 +26,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -225,6 +227,7 @@ fun CollapsibleQueue(
 
                         var internalItems by remember(items) { mutableStateOf(items) }
                         var dragEndIndex by remember { mutableStateOf<Int?>(null) }
+                        var menuItemId by remember { mutableStateOf<String?>(null) }
                         val listState = rememberLazyListState()
                         val coroutineScope = rememberCoroutineScope()
                         val reorderableLazyListState =
@@ -263,51 +266,51 @@ fun CollapsibleQueue(
                                     key = item.id,
                                     enabled = isPlayable,  // Disable reordering for unplayable items
                                 ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .padding(vertical = 1.dp)
-                                            .alpha(
-                                                when {
-                                                    !isPlayable -> 0.3f  // Gray out unplayable items
-                                                    isPlayed -> 0.5f
-                                                    else -> 1f
-                                                }
-                                            )
-                                            .fillMaxWidth()
-                                            .clip(shape = RoundedCornerShape(8.dp))
-                                            .conditional(
-                                                condition = isPlayed || !isPlayable,  // Treat unplayable like played items
-                                                ifTrue = {
-                                                    clickable(isPlayable) {  // Only clickable if playable
-                                                        queueAction(
-                                                            QueueAction.PlayQueueItem(
-                                                                queueData.info.id, item.id
+                                    Box {
+                                        Row(
+                                            modifier = Modifier
+                                                .padding(vertical = 1.dp)
+                                                .alpha(
+                                                    when {
+                                                        !isPlayable -> 0.3f  // Gray out unplayable items
+                                                        isPlayed -> 0.5f
+                                                        else -> 1f
+                                                    }
+                                                )
+                                                .fillMaxWidth()
+                                                .clip(shape = RoundedCornerShape(8.dp))
+                                                .conditional(
+                                                    condition = isPlayed,  // Treat unplayable like played items
+                                                    ifTrue = {
+                                                        clickable(isPlayable) {  // Only clickable if playable
+                                                            queueAction(
+                                                                QueueAction.PlayQueueItem(
+                                                                    queueData.info.id, item.id
+                                                                )
                                                             )
+                                                        }
+                                                    },
+                                                    ifFalse = {
+                                                        combinedClickable(
+                                                            onClick = {
+                                                                if (!isCurrent && isPlayable) {
+                                                                    queueAction(
+                                                                        QueueAction.PlayQueueItem(
+                                                                            queueData.info.id, item.id
+                                                                        )
+                                                                    )
+                                                                }
+                                                            },
+                                                            onLongClick = {
+                                                                menuItemId = item.id
+                                                            },
                                                         )
                                                     }
-                                                },
-                                                ifFalse = {
-                                                    combinedClickable(
-                                                        enabled = isPlayable,  // Disable for unplayable items
-                                                        onClick = {
-                                                            if (!isCurrent) {
-                                                                queueAction(
-                                                                    QueueAction.PlayQueueItem(
-                                                                        queueData.info.id, item.id
-                                                                    )
-                                                                )
-                                                            }
-                                                        },
-                                                        onLongClick = {
-                                                            // TODO menu for delete
-                                                        },
-                                                    )
-                                                }
-                                            )
-                                            .padding(horizontal = 12.dp, vertical = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Start
-                                    ) {
+                                                )
+                                                .padding(horizontal = 12.dp, vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.Start
+                                        ) {
                                         val placeholder = MusicNotePainter(
                                             backgroundColor = MaterialTheme.colorScheme.background,
                                             iconColor = MaterialTheme.colorScheme.secondary
@@ -382,6 +385,26 @@ fun CollapsibleQueue(
                                                 tint = MaterialTheme.colorScheme.secondary,
                                             )
                                         }
+                                    }
+
+                                    // Long-click menu
+                                    DropdownMenu(
+                                        expanded = menuItemId == item.id,
+                                        onDismissRequest = { menuItemId = null }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("Delete") },
+                                            onClick = {
+                                                queueAction(
+                                                    QueueAction.RemoveItems(
+                                                        queueData.info.id,
+                                                        listOf(item.id)
+                                                    )
+                                                )
+                                                menuItemId = null
+                                            }
+                                        )
+                                    }
                                     }
                                 }
                             }
