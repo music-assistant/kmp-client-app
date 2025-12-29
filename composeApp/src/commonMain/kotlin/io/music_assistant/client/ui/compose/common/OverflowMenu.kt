@@ -39,7 +39,7 @@ fun OverflowMenuThreeDots(
                 modifier = Modifier.size(16.dp),
                 imageVector = FontAwesomeIcons.Solid.EllipsisV,
                 contentDescription = "Menu",
-                tint = MaterialTheme.colorScheme.onPrimary,
+                tint = MaterialTheme.colorScheme.primary,
             )
         }
         DropdownMenu(

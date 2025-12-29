@@ -136,7 +136,7 @@ fun FullPlayerItem(
     modifier: Modifier,
     item: PlayerData,
     serverUrl: String?,
-    playerAction: (PlayerData, PlayerAction) -> Unit
+    playerAction: (PlayerData, PlayerAction) -> Unit,
 ) {
     val track = item.queueInfo?.currentItem?.track
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer

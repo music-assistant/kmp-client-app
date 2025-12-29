@@ -59,6 +59,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,11 +68,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.ui.compose.common.HorizontalPagerIndicator
+import io.music_assistant.client.ui.compose.common.OverflowMenuOption
+import io.music_assistant.client.ui.compose.common.OverflowMenuThreeDots
 import io.music_assistant.client.ui.compose.main.PlayerAction
 import io.music_assistant.client.ui.compose.main.QueueAction
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import io.music_assistant.client.utils.NavScreen
 import io.music_assistant.client.utils.conditional
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import musicassistantclient.composeapp.generated.resources.Res
 import musicassistantclient.composeapp.generated.resources.ic_ma_logo
@@ -84,6 +88,12 @@ fun HomeScreen(
     viewModel: HomeScreenViewModel = koinViewModel(),
     navigateTo: (NavScreen) -> Unit,
 ) {
+    val uriHandler = LocalUriHandler.current
+
+    LaunchedEffect(Unit) {
+        viewModel.links.collectLatest { url -> uriHandler.openUri(url) }
+    }
+
     var showPlayersView by remember { mutableStateOf(false) }
     var isQueueExpanded by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -230,6 +240,8 @@ fun HomeScreen(
                                             onItemMoved = null,
                                             navigateTo = navigateTo,
                                             queueAction = { action -> viewModel.queueAction(action) },
+                                            settingsAction = viewModel::openPlayerSettings,
+                                            dspSettingsAction = viewModel::openPlayerDspSettings,
                                         )
                                     }
                                 }
@@ -314,6 +326,8 @@ fun HomeScreen(
                                             },
                                             navigateTo = navigateTo,
                                             queueAction = { action -> viewModel.queueAction(action) },
+                                            settingsAction = viewModel::openPlayerSettings,
+                                            dspSettingsAction = viewModel::openPlayerDspSettings,
                                         )
                                     }
                                 }
@@ -345,6 +359,8 @@ private fun PlayersPager(
     onItemMoved: ((Int) -> Unit)?,
     navigateTo: (NavScreen) -> Unit,
     queueAction: (QueueAction) -> Unit,
+    settingsAction: (String) -> Unit,
+    dspSettingsAction: (String) -> Unit,
 ) {
     // Extract playerData list to ensure proper recomposition
     val playerDataList = playersState.playerData
@@ -364,18 +380,39 @@ private fun PlayersPager(
             val player = playerDataList.getOrNull(page) ?: return@HorizontalPager
 
             Column {
-                Text(
+                Box(
                     modifier = Modifier
                         .padding(top = 8.dp)
-                        .fillMaxWidth(),
-                    text = player.player.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                        .fillMaxWidth()
+                ) {
+                    Text(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(horizontal = 48.dp),
+                        text = player.player.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    // Overflow menu on the right
+                    OverflowMenuThreeDots(
+                        modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp),
+                        options = listOf(
+                            OverflowMenuOption(
+                                title = "Settings",
+                                onClick = { settingsAction(player.player.id) }
+                            ),
+                            OverflowMenuOption(
+                                title = "DSP settings",
+                                onClick = { dspSettingsAction(player.player.id) }
+                            ),
+                        )
+                    )
+                }
                 AnimatedVisibility(
                     visible = isQueueExpanded.takeIf { showQueue } != false,
                     enter = fadeIn(tween(300)) + expandVertically(tween(300)),
