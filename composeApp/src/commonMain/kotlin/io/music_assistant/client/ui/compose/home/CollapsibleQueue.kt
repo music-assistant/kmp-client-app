@@ -30,6 +30,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import io.music_assistant.client.data.model.client.PlayerData
+import io.music_assistant.client.ui.compose.common.OverflowMenu
+import io.music_assistant.client.ui.compose.common.OverflowMenuOption
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -72,6 +75,8 @@ fun CollapsibleQueue(
     navigateTo: (NavScreen) -> Unit,
     serverUrl: String?,
     queueAction: (QueueAction) -> Unit,
+    players: List<PlayerData> = emptyList(),
+    onPlayerSelected: ((String) -> Unit)? = null,
 ) {
     Column(
         modifier = modifier
@@ -80,30 +85,95 @@ fun CollapsibleQueue(
             .animateContentSize(),
     ) {
         Row(
-            modifier = Modifier
-                .wrapContentSize()
-                .background(
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = RoundedCornerShape(16.dp)
-                )
-                .clickable(onClick = { onQueueExpandedSwitch() })
-                .padding(vertical = 4.dp, horizontal = 16.dp),
-            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Queue",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimary,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Icon(
-                imageVector = if (isQueueExpanded) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
-                contentDescription = "Toggle Queue",
-                tint = MaterialTheme.colorScheme.onPrimary,
-            )
+            Row(
+                modifier = Modifier
+                    .wrapContentSize()
+                    .background(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                    .clickable(onClick = { onQueueExpandedSwitch() })
+                    .padding(vertical = 4.dp, horizontal = 16.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Queue",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Icon(
+                    imageVector = if (isQueueExpanded) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
+                    contentDescription = "Toggle Queue",
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                )
+            }
+
+            // Action buttons (visible when expanded and has items)
+            val queueData = queue as? DataState.Data
+            val items = (queueData?.data?.items as? DataState.Data)?.data
+            val hasItems = items?.isNotEmpty() == true
+            val queueId = queueData?.data?.info?.id
+
+            if (isQueueExpanded && hasItems && queueId != null) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Add button
+                    OutlinedButton(
+                        onClick = { navigateTo(NavScreen.Library(libraryArgs)) }
+                    ) {
+                        Text("Add")
+                    }
+
+                    // Transfer button
+                    OverflowMenu(
+                        modifier = Modifier,
+                        buttonContent = {
+                            OutlinedButton(onClick = it) {
+                                Text("Transfer")
+                            }
+                        },
+                        options = players.filter { p -> p.player.id != queueId }.map { playerData ->
+                            OverflowMenuOption(
+                                title = playerData.player.name,
+                                onClick = {
+                                    queueAction(
+                                        QueueAction.Transfer(
+                                            queueId,
+                                            playerData.player.id,
+                                            playerData.player.isPlaying
+                                        )
+                                    )
+                                    onPlayerSelected?.invoke(playerData.player.id)
+                                }
+                            )
+                        }.ifEmpty {
+                            listOf(
+                                OverflowMenuOption(
+                                    title = "No other players available",
+                                    onClick = { /* No-op */ }
+                                )
+                            )
+                        }
+                    )
+
+                    // Clear button
+                    OutlinedButton(
+                        onClick = { queueAction(QueueAction.ClearQueue(queueId)) }
+                    ) {
+                        Text("Clear")
+                    }
+                }
+            }
         }
 
         if (isQueueExpanded) {

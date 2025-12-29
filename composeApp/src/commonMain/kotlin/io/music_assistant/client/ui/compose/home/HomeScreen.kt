@@ -29,13 +29,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeMute
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -61,7 +59,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,7 +66,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.music_assistant.client.data.model.client.PlayerData
-import io.music_assistant.client.data.model.client.QueueTrack
 import io.music_assistant.client.ui.compose.common.HorizontalPagerIndicator
 import io.music_assistant.client.ui.compose.main.PlayerAction
 import io.music_assistant.client.ui.compose.main.QueueAction
@@ -352,6 +348,7 @@ private fun PlayersPager(
 ) {
     // Extract playerData list to ensure proper recomposition
     val playerDataList = playersState.playerData
+    val coroutineScope = rememberCoroutineScope()
 
     Column(modifier = modifier) {
         HorizontalPagerIndicator(
@@ -499,6 +496,15 @@ private fun PlayersPager(
                         navigateTo = navigateTo,
                         serverUrl = serverUrl,
                         queueAction = queueAction,
+                        players = playerDataList,
+                        onPlayerSelected = { playerId ->
+                            val targetIndex = playerDataList.indexOfFirst { it.player.id == playerId }
+                            if (targetIndex != -1) {
+                                coroutineScope.launch {
+                                    playerPagerState.animateScrollToPage(targetIndex)
+                                }
+                            }
+                        }
                     )
                 }
             }

@@ -99,6 +99,36 @@ fun OverflowMenu(
     }
 }
 
+@Composable
+fun OverflowMenu(
+    modifier: Modifier = Modifier,
+    buttonContent: @Composable (onClick: () -> Unit) -> Unit,
+    options: List<OverflowMenuOption>,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box(
+        modifier = modifier.wrapContentSize(Alignment.TopStart)
+    ) {
+        buttonContent { expanded = true }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    onClick = {
+                        option.onClick()
+                        expanded = false
+                    },
+                    text = {
+                        Text(modifier = Modifier.padding(all = 4.dp), text = option.title)
+                    }
+                )
+            }
+        }
+    }
+}
+
 data class OverflowMenuOption(
     val title: String,
     val onClick: () -> Unit
