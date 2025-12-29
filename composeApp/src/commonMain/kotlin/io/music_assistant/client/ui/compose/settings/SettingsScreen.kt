@@ -55,26 +55,15 @@ import io.music_assistant.client.utils.isValidHost
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun SettingsScreen(
-    onBack: () -> Unit,
-    navigateTo: ((NavScreen) -> Unit)? = null
-) {
+fun SettingsScreen(onBack: () -> Unit, ) {
     val themeViewModel = koinViewModel<ThemeViewModel>()
     val theme = themeViewModel.theme.collectAsStateWithLifecycle(ThemeSetting.FollowSystem)
     val viewModel = koinViewModel<SettingsViewModel>()
     val savedConnectionInfo by viewModel.savedConnectionInfo.collectAsStateWithLifecycle()
     val sessionState by viewModel.sessionState.collectAsStateWithLifecycle()
-    var shouldNavigateHome by remember { mutableStateOf(false) }
     val dataConnection = (sessionState as? SessionState.Connected)?.dataConnectionState
 
-    // Navigate to Home after successful authentication
-    if (dataConnection != DataConnectionState.Authenticated && dataConnection != DataConnectionState.Anonymous) {
-        shouldNavigateHome = true
-    } else if (shouldNavigateHome) {
-        navigateTo?.invoke(NavScreen.Home) ?: onBack()
-        shouldNavigateHome = false
-    }
-
+    // Only allow back navigation when connected
     BackHandler(enabled = true) {
         if (sessionState is SessionState.Connected) {
             onBack()

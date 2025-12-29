@@ -16,7 +16,6 @@ import androidx.navigation3.scene.DialogSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
 import io.music_assistant.client.api.ServiceClient
-import io.music_assistant.client.settings.SettingsRepository
 import io.music_assistant.client.ui.compose.home.HomeScreen
 import io.music_assistant.client.ui.compose.library.LibraryArgs
 import io.music_assistant.client.ui.compose.library.LibraryScreen
@@ -76,7 +75,7 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
         initialScreen
     )
 
-    // Monitor session state and navigate to Settings on disconnection
+    // Monitor session state and navigate appropriately
     LaunchedEffect(sessionState) {
         when (sessionState) {
             is SessionState.Disconnected -> {
@@ -88,12 +87,20 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
             }
             is SessionState.Connected -> {
                 val connState = (sessionState as SessionState.Connected).dataConnectionState
-                // If not authenticated/anonymous and not already on Settings, navigate to Settings
-                if (connState != DataConnectionState.Authenticated &&
-                    connState != DataConnectionState.Anonymous &&
-                    backStack.last() !is NavScreen.Settings) {
-                    backStack.clear()
-                    backStack.add(NavScreen.Settings)
+                when {
+                    // If authenticated or anonymous, navigate to Home (clear Settings from backstack)
+                    connState == DataConnectionState.Authenticated ||
+                    connState == DataConnectionState.Anonymous -> {
+                        if (backStack.last() !is NavScreen.Home) {
+                            backStack.clear()
+                            backStack.add(NavScreen.Home)
+                        }
+                    }
+                    // If not authenticated/anonymous, navigate to Settings
+                    backStack.last() !is NavScreen.Settings -> {
+                        backStack.clear()
+                        backStack.add(NavScreen.Settings)
+                    }
                 }
             }
             else -> { /* Connecting state - do nothing */ }
@@ -122,7 +129,6 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
             entry<NavScreen.Settings> {
                 SettingsScreen(
                     onBack = { if (backStack.last() is NavScreen.Settings) backStack.removeLastOrNull() },
-                    navigateTo = { screen -> backStack.add(screen) }
                 )
             }
             entry<NavScreen.Library>(
