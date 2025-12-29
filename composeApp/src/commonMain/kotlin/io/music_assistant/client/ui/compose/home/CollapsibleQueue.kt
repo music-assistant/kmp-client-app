@@ -186,22 +186,29 @@ fun CollapsibleQueue(
                                 key = { _, item -> item.id }) { index, item ->
                                 val isCurrent = item.id == currentItemId
                                 val isPlayed = index < currentItemIndex
+                                val isPlayable = item.isPlayable
 
                                 ReorderableItem(
                                     state = reorderableLazyListState,
                                     key = item.id,
-                                    enabled = true,
+                                    enabled = isPlayable,  // Disable reordering for unplayable items
                                 ) {
                                     Row(
                                         modifier = Modifier
                                             .padding(vertical = 1.dp)
-                                            .alpha(if (isPlayed) 0.5f else 1f)
+                                            .alpha(
+                                                when {
+                                                    !isPlayable -> 0.3f  // Gray out unplayable items
+                                                    isPlayed -> 0.5f
+                                                    else -> 1f
+                                                }
+                                            )
                                             .fillMaxWidth()
                                             .clip(shape = RoundedCornerShape(8.dp))
                                             .conditional(
-                                                condition = isPlayed,
+                                                condition = isPlayed || !isPlayable,  // Treat unplayable like played items
                                                 ifTrue = {
-                                                    clickable {
+                                                    clickable(isPlayable) {  // Only clickable if playable
                                                         queueAction(
                                                             QueueAction.PlayQueueItem(
                                                                 queueData.info.id, item.id
@@ -211,7 +218,7 @@ fun CollapsibleQueue(
                                                 },
                                                 ifFalse = {
                                                     combinedClickable(
-                                                        enabled = true,
+                                                        enabled = isPlayable,  // Disable for unplayable items
                                                         onClick = {
                                                             if (!isCurrent) {
                                                                 queueAction(
@@ -259,10 +266,14 @@ fun CollapsibleQueue(
                                         ) {
                                             Text(
                                                 modifier = Modifier.fillMaxWidth().alpha(0.7f),
-                                                text = item.track.subtitle ?: "Unknown",
+                                                text = if (isPlayable) {
+                                                    item.track.subtitle ?: "Unknown"
+                                                } else {
+                                                    "Cannot play this item"
+                                                },
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
-                                                color = MaterialTheme.colorScheme.onPrimary,
+                                                color = MaterialTheme.colorScheme.secondary,
                                                 style = MaterialTheme.typography.bodyMedium,
                                             )
                                             Text(
@@ -278,7 +289,7 @@ fun CollapsibleQueue(
                                                 }
                                             )
                                         }
-                                        if (!isCurrent && !isPlayed) {
+                                        if (!isCurrent && !isPlayed && isPlayable) {
                                             Icon(
                                                 modifier = Modifier
                                                     .draggableHandle(

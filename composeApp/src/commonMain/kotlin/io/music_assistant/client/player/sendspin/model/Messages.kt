@@ -145,6 +145,12 @@ data class ClientStatePayload(
 )
 
 @Serializable
+data class ServerStateMessage(
+    override val type: String = "server/state",
+    val payload: JsonElement? = null
+) : SendspinMessage
+
+@Serializable
 data class PlayerStateObject(
     val state: PlayerStateValue,
     val volume: Int? = null,

@@ -242,15 +242,22 @@ private fun QueueUI(
             val isCurrent = item.id == queue?.currentItem?.id
             val isChosen = chosenItemsIds?.contains(item.id) == true
             val isPlayed = index < currentIndex
+            val isPlayable = item.isPlayable
             ReorderableItem(
                 state = reorderableLazyListState,
                 key = item.id,
-                enabled = enabled,
+                enabled = enabled && isPlayable,  // Disable reordering for unplayable items
             ) {
                 Row(
                     modifier = Modifier
                         .padding(vertical = 1.dp)
-                        .alpha(if (isPlayed && !isChosen) 0.5f else 1f)
+                        .alpha(
+                            when {
+                                !isPlayable -> 0.3f  // Gray out unplayable items
+                                isPlayed && !isChosen -> 0.5f
+                                else -> 1f
+                            }
+                        )
                         .fillMaxWidth()
                         .clip(shape = RoundedCornerShape(16.dp))
                         .background(
@@ -260,9 +267,9 @@ private fun QueueUI(
                             }
                         )
                         .conditional(
-                            condition = isPlayed,
+                            condition = isPlayed || !isPlayable,  // Also treat unplayable like played items
                             ifTrue = {
-                                clickable(!isInChooseMode) {
+                                clickable(!isInChooseMode && isPlayable) {  // Only clickable if playable
                                     queue?.id?.let { queueId ->
                                         queueAction(
                                             QueueAction.PlayQueueItem(
@@ -274,7 +281,7 @@ private fun QueueUI(
                             },
                             ifFalse = {
                                 combinedClickable(
-                                    enabled = enabled,
+                                    enabled = enabled && isPlayable,  // Disable clicks for unplayable items
                                     onClick = {
                                         if (isInChooseMode) {
                                             onItemChosenChanged(item.id)

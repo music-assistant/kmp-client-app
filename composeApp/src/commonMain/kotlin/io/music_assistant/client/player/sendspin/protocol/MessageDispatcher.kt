@@ -131,6 +131,10 @@ class MessageDispatcher(
                     val message = myJson.decodeFromJsonElement<GroupUpdateMessage>(json)
                     handleGroupUpdate(message)
                 }
+                "server/state" -> {
+                    val message = myJson.decodeFromJsonElement<ServerStateMessage>(json)
+                    handleServerState(message)
+                }
                 else -> {
                     logger.w { "Unknown message type: $type" }
                 }
@@ -295,6 +299,11 @@ class MessageDispatcher(
     private fun handleGroupUpdate(message: GroupUpdateMessage) {
         logger.d { "Received group/update: ${message.payload.groupName}" }
         // Store group info if needed later
+    }
+
+    private fun handleServerState(message: ServerStateMessage) {
+        logger.d { "Received server/state: ${message.payload}" }
+        // Server state message - acknowledged but not used currently
     }
 
     // Use monotonic time for clock sync instead of wall clock time
