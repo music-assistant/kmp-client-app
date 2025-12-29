@@ -26,6 +26,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -86,94 +88,79 @@ fun CollapsibleQueue(
             .padding(start = 16.dp, end = 16.dp, bottom = if (isQueueExpanded) 0.dp else 16.dp)
             .animateContentSize(),
     ) {
-        Row(
+        Button(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            onClick = { onQueueExpandedSwitch() }
         ) {
+            Text(
+                text = "Queue",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Icon(
+                imageVector = if (isQueueExpanded) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
+                contentDescription = "Toggle Queue"
+            )
+        }
+
+        // Action buttons (visible when expanded and has items)
+        val queueData = queue as? DataState.Data
+        val items = (queueData?.data?.items as? DataState.Data)?.data
+        val hasItems = items?.isNotEmpty() == true
+        val queueId = queueData?.data?.info?.id
+
+        if (isQueueExpanded && hasItems && queueId != null) {
             Row(
-                modifier = Modifier
-                    .wrapContentSize()
-                    .background(
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(16.dp)
-                    )
-                    .clickable(onClick = { onQueueExpandedSwitch() })
-                    .padding(vertical = 4.dp, horizontal = 16.dp),
-                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Queue",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Icon(
-                    imageVector = if (isQueueExpanded) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
-                    contentDescription = "Toggle Queue",
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                )
-            }
-
-            // Action buttons (visible when expanded and has items)
-            val queueData = queue as? DataState.Data
-            val items = (queueData?.data?.items as? DataState.Data)?.data
-            val hasItems = items?.isNotEmpty() == true
-            val queueId = queueData?.data?.info?.id
-
-            if (isQueueExpanded && hasItems && queueId != null) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                // Add button
+                OutlinedButton(
+                    onClick = { navigateTo(NavScreen.Library(libraryArgs)) }
                 ) {
-                    // Add button
-                    OutlinedButton(
-                        onClick = { navigateTo(NavScreen.Library(libraryArgs)) }
-                    ) {
-                        Text("Add")
-                    }
+                    Text("Add")
+                }
 
-                    // Transfer button
-                    OverflowMenu(
-                        modifier = Modifier,
-                        buttonContent = {
-                            OutlinedButton(onClick = it) {
-                                Text("Transfer")
-                            }
-                        },
-                        options = players.filter { p -> p.player.id != queueId }.map { playerData ->
-                            OverflowMenuOption(
-                                title = playerData.player.name,
-                                onClick = {
-                                    queueAction(
-                                        QueueAction.Transfer(
-                                            queueId,
-                                            playerData.player.id,
-                                            playerData.player.isPlaying
-                                        )
-                                    )
-                                    onPlayerSelected?.invoke(playerData.player.id)
-                                }
-                            )
-                        }.ifEmpty {
-                            listOf(
-                                OverflowMenuOption(
-                                    title = "No other players available",
-                                    onClick = { /* No-op */ }
-                                )
-                            )
+                // Transfer button
+                OverflowMenu(
+                    modifier = Modifier,
+                    buttonContent = {
+                        OutlinedButton(onClick = it) {
+                            Text("Transfer")
                         }
-                    )
-
-                    // Clear button
-                    OutlinedButton(
-                        onClick = { queueAction(QueueAction.ClearQueue(queueId)) }
-                    ) {
-                        Text("Clear")
+                    },
+                    options = players.filter { p -> p.player.id != queueId }.map { playerData ->
+                        OverflowMenuOption(
+                            title = playerData.player.name,
+                            onClick = {
+                                queueAction(
+                                    QueueAction.Transfer(
+                                        queueId,
+                                        playerData.player.id,
+                                        playerData.player.isPlaying
+                                    )
+                                )
+                                onPlayerSelected?.invoke(playerData.player.id)
+                            }
+                        )
+                    }.ifEmpty {
+                        listOf(
+                            OverflowMenuOption(
+                                title = "No other players available",
+                                onClick = { /* No-op */ }
+                            )
+                        )
                     }
+                )
+
+                // Clear button
+                OutlinedButton(
+                    onClick = { queueAction(QueueAction.ClearQueue(queueId)) }
+                ) {
+                    Text("Clear")
                 }
             }
         }
@@ -296,7 +283,8 @@ fun CollapsibleQueue(
                                                                 if (!isCurrent && isPlayable) {
                                                                     queueAction(
                                                                         QueueAction.PlayQueueItem(
-                                                                            queueData.info.id, item.id
+                                                                            queueData.info.id,
+                                                                            item.id
                                                                         )
                                                                     )
                                                                 }
@@ -311,100 +299,101 @@ fun CollapsibleQueue(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.Start
                                         ) {
-                                        val placeholder = MusicNotePainter(
-                                            backgroundColor = MaterialTheme.colorScheme.background,
-                                            iconColor = MaterialTheme.colorScheme.secondary
-                                        )
-                                        AsyncImage(
-                                            modifier = Modifier
-                                                .padding(end = 8.dp)
-                                                .size(48.dp)
-                                                .clip(RoundedCornerShape(size = 4.dp)),
-                                            placeholder = placeholder,
-                                            fallback = placeholder,
-                                            model = item.track.imageInfo?.url(serverUrl),
-                                            contentDescription = null,
-                                            contentScale = ContentScale.Crop,
-                                        )
-                                        if (isCurrent) {
-                                            Icon(
-                                                modifier = Modifier.padding(end = 8.dp).size(12.dp),
-                                                imageVector = FontAwesomeIcons.Solid.DotCircle,
+                                            val placeholder = MusicNotePainter(
+                                                backgroundColor = MaterialTheme.colorScheme.background,
+                                                iconColor = MaterialTheme.colorScheme.secondary
+                                            )
+                                            AsyncImage(
+                                                modifier = Modifier
+                                                    .padding(end = 8.dp)
+                                                    .size(48.dp)
+                                                    .clip(RoundedCornerShape(size = 4.dp)),
+                                                placeholder = placeholder,
+                                                fallback = placeholder,
+                                                model = item.track.imageInfo?.url(serverUrl),
                                                 contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.secondary,
+                                                contentScale = ContentScale.Crop,
                                             )
+                                            if (isCurrent) {
+                                                Icon(
+                                                    modifier = Modifier.padding(end = 8.dp)
+                                                        .size(12.dp),
+                                                    imageVector = Icons.Default.PlayArrow,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.secondary,
+                                                )
+                                            }
+                                            Column(
+                                                modifier = Modifier.weight(1f).wrapContentHeight()
+                                            ) {
+                                                Text(
+                                                    modifier = Modifier.fillMaxWidth().alpha(0.7f),
+                                                    text = if (isPlayable) {
+                                                        item.track.subtitle ?: "Unknown"
+                                                    } else {
+                                                        "Cannot play this item"
+                                                    },
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    color = MaterialTheme.colorScheme.secondary,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                )
+                                                Text(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    text = item.track.name,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    color = MaterialTheme.colorScheme.secondary,
+                                                    style = MaterialTheme.typography.bodyLarge,
+                                                    fontWeight = when {
+                                                        isCurrent -> FontWeight.Bold
+                                                        else -> FontWeight.Normal
+                                                    }
+                                                )
+                                            }
+                                            if (!isCurrent && !isPlayed && isPlayable) {
+                                                Icon(
+                                                    modifier = Modifier
+                                                        .draggableHandle(
+                                                            onDragStopped = {
+                                                                dragEndIndex?.let { to ->
+                                                                    queueAction(
+                                                                        QueueAction.MoveItem(
+                                                                            queueData.info.id,
+                                                                            item.id,
+                                                                            from = index,
+                                                                            to = to
+                                                                        )
+                                                                    )
+                                                                }
+                                                            }
+                                                        )
+                                                        .size(16.dp),
+                                                    imageVector = TablerIcons.GripVertical,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.secondary,
+                                                )
+                                            }
                                         }
-                                        Column(
-                                            modifier = Modifier.weight(1f).wrapContentHeight()
+
+                                        // Long-click menu
+                                        DropdownMenu(
+                                            expanded = menuItemId == item.id,
+                                            onDismissRequest = { menuItemId = null }
                                         ) {
-                                            Text(
-                                                modifier = Modifier.fillMaxWidth().alpha(0.7f),
-                                                text = if (isPlayable) {
-                                                    item.track.subtitle ?: "Unknown"
-                                                } else {
-                                                    "Cannot play this item"
-                                                },
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                color = MaterialTheme.colorScheme.secondary,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                            )
-                                            Text(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                text = item.track.name,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                color = MaterialTheme.colorScheme.secondary,
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                fontWeight = when {
-                                                    isCurrent -> FontWeight.Bold
-                                                    else -> FontWeight.Normal
+                                            DropdownMenuItem(
+                                                text = { Text("Delete") },
+                                                onClick = {
+                                                    queueAction(
+                                                        QueueAction.RemoveItems(
+                                                            queueData.info.id,
+                                                            listOf(item.id)
+                                                        )
+                                                    )
+                                                    menuItemId = null
                                                 }
                                             )
                                         }
-                                        if (!isCurrent && !isPlayed && isPlayable) {
-                                            Icon(
-                                                modifier = Modifier
-                                                    .draggableHandle(
-                                                        onDragStopped = {
-                                                            dragEndIndex?.let { to ->
-                                                                queueAction(
-                                                                    QueueAction.MoveItem(
-                                                                        queueData.info.id,
-                                                                        item.id,
-                                                                        from = index,
-                                                                        to = to
-                                                                    )
-                                                                )
-                                                            }
-                                                        }
-                                                    )
-                                                    .size(16.dp),
-                                                imageVector = TablerIcons.GripVertical,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.secondary,
-                                            )
-                                        }
-                                    }
-
-                                    // Long-click menu
-                                    DropdownMenu(
-                                        expanded = menuItemId == item.id,
-                                        onDismissRequest = { menuItemId = null }
-                                    ) {
-                                        DropdownMenuItem(
-                                            text = { Text("Delete") },
-                                            onClick = {
-                                                queueAction(
-                                                    QueueAction.RemoveItems(
-                                                        queueData.info.id,
-                                                        listOf(item.id)
-                                                    )
-                                                )
-                                                menuItemId = null
-                                            }
-                                        )
-                                    }
                                     }
                                 }
                             }
