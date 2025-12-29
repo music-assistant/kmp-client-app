@@ -40,7 +40,8 @@ class SendspinClient(
     val playbackStoppedDueToError: StateFlow<Throwable?> = _playbackStoppedDueToError.asStateFlow()
 
     // Track current volume/mute state
-    private var currentVolume: Int = 100
+    // Initialize with current system volume (not hardcoded 100)
+    private var currentVolume: Int = mediaPlayerController.getCurrentSystemVolume()
     private var currentMuted: Boolean = false
 
     // State reporting
@@ -77,6 +78,11 @@ class SendspinClient(
             // Clean up existing connection
             disconnectFromServer()
 
+            // Update current volume from system right before connecting
+            // (in case it changed since construction)
+            currentVolume = mediaPlayerController.getCurrentSystemVolume()
+            logger.i { "Initializing with system volume: $currentVolume%" }
+
             // Create WebSocket handler
             val wsHandler = WebSocketHandler(serverUrl)
             webSocketHandler = wsHandler
@@ -86,7 +92,8 @@ class SendspinClient(
             val dispatcher = MessageDispatcher(
                 webSocketHandler = wsHandler,
                 clockSynchronizer = clockSynchronizer,
-                clientCapabilities = capabilities
+                clientCapabilities = capabilities,
+                initialVolume = currentVolume
             )
             messageDispatcher = dispatcher
 

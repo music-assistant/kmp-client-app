@@ -41,6 +41,11 @@ actual class MediaPlayerController actual constructor(val platformContext: Platf
         // TODO: Implement using javax.sound
     }
 
+    actual fun getCurrentSystemVolume(): Int {
+        // TODO: Implement using javax.sound
+        return 100
+    }
+
     actual fun release() {
         listener = null
     }

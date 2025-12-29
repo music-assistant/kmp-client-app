@@ -17,7 +17,8 @@ import kotlin.time.Duration.Companion.seconds
 class MessageDispatcher(
     private val webSocketHandler: WebSocketHandler,
     private val clockSynchronizer: ClockSynchronizer,
-    private val clientCapabilities: ClientHelloPayload
+    private val clientCapabilities: ClientHelloPayload,
+    private val initialVolume: Int = 100
 ) : CoroutineScope {
 
     private val logger = Logger.withTag("MessageDispatcher")
@@ -201,10 +202,10 @@ class MessageDispatcher(
     }
 
     private suspend fun sendInitialState() {
-        // Send initial player state as SYNCHRONIZED with default volume
+        // Send initial player state as SYNCHRONIZED with current system volume
         val initialState = PlayerStateObject(
             state = PlayerStateValue.SYNCHRONIZED,
-            volume = 100,
+            volume = initialVolume,
             muted = false
         )
         sendState(initialState)

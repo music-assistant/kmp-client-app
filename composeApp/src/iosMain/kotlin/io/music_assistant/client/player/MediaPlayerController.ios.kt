@@ -48,6 +48,11 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
         isPrepared = false
         callback = null
     }
+
+    actual fun getCurrentSystemVolume(): Int {
+        // TODO: "Not yet implemented"
+        return 100
+    }
 }
 
 actual class PlatformContext

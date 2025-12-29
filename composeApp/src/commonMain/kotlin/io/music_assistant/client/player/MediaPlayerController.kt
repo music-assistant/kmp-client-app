@@ -28,6 +28,9 @@ expect class MediaPlayerController(platformContext: PlatformContext) {
     // Mute control
     fun setMuted(muted: Boolean)
 
+    // Get current system volume (0-100)
+    fun getCurrentSystemVolume(): Int
+
     fun release()
 }
 

@@ -365,6 +365,19 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
         applyVolume()
     }
 
+    actual fun getCurrentSystemVolume(): Int {
+        val currentSystemVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val volumePercent = if (maxVolume > 0) {
+            (currentSystemVolume * 100 / maxVolume).coerceIn(0, 100)
+        } else {
+            logger.w { "AudioManager returned max volume 0, defaulting to 0%" }
+            0
+        }
+        logger.d { "System volume: $currentSystemVolume/$maxVolume = $volumePercent%" }
+        return volumePercent
+    }
+
     private fun applyVolume() {
         val track = audioTrack ?: return
 

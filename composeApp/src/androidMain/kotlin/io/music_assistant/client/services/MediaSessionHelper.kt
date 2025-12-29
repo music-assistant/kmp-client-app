@@ -15,7 +15,7 @@ import io.music_assistant.client.R
 import io.music_assistant.client.data.model.server.RepeatMode
 
 class MediaSessionHelper(
-    tag: String,
+    private val tag: String,
     private val multiPlayer: Boolean,
     private val context: Context,
     callback: MediaSessionCompat.Callback,
@@ -26,7 +26,7 @@ class MediaSessionHelper(
         context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private val handler = Handler(Looper.getMainLooper())
 
-    private var currentVolumePercent: Int = 100 // Current volume in 0-100 scale
+    private var currentVolumePercent: Int = 0 // Current volume in 0-100 scale (initialized in init{})
     private var lastSystemVolume: Int = -1 // Track actual system volume to detect real changes
     private var updatingFromServer = false // Prevent circular updates
 
@@ -64,6 +64,13 @@ class MediaSessionHelper(
 
         // Initialize with current system volume
         lastSystemVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        currentVolumePercent = if (maxVolume > 0) {
+            (lastSystemVolume * 100 / maxVolume).coerceIn(0, 100)
+        } else {
+            0
+        }
+        android.util.Log.d(tag, "MediaSessionHelper initialized with system volume: $lastSystemVolume/$maxVolume = $currentVolumePercent%")
 
         // Register volume observer to monitor system volume changes
         context.contentResolver.registerContentObserver(
@@ -94,6 +101,7 @@ class MediaSessionHelper(
         // Only update if the system volume would actually change
         val currentSystemVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
         if (targetSystemVolume != currentSystemVolume) {
+            android.util.Log.d(tag, "Server requested volume change: $currentVolumePercent% (system: $currentSystemVolume -> $targetSystemVolume)")
             updatingFromServer = true
             lastSystemVolume = targetSystemVolume
 
