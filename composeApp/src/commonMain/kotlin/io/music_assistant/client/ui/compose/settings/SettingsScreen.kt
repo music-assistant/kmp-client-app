@@ -87,7 +87,7 @@ fun SettingsScreen(onBack: () -> Unit, ) {
                     .fillMaxWidth()
                     .padding(all = 16.dp),
             ) {
-                if (dataConnection == DataConnectionState.Authenticated || dataConnection == DataConnectionState.Anonymous) {
+                if (dataConnection == DataConnectionState.Authenticated) {
                     ActionButton(
                         icon = FontAwesomeIcons.Solid.ArrowLeft,
                         size = 24.dp

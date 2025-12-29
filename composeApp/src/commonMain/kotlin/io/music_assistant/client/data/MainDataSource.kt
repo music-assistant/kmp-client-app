@@ -138,7 +138,7 @@ class MainDataSource(
                 when (it) {
                     is SessionState.Connected -> {
                         watchJob = watchApiEvents()
-                        if (it.dataConnectionState == DataConnectionState.Authenticated || it.dataConnectionState == DataConnectionState.Anonymous) {
+                        if (it.dataConnectionState == DataConnectionState.Authenticated) {
                             initSendspinIfEnabled()
                             updatePlayersAndQueues()
                         } else {
@@ -251,25 +251,25 @@ class MainDataSource(
         log.i { "Initializing Sendspin client: $serverHost:${config.serverPort}" }
 
         try {
-            val client = SendspinClient(config, mediaPlayerController)
-            sendspinClient = client
-
-            // Monitor for playback errors (e.g., Android Auto disconnect, audio output changed)
-            // and pause the MA server player when they occur
-            launch {
-                client.playbackStoppedDueToError.filterNotNull().collect { error ->
-                    log.w(error) { "Sendspin playback stopped due to error - pausing MA server player" }
-                    // Pause the local sendspin player on the MA server
-                    localPlayer.value?.let { playerData ->
-                        if (playerData.player.isPlaying) {
-                            log.i { "Sending pause command to MA server for player ${playerData.player.name}" }
-                            playerAction(playerData, PlayerAction.TogglePlayPause)
+            sendspinClient = SendspinClient(config, mediaPlayerController).also {
+                launch {
+                    // Monitor for playback errors (e.g., Android Auto disconnect, audio output changed)
+                    // and pause the MA server player when they occur
+                    it.playbackStoppedDueToError.filterNotNull().collect { error ->
+                        log.w(error) { "Sendspin playback stopped due to error - pausing MA server player" }
+                        // Pause the local sendspin player on the MA server
+                        localPlayer.value?.let { playerData ->
+                            if (playerData.player.isPlaying) {
+                                log.i { "Sending pause command to MA server for player ${playerData.player.name}" }
+                                playerAction(playerData, PlayerAction.TogglePlayPause)
+                            }
                         }
                     }
                 }
+
+                it.start()
             }
 
-            client.start()
         } catch (e: Exception) {
             log.e(e) { "Failed to initialize Sendspin client" }
         }

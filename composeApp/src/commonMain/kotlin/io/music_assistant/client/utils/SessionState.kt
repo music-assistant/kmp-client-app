@@ -2,8 +2,8 @@ package io.music_assistant.client.utils
 
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.music_assistant.client.api.ConnectionInfo
-import io.music_assistant.client.data.model.server.User
 import io.music_assistant.client.data.model.server.ServerInfo
+import io.music_assistant.client.data.model.server.User
 
 sealed class SessionState {
     data class Connected(
@@ -16,13 +16,7 @@ sealed class SessionState {
 
         val dataConnectionState: DataConnectionState = when {
             serverInfo == null -> DataConnectionState.AwaitingServerInfo
-
-            user == null ->
-                if (serverInfo.schemaVersion?.let { it >= AUTH_REQUIRED_SCHEMA_VERSION } == true)
-                    DataConnectionState.AwaitingAuth(authProcessState)
-                else
-                    DataConnectionState.Anonymous
-
+            user == null -> DataConnectionState.AwaitingAuth(authProcessState)
             else -> DataConnectionState.Authenticated
         }
 
@@ -36,9 +30,4 @@ sealed class SessionState {
         data object NoServerData : Disconnected()
         data class Error(val reason: Exception?) : Disconnected()
     }
-
-    companion object {
-        private const val AUTH_REQUIRED_SCHEMA_VERSION = 28
-    }
-
 }

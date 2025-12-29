@@ -50,8 +50,7 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
     val initialScreen = when (val state = sessionState) {
         is SessionState.Connected -> {
             when (state.dataConnectionState) {
-                DataConnectionState.Authenticated,
-                DataConnectionState.Anonymous -> NavScreen.Home
+                DataConnectionState.Authenticated -> NavScreen.Home
                 else -> NavScreen.Settings
             }
         }
@@ -103,7 +102,7 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
                     }
                 }
             }
-            else -> { /* Connecting state - do nothing */ }
+            is SessionState.Connecting -> { /* Do nothing */ }
         }
     }
     val bottomSheetStrategy = remember { BottomSheetSceneStrategy<NavKey>() }

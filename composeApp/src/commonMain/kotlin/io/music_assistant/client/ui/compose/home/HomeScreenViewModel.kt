@@ -67,7 +67,6 @@ class HomeScreenViewModel(
                 when (connection) {
                     is SessionState.Connected -> {
                         when (val connState = connection.dataConnectionState) {
-                            DataConnectionState.Anonymous,
                             DataConnectionState.Authenticated -> {
                                 // Load recommendations when data connection is ready
                                 if (_recommendationsState.value.recommendations is DataState.Loading) {

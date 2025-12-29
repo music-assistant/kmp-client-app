@@ -44,7 +44,6 @@ class MainViewModel(
                 when (it) {
                     is SessionState.Connected -> {
                         when (val connState = it.dataConnectionState) {
-                            DataConnectionState.Anonymous,
                             DataConnectionState.Authenticated -> {
                                 _state.update { PlayersState.Loading }
                                 stopJobs()
