@@ -127,11 +127,11 @@ class MainViewModel(
     fun onQueueChosenItemsClear() = Unit
     fun onPlayersSortChanged(newSort: List<String>) = dataSource.onPlayersSortChanged(newSort)
     fun openPlayerSettings(id: String) = settings.connectionInfo.value?.webUrl?.let { url ->
-        onOpenExternalLink("$url/#/settings/editplayer/$id")
+        onOpenExternalLink("$url/?code=${settings.token.value}#/settings/editplayer/$id")
     }
 
     fun openPlayerDspSettings(id: String) = settings.connectionInfo.value?.webUrl?.let { url ->
-        onOpenExternalLink("$url/#/settings/editplayer/$id/dsp")
+        onOpenExternalLink("$url/?code=${settings.token.value}#/settings/editplayer/$id/dsp")
     }
 
     private fun onOpenExternalLink(url: String) = viewModelScope.launch { _links.emit(url) }
