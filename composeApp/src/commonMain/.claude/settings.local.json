@@ -4,7 +4,9 @@
       "WebFetch(domain:www.sendspin-audio.com)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(./gradlew compileKotlinMetadata:*)",
+      "Bash(./gradlew :composeApp:compileDebugKotlinAndroid:*)"
     ]
   }
 }

@@ -19,6 +19,7 @@ class SettingsViewModel(
         apiClient.connect(connection = ConnectionInfo(host, port.toInt(), isTls))
 
     fun disconnect() = apiClient.disconnectByUser()
+
     fun login(login: String, password: String) {
         viewModelScope.launch { apiClient.login(login, password) }
     }

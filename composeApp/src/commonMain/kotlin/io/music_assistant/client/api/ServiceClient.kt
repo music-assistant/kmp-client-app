@@ -74,9 +74,9 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                         listeningJob = null
                         when (it) {
                             SessionState.Disconnected.ByUser,
-                            SessionState.Disconnected.NoServerData -> Unit
+                            SessionState.Disconnected.NoServerData,
+                            is SessionState.Disconnected.Error -> Unit
 
-                            is SessionState.Disconnected.Error,
                             SessionState.Disconnected.Initial -> {
                                 settings.connectionInfo.value?.let { connectionInfo ->
                                     connect(connectionInfo)

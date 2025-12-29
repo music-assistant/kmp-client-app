@@ -83,7 +83,7 @@ class SettingsRepository(
 
     // Sendspin settings
     private val _sendspinEnabled = MutableStateFlow(
-        settings.getBoolean("sendspin_enabled", false)
+        settings.getBoolean("sendspin_enabled", true)
     )
     val sendspinEnabled = _sendspinEnabled.asStateFlow()
 

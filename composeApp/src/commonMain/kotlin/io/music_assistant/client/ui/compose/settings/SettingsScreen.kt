@@ -48,24 +48,31 @@ import io.music_assistant.client.ui.theme.ThemeSetting
 import io.music_assistant.client.ui.theme.ThemeViewModel
 import io.music_assistant.client.utils.AuthProcessState
 import io.music_assistant.client.utils.DataConnectionState
+import io.music_assistant.client.utils.NavScreen
 import io.music_assistant.client.utils.SessionState
 import io.music_assistant.client.utils.isIpPort
 import io.music_assistant.client.utils.isValidHost
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(
+    onBack: () -> Unit,
+    navigateTo: ((NavScreen) -> Unit)? = null
+) {
     val themeViewModel = koinViewModel<ThemeViewModel>()
     val theme = themeViewModel.theme.collectAsStateWithLifecycle(ThemeSetting.FollowSystem)
     val viewModel = koinViewModel<SettingsViewModel>()
     val savedConnectionInfo by viewModel.savedConnectionInfo.collectAsStateWithLifecycle()
     val sessionState by viewModel.sessionState.collectAsStateWithLifecycle()
-    var shouldPopOnAuth by remember { mutableStateOf(false) }
+    var shouldNavigateHome by remember { mutableStateOf(false) }
     val dataConnection = (sessionState as? SessionState.Connected)?.dataConnectionState
+
+    // Navigate to Home after successful authentication
     if (dataConnection != DataConnectionState.Authenticated && dataConnection != DataConnectionState.Anonymous) {
-        shouldPopOnAuth = true
-    } else if (shouldPopOnAuth) {
-        onBack()
+        shouldNavigateHome = true
+    } else if (shouldNavigateHome) {
+        navigateTo?.invoke(NavScreen.Home) ?: onBack()
+        shouldNavigateHome = false
     }
 
     BackHandler(enabled = true) {
@@ -84,8 +91,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 .fillMaxSize()
                 .padding(scaffoldPadding)
                 .consumeWindowInsets(scaffoldPadding)
-                .systemBarsPadding()
-                .verticalScroll(rememberScrollState()),
+                .systemBarsPadding(),
         ) {
             Row(
                 modifier = Modifier
@@ -116,232 +122,215 @@ fun SettingsScreen(onBack: () -> Unit) {
                     themeViewModel.switchTheme(changedTheme)
                 }
             }
-        }
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            var ipAddress by remember { mutableStateOf("") }
-            var port by remember { mutableStateOf("8095") }
-            var isTls by remember { mutableStateOf(false) }
-            val serverInputsFieldVisible = sessionState is SessionState.Disconnected
-            LaunchedEffect(savedConnectionInfo) {
-                savedConnectionInfo?.let {
-                    ipAddress = it.host
-                    port = it.port.toString()
-                    isTls = it.isTls
-                }
-            }
-            Text(
-                modifier = Modifier.padding(bottom = 24.dp),
-                text = when (val state = sessionState) {
-                    is SessionState.Connected -> {
-                        savedConnectionInfo?.let { conn ->
-                            "Connected to ${conn.host}:${conn.port}" +
-                                    (state.serverInfo?.let { server -> "\nServer version ${server.serverVersion}, schema ${server.schemaVersion}" }
-                                        ?: "")
-                        } ?: "Unknown connection"
-                    }
 
-                    SessionState.Connecting -> "Connecting to $ipAddress:$port."
-                    is SessionState.Disconnected -> {
-                        when (state) {
-                            SessionState.Disconnected.ByUser -> ""
-                            is SessionState.Disconnected.Error -> "Disconnected${state.reason?.message?.let { ": $it" } ?: ""}"
-                            SessionState.Disconnected.Initial -> ""
-                            SessionState.Disconnected.NoServerData -> "Please provide server address and port."
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                var ipAddress by remember { mutableStateOf("") }
+                var port by remember { mutableStateOf("8095") }
+                var isTls by remember { mutableStateOf(false) }
+                var username by remember { mutableStateOf("") }
+                var password by remember { mutableStateOf("") }
+                var isPasswordVisible by remember { mutableStateOf(false) }
+                var pendingLogin by remember { mutableStateOf(false) }
+                val serverInputsFieldVisible = sessionState is SessionState.Disconnected
+
+                LaunchedEffect(savedConnectionInfo) {
+                    savedConnectionInfo?.let {
+                        ipAddress = it.host
+                        port = it.port.toString()
+                        isTls = it.isTls
+                    }
+                }
+
+                // Auto-login after connection if credentials were provided
+                LaunchedEffect(sessionState, pendingLogin) {
+                    val currentState = sessionState
+                    if (pendingLogin && currentState is SessionState.Connected) {
+                        val connState = currentState.dataConnectionState
+                        if (connState is DataConnectionState.AwaitingAuth) {
+                            val authState = connState.authProcessState
+                            if (authState == AuthProcessState.NotStarted &&
+                                username.isNotEmpty() && password.isNotEmpty()
+                            ) {
+                                viewModel.login(username, password)
+                            }
+                            // Clear pending flag if login failed or completed
+                            if (authState is AuthProcessState.Failed) {
+                                pendingLogin = false
+                            }
                         }
                     }
-                },
-                color = MaterialTheme.colorScheme.onBackground,
-                textAlign = TextAlign.Center,
-                minLines = 2,
-                maxLines = 2,
-            )
-            if (serverInputsFieldVisible) {
-                TextField(
-                    modifier = Modifier.padding(bottom = 16.dp),
-                    value = ipAddress,
-                    onValueChange = { ipAddress = it },
-                    label = {
-                        Text("IP address")
-                    },
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-                    )
-                )
-                TextField(
-                    modifier = Modifier.padding(bottom = 16.dp),
-                    value = port,
-                    onValueChange = { port = it },
-                    label = {
-                        Text("Port (8095 by default)")
-                    },
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-                    )
-                )
-                Row(
-                    modifier = Modifier.padding(bottom = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        modifier = Modifier.align(Alignment.CenterVertically),
-                        checked = isTls,
-                        onCheckedChange = { isTls = it })
-                    Text(
-                        modifier = Modifier.align(Alignment.CenterVertically),
-                        text = "Use TLS"
-                    )
                 }
-            }
-            Button(
-                enabled = ipAddress.isValidHost() && port.isIpPort() && sessionState != SessionState.Connecting,
-                onClick = {
-                    if (sessionState is SessionState.Connected)
-                        viewModel.disconnect()
-                    else
-                        viewModel.attemptConnection(ipAddress, port, isTls)
-                }
-            ) {
-                Text(
-                    text = if (sessionState is SessionState.Connected)
-                        "Disconnect"
-                    else
-                        "Connect"
-                )
-            }
-            AuthSection(
-                state = sessionState,
-                onLoginClick = viewModel::login,
-                onLogoutClick = viewModel::logout
-            )
-            SendspinSection(
-                viewModel = viewModel,
-                enabled = sessionState is SessionState.Connected
-            )
-        }
-    }
-}
 
-@Composable
-fun AuthSection(
-    modifier: Modifier = Modifier,
-    state: SessionState,
-    onLoginClick: (String, String) -> Unit,
-    onLogoutClick: () -> Unit,
-) {
-    if (state !is SessionState.Connected) {
-        return
-    }
-    when (val connState = state.dataConnectionState) {
-        is DataConnectionState.AwaitingAuth -> {
-            val fieldsEnabled = connState.authProcessState != AuthProcessState.InProgress
-            var login by remember { mutableStateOf("") }
-            var password by remember { mutableStateOf("") }
-            var isPasswordVisible by remember { mutableStateOf(false) }
-            val error = when (connState.authProcessState) {
-                is AuthProcessState.Failed -> connState.authProcessState.reason
-                AuthProcessState.LoggedOut -> "Logged out"
-                else -> null
-            }
-            Column(
-                modifier = modifier
-                    .fillMaxWidth()
-                    .padding(top = 32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                TextField(
-                    modifier = Modifier.padding(bottom = 16.dp),
-                    enabled = fieldsEnabled,
-                    value = login,
-                    onValueChange = { login = it },
-                    label = { Text("Login") },
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-                    )
-                )
-                TextField(
-                    modifier = Modifier.padding(bottom = 16.dp),
-                    enabled = fieldsEnabled,
-                    value = password,
-                    visualTransformation =
-                        if (isPasswordVisible)
-                            VisualTransformation.None
-                        else
-                            PasswordVisualTransformation(),
-                    onValueChange = { password = it },
-                    label = { Text("Password") },
-                    trailingIcon = {
-                        val icon =
-                            if (isPasswordVisible)
-                                Icons.Filled.VisibilityOff
-                            else
-                                Icons.Filled.Visibility
-                        val description =
-                            if (isPasswordVisible)
-                                "Hide password"
-                            else
-                                "Show password"
-                        IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                            Icon(imageVector = icon, contentDescription = description)
+                // Get auth error if any
+                val authError = (sessionState as? SessionState.Connected)?.let { state ->
+                    (state.dataConnectionState as? DataConnectionState.AwaitingAuth)?.let { connState ->
+                        when (connState.authProcessState) {
+                            is AuthProcessState.Failed -> connState.authProcessState.reason
+                            AuthProcessState.LoggedOut -> "Logged out"
+                            else -> null
+                        }
+                    }
+                }
+                Text(
+                    modifier = Modifier.padding(bottom = 24.dp),
+                    text = when (val state = sessionState) {
+                        is SessionState.Connected -> {
+                            savedConnectionInfo?.let { conn ->
+                                "Connected to ${conn.host}:${conn.port}" +
+                                        (state.serverInfo?.let { server -> "\nServer version ${server.serverVersion}, schema ${server.schemaVersion}" }
+                                            ?: "") +
+                                        (state.user?.description?.let { user -> "\nLogged in as $user" })
+                            } ?: "Unknown connection"
+                        }
+
+                        SessionState.Connecting -> "Connecting to $ipAddress:$port."
+                        is SessionState.Disconnected -> {
+                            when (state) {
+                                SessionState.Disconnected.ByUser -> "Disconnected"
+                                is SessionState.Disconnected.Error -> "Disconnected${state.reason?.message?.let { ": $it" } ?: ""}"
+                                SessionState.Disconnected.Initial -> ""
+                                SessionState.Disconnected.NoServerData -> "Please provide server address and port."
+                            }
                         }
                     },
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-                    )
-                )
-                error?.let {
-                    Text(
-                        modifier = Modifier.padding(bottom = 16.dp),
-                        text = it,
-                        color = MaterialTheme.colorScheme.error,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-                Button(
-                    enabled = fieldsEnabled && login.isNotEmpty() && password.isNotEmpty(),
-                    onClick = {
-                        onLoginClick(login, password)
-                    }
-                ) {
-                    Text(text = "Login")
-                }
-            }
-        }
-
-        DataConnectionState.Authenticated -> {
-            Column(
-                modifier = modifier
-                    .fillMaxWidth()
-                    .padding(top = 32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    modifier = modifier.padding(top = 32.dp),
-                    text = "Logged in as ${state.user?.description ?: "Unknown User"}",
                     color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center,
+                    minLines = 3,
+                    maxLines = 3,
                 )
+                if (serverInputsFieldVisible) {
+                    TextField(
+                        modifier = Modifier.padding(bottom = 16.dp),
+                        value = ipAddress,
+                        onValueChange = { ipAddress = it },
+                        label = {
+                            Text("IP address")
+                        },
+                        singleLine = true,
+                        colors = TextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        )
+                    )
+                    TextField(
+                        modifier = Modifier.padding(bottom = 16.dp),
+                        value = port,
+                        onValueChange = { port = it },
+                        label = {
+                            Text("Port (8095 by default)")
+                        },
+                        singleLine = true,
+                        colors = TextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        )
+                    )
+                    Row(
+                        modifier = Modifier.padding(bottom = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            modifier = Modifier.align(Alignment.CenterVertically),
+                            checked = isTls,
+                            onCheckedChange = { isTls = it })
+                        Text(
+                            modifier = Modifier.align(Alignment.CenterVertically),
+                            text = "Use TLS"
+                        )
+                    }
+
+                    // Authentication fields
+                    TextField(
+                        modifier = Modifier.padding(bottom = 16.dp),
+                        value = username,
+                        onValueChange = { username = it },
+                        label = { Text("Username") },
+                        singleLine = true,
+                        colors = TextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        )
+                    )
+
+                    TextField(
+                        modifier = Modifier.padding(bottom = 16.dp),
+                        value = password,
+                        visualTransformation =
+                            if (isPasswordVisible)
+                                VisualTransformation.None
+                            else
+                                PasswordVisualTransformation(),
+                        onValueChange = { password = it },
+                        label = { Text("Password") },
+                        trailingIcon = {
+                            val icon =
+                                if (isPasswordVisible)
+                                    Icons.Filled.VisibilityOff
+                                else
+                                    Icons.Filled.Visibility
+                            val description =
+                                if (isPasswordVisible)
+                                    "Hide password"
+                                else
+                                    "Show password"
+                            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                Icon(imageVector = icon, contentDescription = description)
+                            }
+                        },
+                        singleLine = true,
+                        colors = TextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        )
+                    )
+
+                    // Show authentication error if any
+                    authError?.let {
+                        Text(
+                            modifier = Modifier.padding(bottom = 16.dp),
+                            text = it,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.padding(bottom = 8.dp))
+
+                    // Sendspin settings (only when disconnected)
+                    SendspinSection(
+                        viewModel = viewModel,
+                        enabled = true
+                    )
+                }
                 Button(
-                    onClick = { onLogoutClick() }
+                    enabled = ipAddress.isValidHost() && port.isIpPort() && sessionState != SessionState.Connecting,
+                    onClick = {
+                        if (sessionState is SessionState.Connected) {
+                            viewModel.disconnect()
+                        } else {
+                            viewModel.attemptConnection(ipAddress, port, isTls)
+                            // Set flag to auto-login after connection if credentials provided
+                            if (username.isNotEmpty() && password.isNotEmpty()) {
+                                pendingLogin = true
+                            }
+                        }
+                    }
                 ) {
-                    Text(text = "Logout")
+                    Text(
+                        text = if (sessionState is SessionState.Connected)
+                            "Disconnect"
+                        else
+                            "Connect"
+                    )
                 }
             }
         }
-
-        DataConnectionState.Anonymous,
-        DataConnectionState.AwaitingServerInfo -> Unit
     }
 }
 
@@ -355,36 +344,33 @@ fun SendspinSection(
     val sendspinDeviceName by viewModel.sendspinDeviceName.collectAsStateWithLifecycle()
     val sendspinPort by viewModel.sendspinPort.collectAsStateWithLifecycle()
     val sendspinPath by viewModel.sendspinPath.collectAsStateWithLifecycle()
-    val savedConnectionInfo by viewModel.savedConnectionInfo.collectAsStateWithLifecycle()
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 32.dp, start = 16.dp, end = 16.dp),
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             modifier = Modifier.padding(bottom = 16.dp),
-            text = "Sendspin Player",
+            text = "Local Player",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground
         )
 
         Row(
             modifier = Modifier
-                .fillMaxWidth()
                 .padding(bottom = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = "Enable Sendspin",
-                color = MaterialTheme.colorScheme.onBackground
-            )
             Checkbox(
                 enabled = enabled,
                 checked = sendspinEnabled,
                 onCheckedChange = { viewModel.setSendspinEnabled(it) }
+            )
+            Text(
+                text = "Enable local player (Sendspin)",
+                color = MaterialTheme.colorScheme.onBackground
             )
         }
 
@@ -393,7 +379,7 @@ fun SendspinSection(
                 modifier = Modifier.padding(bottom = 16.dp),
                 value = sendspinDeviceName,
                 onValueChange = { viewModel.setSendspinDeviceName(it) },
-                label = { Text("Device Name") },
+                label = { Text("Player name") },
                 singleLine = true,
                 colors = TextFieldDefaults.colors(
                     focusedTextColor = MaterialTheme.colorScheme.onBackground,
@@ -404,8 +390,10 @@ fun SendspinSection(
             TextField(
                 modifier = Modifier.padding(bottom = 16.dp),
                 value = sendspinPort.toString(),
-                onValueChange = { it.toIntOrNull()?.let { port -> viewModel.setSendspinPort(port) } },
-                label = { Text("Sendspin Port") },
+                onValueChange = {
+                    it.toIntOrNull()?.let { port -> viewModel.setSendspinPort(port) }
+                },
+                label = { Text("Port (8927 by default)") },
                 singleLine = true,
                 colors = TextFieldDefaults.colors(
                     focusedTextColor = MaterialTheme.colorScheme.onBackground,
@@ -417,22 +405,13 @@ fun SendspinSection(
                 modifier = Modifier.padding(bottom = 16.dp),
                 value = sendspinPath,
                 onValueChange = { viewModel.setSendspinPath(it) },
-                label = { Text("Sendspin Path") },
+                label = { Text("Path (/sendspin by default)") },
                 singleLine = true,
                 colors = TextFieldDefaults.colors(
                     focusedTextColor = MaterialTheme.colorScheme.onBackground,
                     unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
                 )
             )
-
-            savedConnectionInfo?.let { conn ->
-                Text(
-                    modifier = Modifier.padding(top = 8.dp),
-                    text = "Will connect to: ws://${conn.host}:$sendspinPort$sendspinPath",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
 }
