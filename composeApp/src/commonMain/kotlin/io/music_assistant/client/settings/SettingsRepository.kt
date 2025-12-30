@@ -75,12 +75,6 @@ class SettingsRepository(
         _playersSorting.update { newValue }
     }
 
-    @OptIn(ExperimentalUuidApi::class)
-    fun getLocalPlayerId(): String =
-        settings.getStringOrNull("local_player_id") ?: Uuid.random().toString().also {
-            settings.putString("local_player_id", it)
-        }
-
     // Sendspin settings
     private val _sendspinEnabled = MutableStateFlow(
         settings.getBoolean("sendspin_enabled", true)

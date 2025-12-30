@@ -25,10 +25,7 @@ object SendspinCapabilities {
                     // TODO: Add FLAC and OPUS later
                 ),
                 bufferCapacity = config.bufferCapacityMicros,
-                supportedCommands = listOf(
-                    PlayerCommand.VOLUME,
-                    PlayerCommand.MUTE
-                )
+                supportedCommands = listOf()
             ),
             metadataV1Support = MetadataSupport(
                 supportedPictureFormats = emptyList()

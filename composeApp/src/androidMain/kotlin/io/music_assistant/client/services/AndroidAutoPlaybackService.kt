@@ -65,12 +65,6 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
             multiPlayer = false,
             context = this,
             callback = createCallback(),
-            onVolumeChange = { volume ->
-                // Send volume change to Music Assistant server
-                currentPlayerData.value?.let { playerData ->
-                    dataSource.playerAction(playerData, PlayerAction.VolumeSet(volume.toDouble()))
-                }
-            }
         )
         sessionToken = mediaSessionHelper.getSessionToken()
         imageLoader = ImageLoader(this)
@@ -97,14 +91,6 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
                         }
                     }
                     else -> mediaSessionHelper.updateQueue(emptyList())
-                }
-            }
-        }
-        scope.launch {
-            // Sync volume from server to MediaSession
-            currentPlayerData.filterNotNull().collect { playerData ->
-                playerData.player.volumeLevel?.toInt()?.let { volume ->
-                    mediaSessionHelper.updateVolumeFromServer(volume)
                 }
             }
         }

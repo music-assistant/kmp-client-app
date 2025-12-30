@@ -32,7 +32,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.reflect.KClass
 
 @OptIn(FlowPreview::class)
 class HomeScreenViewModel(
@@ -157,7 +156,8 @@ class HomeScreenViewModel(
                 _playersState.update {
                     PlayersState.Data(
                         playerData,
-                        dataSource.selectedPlayerIndex.value
+                        dataSource.selectedPlayerIndex.value,
+                        dataSource.localPlayer.value?.playerId
                     )
                 }
         }
@@ -225,7 +225,8 @@ class HomeScreenViewModel(
         data object NoAuth : PlayersState()
         data class Data(
             val playerData: List<PlayerData>,
-            val selectedPlayerIndex: Int? = null
+            val selectedPlayerIndex: Int? = null,
+            val localPlayerId: String? = null
         ) : PlayersState()
     }
 }

@@ -67,7 +67,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.music_assistant.client.data.model.client.PlayerData
-import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.ui.compose.common.HorizontalPagerIndicator
 import io.music_assistant.client.ui.compose.common.OverflowMenuOption
 import io.music_assistant.client.ui.compose.common.OverflowMenuThreeDots
@@ -385,7 +384,7 @@ private fun PlayersPager(
                 ) {
                     Text(
                         modifier = Modifier.align(Alignment.Center),
-                        text = player.player.name,
+                        text = if (player.playerId == playersState.localPlayerId) "Local player" else player.player.name,
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Medium,
@@ -458,7 +457,12 @@ private fun PlayersPager(
                     }
                 }
 
-                if (showQueue && player.player.canSetVolume && player.player.volumeLevel != null) {
+                if (
+                    showQueue
+                    && player.player.canSetVolume
+                    && player.player.volumeLevel != null
+                    && player.playerId != playersState.localPlayerId
+                ) {
                     var currentVolume by remember(player.player.volumeLevel) {
                         mutableStateOf(player.player.volumeLevel)
                     }
@@ -530,7 +534,8 @@ private fun PlayersPager(
                         queueAction = queueAction,
                         players = playerDataList,
                         onPlayerSelected = { playerId ->
-                            val targetIndex = playerDataList.indexOfFirst { it.player.id == playerId }
+                            val targetIndex =
+                                playerDataList.indexOfFirst { it.player.id == playerId }
                             if (targetIndex != -1) {
                                 coroutineScope.launch {
                                     playerPagerState.animateScrollToPage(targetIndex)
