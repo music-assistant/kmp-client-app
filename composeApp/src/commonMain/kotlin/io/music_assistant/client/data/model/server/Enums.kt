@@ -89,39 +89,12 @@ enum class EventType {
     SYNC_TASKS_UPDATED,
     @SerialName("auth_session")
     AUTH_SESSION,
-    @SerialName("builtin_player")
-    BUILTIN_PLAYER,
     @SerialName("connected")
     CONNECTED,
     @SerialName("disconnected")
     DISCONNECTED,
     @SerialName("*")
     ALL
-}
-
-enum class BuiltinPlayerEventType {
-    @SerialName("play")
-    PLAY,
-    @SerialName("pause")
-    PAUSE,
-    @SerialName("resume")
-    RESUME,
-    @SerialName("stop")
-    STOP,
-    @SerialName("mute")
-    MUTE,
-    @SerialName("unmute")
-    UNMUTE,
-    @SerialName("set_volume")
-    SET_VOLUME,
-    @SerialName("play_media")
-    PLAY_MEDIA,
-    @SerialName("timeout")
-    TIMEOUT,
-    @SerialName("power_off")
-    POWER_OFF,
-    @SerialName("power_on")
-    POWER_ON,
 }
 
 //enum class AlbumType {

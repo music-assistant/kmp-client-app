@@ -8,8 +8,8 @@ import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.data.MainDataSource
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItemList
-import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.client.Player
+import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.server.ServerMediaItem
 import io.music_assistant.client.settings.SettingsRepository
@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.reflect.KClass
 
 @OptIn(FlowPreview::class)
 class HomeScreenViewModel(
@@ -127,11 +128,6 @@ class HomeScreenViewModel(
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        // Sendspin cleanup is now handled by MainDataSource
-    }
-
     private fun loadRecommendations() {
         viewModelScope.launch {
             _recommendationsState.update { it.copy(recommendations = DataState.Loading()) }
@@ -145,7 +141,9 @@ class HomeScreenViewModel(
     }
 
     fun onRecommendationItemClicked(mediaItem: AppMediaItem) {
-        // TODO
+        dataSource.selectedPlayer?.libraryArgs?.queueOrPlayerId?.let {
+            playItem(mediaItem, it, QueueOption.PLAY)
+        }
     }
 
     private fun stopJobs() {
@@ -179,16 +177,16 @@ class HomeScreenViewModel(
     fun queueAction(action: QueueAction) = dataSource.queueAction(action)
     fun onPlayersSortChanged(newSort: List<String>) = dataSource.onPlayersSortChanged(newSort)
     fun openPlayerSettings(id: String) = settings.connectionInfo.value?.webUrl?.let { url ->
-        onOpenExternalLink("$url/#/settings/editplayer/$id")
+        onOpenExternalLink("$url/?code=${settings.token.value}#/settings/editplayer/$id")
     }
 
     fun openPlayerDspSettings(id: String) = settings.connectionInfo.value?.webUrl?.let { url ->
-        onOpenExternalLink("$url/#/settings/editplayer/$id/dsp")
+        onOpenExternalLink("$url/?code=${settings.token.value}#/settings/editplayer/$id/dsp")
     }
 
     private fun onOpenExternalLink(url: String) = viewModelScope.launch { _links.emit(url) }
 
-    fun playItem(item: AppMediaItem, queueOrPlayerId: String, option: QueueOption) {
+    private fun playItem(item: AppMediaItem, queueOrPlayerId: String, option: QueueOption) {
         item.uri?.let {
             viewModelScope.launch {
                 apiClient.sendRequest(
@@ -215,8 +213,8 @@ class HomeScreenViewModel(
             result.resultAs<List<ServerMediaItem>>()?.toAppMediaItemList()?.mapNotNull { it as? T }
         }
 
-    fun onRowButtonClicked(string: String) {
-        // TODO("Not yet implemented")
+    fun onRowButtonClicked(type: KClass<out AppMediaItem>) {
+        // TODO("Open library for type")
     }
 
     data class RecommendationsState(

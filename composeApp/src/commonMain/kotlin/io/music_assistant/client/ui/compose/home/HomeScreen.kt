@@ -195,8 +195,7 @@ fun HomeScreen(
                             dataState,
                             serverUrl,
                             onItemClick = viewModel::onRecommendationItemClicked,
-                            onLongItemClick = { item ->  /*TODO*/ },
-                            onRowActionClick = { id -> viewModel.onRowButtonClicked(id) },
+                            onRowActionClick = { type -> viewModel.onRowButtonClicked(type) },
                         )
 
                         Box(

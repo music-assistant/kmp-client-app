@@ -119,7 +119,15 @@ abstract class AppMediaItem(
         //isPlayable,
         //timestampAdded,
         //timestampModified,
-    )
+    ) {
+        val rowItemType = when(itemId) {
+            "recently_added_tracks", "recent_favorite_tracks" -> Track::class
+            "recently_added_albums", "random_albums" -> Album::class
+            "random_artists" -> Artist::class
+            "favorite_playlists" -> Playlist::class
+            else -> null
+        }
+    }
 
     class Artist(
         itemId: String,

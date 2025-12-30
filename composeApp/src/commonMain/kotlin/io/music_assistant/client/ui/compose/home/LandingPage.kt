@@ -26,12 +26,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.FeaturedPlayList
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -55,6 +54,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import co.touchlab.kermit.Logger
 import coil3.compose.AsyncImage
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.ui.compose.common.DataState
@@ -62,6 +62,7 @@ import io.music_assistant.client.ui.compose.common.painters.VinylRecordPainter
 import io.music_assistant.client.ui.compose.common.painters.WaveformPainter
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
 import io.music_assistant.client.utils.SessionState
+import kotlin.reflect.KClass
 
 @Composable
 fun LandingPage(
@@ -70,8 +71,7 @@ fun LandingPage(
     dataState: DataState<List<AppMediaItem.RecommendationFolder>>,
     serverUrl: String?,
     onItemClick: (AppMediaItem) -> Unit,
-    onLongItemClick: (AppMediaItem) -> Unit,
-    onRowActionClick: (String) -> Unit,
+    onRowActionClick: (KClass<out AppMediaItem>) -> Unit,
 ) {
     val filteredData = remember(dataState) {
         if (dataState is DataState.Data) {
@@ -104,13 +104,12 @@ fun LandingPage(
                 items = filteredData,
                 key = { it.itemId }
             ) { row ->
+                Logger.e("Row ID : ${row.itemId}, Name: ${row.name}, Items count: ${row.items?.size}")
                 CategoryRow(
                     serverUrl = serverUrl,
-                    title = row.name,
-                    buttonLabel = "All items",
+                    row = row,
                     onItemClick = onItemClick,
-                    onLongItemClick = onLongItemClick,
-                    onAllClick = {onRowActionClick(row.itemId)},
+                    onAllClick = { row.rowItemType?.let { onRowActionClick(it) } },
                     mediaItems = row.items.orEmpty()
                 )
             }
@@ -123,13 +122,15 @@ fun LandingPage(
 @Composable
 fun CategoryRow(
     serverUrl: String?,
-    title: String,
-    buttonLabel: String,
+    row: AppMediaItem.RecommendationFolder,
     onItemClick: (AppMediaItem) -> Unit,
-    onLongItemClick: (AppMediaItem) -> Unit,
     onAllClick: () -> Unit,
     mediaItems: List<AppMediaItem>
 ) {
+    val isHomogenous = remember(mediaItems) {
+        mediaItems.all { it::class == mediaItems.firstOrNull()?.let { first -> first::class } }
+    }
+    val onLongItemClick: (AppMediaItem) -> Unit = {/*TODO*/}
     Column {
         Row(
             modifier = Modifier
@@ -139,14 +140,19 @@ fun CategoryRow(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = title,
+                text = row.name,
                 style = MaterialTheme.typography.titleLarge
             )
-            TextButton(
-                onClick = onAllClick,
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Text(buttonLabel, style = MaterialTheme.typography.labelLarge)
+            row.rowItemType?.let { type ->
+                val title = allItemsTitle(type)
+                title?.let {
+                    TextButton(
+                        onClick = onAllClick,
+                        contentPadding = PaddingValues(start = 4.dp, end = 4.dp)
+                    ) {
+                        Text(title, style = MaterialTheme.typography.labelLarge)
+                    }
+                }
             }
         }
         LazyRow(
@@ -188,7 +194,8 @@ fun CategoryRow(
                         itemSize = 96.dp,
                         onClick = onItemClick,
                         onLongClick = onLongItemClick,
-                        serverUrl = serverUrl
+                        serverUrl = serverUrl,
+                        homogenous = isHomogenous,
                     )
 
                     is AppMediaItem.Album -> AlbumItem(
@@ -204,7 +211,8 @@ fun CategoryRow(
                         itemSize = 96.dp,
                         onClick = onItemClick,
                         onLongClick = onLongItemClick,
-                        serverUrl = serverUrl
+                        serverUrl = serverUrl,
+                        homogenous = isHomogenous,
                     )
 
                     else -> {}
@@ -316,6 +324,7 @@ fun ArtistItem(
     onClick: (AppMediaItem) -> Unit,
     onLongClick: (AppMediaItem) -> Unit,
     serverUrl: String?,
+    homogenous: Boolean,
 ) {
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
@@ -350,6 +359,17 @@ fun ArtistItem(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
+        if (!homogenous) {
+            Text(
+                modifier = Modifier.width(itemSize),
+                text = item.subtitle.orEmpty(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
@@ -369,6 +389,7 @@ fun AlbumItem(
             modifier = Modifier
                 .size(itemSize)
                 .clip(RoundedCornerShape(8.dp))
+                .background(primaryContainer)
         ) {
 
             val vinylRecord = remember(primaryContainer, background) {
@@ -401,17 +422,6 @@ fun AlbumItem(
                     .clip(cutStripShape)
                     .clip(holeShape)
             )
-
-//            Canvas(modifier = Modifier.size(itemSize)) {
-//                val center = size.width / 2f
-//                val radiusPx = holeRadius.toPx()
-//                drawCircle(
-//                    color = Color.Black,
-//                    radius = radiusPx + 1.dp.toPx(),
-//                    center = Offset(center, center),
-//                    style = Stroke(width = 3.dp.toPx())
-//                )
-//            }
         }
         Spacer(Modifier.height(4.dp))
         Text(
@@ -441,22 +451,27 @@ fun PlaylistItem(
     onClick: (AppMediaItem) -> Unit,
     onLongClick: (AppMediaItem) -> Unit,
     serverUrl: String?,
+    homogenous: Boolean,
 ) {
+    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
+    val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
+
     LibraryItem(item, onClick, onLongClick) {
         Box(
             modifier = Modifier
                 .size(itemSize)
                 .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer),
+                .background(primaryContainer),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.List,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(50.dp)
+            val placeholder = rememberPlaceholderPainter(
+                backgroundColor = primaryContainer,
+                iconColor = onPrimaryContainer,
+                icon = Icons.AutoMirrored.Filled.FeaturedPlayList
             )
             AsyncImage(
+                placeholder = placeholder,
+                fallback = placeholder,
                 model = item.imageInfo?.url(serverUrl),
                 contentDescription = item.name,
                 contentScale = ContentScale.Crop,
@@ -472,6 +487,17 @@ fun PlaylistItem(
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
         )
+        if (!homogenous) {
+            Text(
+                modifier = Modifier.width(itemSize),
+                text = item.subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
@@ -529,6 +555,14 @@ class HoleShape(private val holeRadius: Dp) : Shape {
 
         return Outline.Generic(finalPath)
     }
+}
+
+fun allItemsTitle(type: KClass<out AppMediaItem>) = when (type) {
+    AppMediaItem.Track::class -> "All tracks"
+    AppMediaItem.Album::class -> "All albums"
+    AppMediaItem.Artist::class -> "All artists"
+    AppMediaItem.Playlist::class -> "All playlists"
+    else -> null
 }
 
 

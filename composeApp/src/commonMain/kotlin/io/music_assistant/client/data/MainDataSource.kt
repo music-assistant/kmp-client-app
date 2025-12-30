@@ -103,6 +103,11 @@ class MainDataSource(
         }
     }.stateIn(this, SharingStarted.Eagerly, null)
 
+    val selectedPlayer: PlayerData?
+        get() = selectedPlayerIndex.value?.let { selectedIndex ->
+            _playersData.value.getOrNull(selectedIndex)
+        }
+
     private var watchJob: Job? = null
     private var updateJob: Job? = null
 
@@ -575,10 +580,6 @@ class MainDataSource(
 
                         } else playerData
                     }
-
-//                        if (data.player.isBuiltin) {
-//                            builtinPlayerQueue.update { list }
-//                        }
                 }
             }
 

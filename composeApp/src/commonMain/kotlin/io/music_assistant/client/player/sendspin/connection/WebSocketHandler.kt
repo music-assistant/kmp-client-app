@@ -87,9 +87,6 @@ class WebSocketHandler(
                         is Frame.Ping, is Frame.Pong -> {
                             // Handled automatically by Ktor
                         }
-                        else -> {
-                            logger.w { "Unknown frame type received: ${frame.frameType}" }
-                        }
                     }
                 }
             } catch (e: Exception) {
