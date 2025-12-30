@@ -584,8 +584,7 @@ fun PlaylistItem(
         Box(
             modifier = Modifier
                 .size(itemSize)
-                .clip(RoundedCornerShape(8.dp))
-                .background(primaryContainer),
+                .clip(RoundedCornerShape(8.dp)),
             contentAlignment = Alignment.Center
         ) {
             val placeholder = rememberPlaceholderPainter(

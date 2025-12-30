@@ -304,6 +304,7 @@ fun HomeScreen(
                                                 isQueueExpanded = !isQueueExpanded
                                             },
                                             onItemMoved = { indexShift ->
+                                                val currentPlayer = state.playerData[playerPagerState.currentPage].player
                                                 val newIndex =
                                                     (playerPagerState.currentPage + indexShift).coerceIn(
                                                         0,
@@ -318,10 +319,8 @@ fun HomeScreen(
                                                                 removeAt(playerPagerState.currentPage)
                                                             )
                                                         }
+                                                viewModel.selectPlayer(currentPlayer)
                                                 viewModel.onPlayersSortChanged(newPlayers)
-                                                coroutineScope.launch {
-                                                    playerPagerState.animateScrollToPage(newIndex)
-                                                }
                                             },
                                             navigateTo = navigateTo,
                                             queueAction = { action -> viewModel.queueAction(action) },

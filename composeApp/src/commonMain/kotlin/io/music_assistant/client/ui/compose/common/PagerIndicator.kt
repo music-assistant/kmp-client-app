@@ -119,7 +119,7 @@ fun HorizontalPagerIndicator(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (pageCount <= 10) {
+            if (pageCount <= 15) {
                 repeat(pageCount) { index ->
                     val (fromIndex, toIndex) = animationState ?: (null to null)
                     val isFrom = index == fromIndex
@@ -259,7 +259,7 @@ fun VerticalPagerIndicator(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (pageCount <= 10) {
+            if (pageCount <= 15) {
                 repeat(pageCount) { index ->
                     val (fromIndex, toIndex) = animationState ?: (null to null)
                     val isFrom = index == fromIndex
