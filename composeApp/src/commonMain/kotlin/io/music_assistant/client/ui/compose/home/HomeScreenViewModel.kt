@@ -141,7 +141,7 @@ class HomeScreenViewModel(
     }
 
     fun onRecommendationItemClicked(mediaItem: AppMediaItem) {
-        dataSource.selectedPlayer?.libraryArgs?.queueOrPlayerId?.let {
+        dataSource.selectedPlayer?.queueOrPlayerId?.let {
             playItem(mediaItem, it, QueueOption.PLAY)
         }
     }
@@ -212,10 +212,6 @@ class HomeScreenViewModel(
             }
             result.resultAs<List<ServerMediaItem>>()?.toAppMediaItemList()?.mapNotNull { it as? T }
         }
-
-    fun onRowButtonClicked(type: KClass<out AppMediaItem>) {
-        // TODO("Open library for type")
-    }
 
     data class RecommendationsState(
         val connectionState: SessionState,

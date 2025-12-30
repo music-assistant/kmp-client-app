@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.music_assistant.client.data.model.client.PlayerData
+import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.ui.compose.common.HorizontalPagerIndicator
 import io.music_assistant.client.ui.compose.common.OverflowMenuOption
 import io.music_assistant.client.ui.compose.common.OverflowMenuThreeDots
@@ -195,7 +196,7 @@ fun HomeScreen(
                             dataState,
                             serverUrl,
                             onItemClick = viewModel::onRecommendationItemClicked,
-                            onRowActionClick = { type -> viewModel.onRowButtonClicked(type) },
+                            onLibraryItemClick = { type -> navigateTo(NavScreen.Library(type)) },
                         )
 
                         Box(
@@ -522,7 +523,6 @@ private fun PlayersPager(
                                 ifFalse = { wrapContentHeight() }
                             ),
                         queue = queue,
-                        libraryArgs = player.libraryArgs,
                         isQueueExpanded = isQueueExpanded,
                         onQueueExpandedSwitch = { onQueueExpandedSwitch() },
                         navigateTo = navigateTo,

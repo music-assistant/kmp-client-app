@@ -23,6 +23,6 @@ val sharedModule = module {
     viewModelOf(::ThemeViewModel)
     factory { MainViewModel(get(), get(), get()) }
     factory { SettingsViewModel(get(), get()) }
-    factory { LibraryViewModel(get()) }
+    factory { LibraryViewModel(get(), get()) }
     factory { HomeScreenViewModel(get(), get(), get()) }
 }

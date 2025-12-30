@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,13 +23,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FeaturedPlayList
+import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -47,6 +52,7 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,12 +63,12 @@ import androidx.compose.ui.unit.dp
 import co.touchlab.kermit.Logger
 import coil3.compose.AsyncImage
 import io.music_assistant.client.data.model.client.AppMediaItem
+import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.painters.VinylRecordPainter
 import io.music_assistant.client.ui.compose.common.painters.WaveformPainter
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
 import io.music_assistant.client.utils.SessionState
-import kotlin.reflect.KClass
 
 @Composable
 fun LandingPage(
@@ -71,7 +77,7 @@ fun LandingPage(
     dataState: DataState<List<AppMediaItem.RecommendationFolder>>,
     serverUrl: String?,
     onItemClick: (AppMediaItem) -> Unit,
-    onRowActionClick: (KClass<out AppMediaItem>) -> Unit,
+    onLibraryItemClick: (MediaType?) -> Unit,
 ) {
     val filteredData = remember(dataState) {
         if (dataState is DataState.Data) {
@@ -100,6 +106,11 @@ fun LandingPage(
             modifier = modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
+            // Your library row
+            item {
+                LibraryRow(onLibraryItemClick = onLibraryItemClick)
+            }
+
             items(
                 items = filteredData,
                 key = { it.itemId }
@@ -109,7 +120,7 @@ fun LandingPage(
                     serverUrl = serverUrl,
                     row = row,
                     onItemClick = onItemClick,
-                    onAllClick = { row.rowItemType?.let { onRowActionClick(it) } },
+                    onAllClick = { row.rowItemType?.let { onLibraryItemClick(it) } },
                     mediaItems = row.items.orEmpty()
                 )
             }
@@ -118,6 +129,120 @@ fun LandingPage(
 }
 
 // --- Common UI Components ---
+
+@Composable
+fun LibraryRow(
+    onLibraryItemClick: (MediaType?) -> Unit
+) {
+    val libraryItems = remember {
+        listOf(
+            LibraryItem("Artists", Icons.Default.Mic, MediaType.ARTIST),
+            LibraryItem("Albums", Icons.Default.Album, MediaType.ALBUM),
+            LibraryItem("Tracks", Icons.Default.MusicNote, MediaType.TRACK),
+            LibraryItem(
+                "Playlists",
+                Icons.AutoMirrored.Filled.FeaturedPlayList,
+                MediaType.PLAYLIST
+            ),
+            LibraryItem("Search", Icons.Default.Search, null),
+        )
+    }
+
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Your library",
+                style = MaterialTheme.typography.titleLarge
+            )
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            libraryItems.chunked(3).forEach { rowItems ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    rowItems.forEach { item ->
+                        LibraryItemCard(
+                            name = item.name,
+                            icon = item.icon,
+                            onClick = { onLibraryItemClick(item.type) }
+                        )
+                    }
+                    // Fill remaining columns with spacers to keep grid alignment
+                    repeat(3 - rowItems.size) {
+                        Spacer(modifier = Modifier.width(96.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LibraryItemCard(
+    name: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    val width = 96.dp
+    val height = 48.dp
+    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
+    val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
+
+    Column(
+        modifier = Modifier
+            .wrapContentSize()
+            .clip(RoundedCornerShape(8.dp))
+            .combinedClickable(onClick = onClick)
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .width(width)
+                .height(height)
+                .clip(RoundedCornerShape(8.dp))
+                .background(primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            val placeholder = rememberPlaceholderPainter(
+                backgroundColor = primaryContainer,
+                iconColor = onPrimaryContainer,
+                icon = icon
+            )
+            Image(
+                painter = placeholder,
+                contentDescription = name,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = name,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.width(width),
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+private data class LibraryItem(
+    val name: String,
+    val icon: ImageVector,
+    val type: MediaType?,
+)
 
 @Composable
 fun CategoryRow(
@@ -130,7 +255,7 @@ fun CategoryRow(
     val isHomogenous = remember(mediaItems) {
         mediaItems.all { it::class == mediaItems.firstOrNull()?.let { first -> first::class } }
     }
-    val onLongItemClick: (AppMediaItem) -> Unit = {/*TODO*/}
+    val onLongItemClick: (AppMediaItem) -> Unit = {/*TODO*/ }
     Column {
         Row(
             modifier = Modifier
@@ -389,7 +514,6 @@ fun AlbumItem(
             modifier = Modifier
                 .size(itemSize)
                 .clip(RoundedCornerShape(8.dp))
-                .background(primaryContainer)
         ) {
 
             val vinylRecord = remember(primaryContainer, background) {
@@ -557,11 +681,11 @@ class HoleShape(private val holeRadius: Dp) : Shape {
     }
 }
 
-fun allItemsTitle(type: KClass<out AppMediaItem>) = when (type) {
-    AppMediaItem.Track::class -> "All tracks"
-    AppMediaItem.Album::class -> "All albums"
-    AppMediaItem.Artist::class -> "All artists"
-    AppMediaItem.Playlist::class -> "All playlists"
+fun allItemsTitle(type: MediaType) = when (type) {
+    MediaType.TRACK -> "All tracks"
+    MediaType.ALBUM -> "All albums"
+    MediaType.ARTIST -> "All artists"
+    MediaType.PLAYLIST -> "All playlists"
     else -> null
 }
 

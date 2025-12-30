@@ -16,8 +16,8 @@ import androidx.navigation3.scene.DialogSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
 import io.music_assistant.client.api.ServiceClient
+import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.ui.compose.home.HomeScreen
-import io.music_assistant.client.ui.compose.library.LibraryArgs
 import io.music_assistant.client.ui.compose.library.LibraryScreen
 import io.music_assistant.client.ui.compose.main.MainScreen
 import io.music_assistant.client.ui.compose.settings.SettingsScreen
@@ -37,7 +37,7 @@ sealed interface NavScreen : NavKey {
     data object Settings : NavScreen
 
     @Serializable
-    data class Library(val args: LibraryArgs) : NavScreen
+    data class Library(val type: MediaType?) : NavScreen
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -132,7 +132,7 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
             entry<NavScreen.Library>(
                 metadata = BottomSheetSceneStrategy.bottomSheet()
             ) {
-                LibraryScreen(it.args) { if (backStack.last() is NavScreen.Library) backStack.removeLastOrNull() }
+                LibraryScreen(it.type) { if (backStack.last() is NavScreen.Library) backStack.removeLastOrNull() }
             }
         }
     )

@@ -6,6 +6,7 @@ import co.touchlab.kermit.Logger
 import io.music_assistant.client.api.Answer
 import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
+import io.music_assistant.client.data.MainDataSource
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItemList
@@ -33,6 +34,7 @@ import kotlinx.coroutines.launch
 @OptIn(FlowPreview::class)
 class LibraryViewModel(
     private val apiClient: ServiceClient,
+    private val mainDataSource: MainDataSource,
 ) : ViewModel() {
 
     private val connectionState = apiClient.sessionState
@@ -314,16 +316,18 @@ class LibraryViewModel(
         }
     }
 
-    fun playSelectedItems(queueOrPlayerId: String, option: QueueOption) {
-        viewModelScope.launch {
-            apiClient.sendRequest(
-                Request.Library.play(
-                    media = _state.value.checkedItems.mapNotNull { it.uri },
-                    queueOrPlayerId = queueOrPlayerId,
-                    option = option,
-                    radioMode = false
+    fun playSelectedItems(option: QueueOption) {
+        mainDataSource.selectedPlayer?.queueOrPlayerId?.let {
+            viewModelScope.launch {
+                apiClient.sendRequest(
+                    Request.Library.play(
+                        media = _state.value.checkedItems.mapNotNull { it.uri },
+                        queueOrPlayerId = it,
+                        option = option,
+                        radioMode = false
+                    )
                 )
-            )
+            }
         }
     }
 

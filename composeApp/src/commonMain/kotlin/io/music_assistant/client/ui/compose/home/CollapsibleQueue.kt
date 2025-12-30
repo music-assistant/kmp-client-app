@@ -54,9 +54,9 @@ import coil3.compose.AsyncImage
 import compose.icons.TablerIcons
 import compose.icons.tablericons.GripVertical
 import io.music_assistant.client.data.model.client.Queue
+import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
-import io.music_assistant.client.ui.compose.library.LibraryArgs
 import io.music_assistant.client.ui.compose.main.QueueAction
 import io.music_assistant.client.utils.NavScreen
 import io.music_assistant.client.utils.conditional
@@ -69,7 +69,6 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 fun CollapsibleQueue(
     modifier: Modifier = Modifier,
     queue: DataState<Queue>,
-    libraryArgs: LibraryArgs,
     isQueueExpanded: Boolean,
     onQueueExpandedSwitch: () -> Unit,
     navigateTo: (NavScreen) -> Unit,
@@ -115,9 +114,9 @@ fun CollapsibleQueue(
             ) {
                 // Add button
                 OutlinedButton(
-                    onClick = { navigateTo(NavScreen.Library(libraryArgs)) }
+                    onClick = { navigateTo(NavScreen.Library(MediaType.ARTIST)) }
                 ) {
-                    Text("Add")
+                    Text("Library")
                 }
 
                 // Transfer button
@@ -198,7 +197,7 @@ fun CollapsibleQueue(
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            OutlinedButton(onClick = { navigateTo(NavScreen.Library(libraryArgs)) }) {
+                            OutlinedButton(onClick = { navigateTo(NavScreen.Library(MediaType.ARTIST)) }) {
                                 Text(text = "Browse Library")
                             }
                         }

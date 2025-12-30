@@ -96,19 +96,19 @@ import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.ui.compose.common.ActionButton
 import io.music_assistant.client.ui.compose.common.DataState
-import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
+import io.music_assistant.client.ui.compose.common.OverflowMenu
+import io.music_assistant.client.ui.compose.common.OverflowMenuOption
 import io.music_assistant.client.ui.compose.common.ToastHost
 import io.music_assistant.client.ui.compose.common.ToastState
 import io.music_assistant.client.ui.compose.common.VerticalHidingContainer
+import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
 import io.music_assistant.client.ui.compose.common.rememberToastState
-import io.music_assistant.client.ui.compose.common.OverflowMenu
-import io.music_assistant.client.ui.compose.common.OverflowMenuOption
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun LibraryScreen(args: LibraryArgs, onBack: () -> Unit) {
+fun LibraryScreen(type: MediaType?, onBack: () -> Unit) {
     val toastState = rememberToastState()
     val viewModel = koinViewModel<LibraryViewModel>()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
@@ -130,7 +130,6 @@ fun LibraryScreen(args: LibraryArgs, onBack: () -> Unit) {
     Library(
         toastState = toastState,
         serverUrl = serverUrl,
-        args = args,
         state = state,
         selectedList = selectedList,
         onBack = onBack,
@@ -146,7 +145,7 @@ fun LibraryScreen(args: LibraryArgs, onBack: () -> Unit) {
         onUpClick = viewModel::onUpClick,
         onShowAlbumsChange = viewModel::onShowAlbumsChange,
         onPlaySelectedItems = { option ->
-            viewModel.playSelectedItems(args.queueOrPlayerId, option)
+            viewModel.playSelectedItems(option)
             onBack()
         },
         onCreatePlaylist = viewModel::createPlaylist,
@@ -159,7 +158,6 @@ private fun Library(
     modifier: Modifier = Modifier,
     toastState: ToastState,
     serverUrl: String?,
-    args: LibraryArgs,
     state: LibraryViewModel.State,
     selectedList: LibraryViewModel.LibraryList?,
     onBack: () -> Unit,
@@ -270,7 +268,7 @@ private fun Library(
                     Text(
                         modifier = Modifier.padding(start = 8.dp).weight(1f)
                             .basicMarquee(iterations = 100),
-                        text = "$chosenItemsDescription, player: ${args.name}",
+                        text = chosenItemsDescription,
                     )
                     ActionButton(
                         icon = TablerIcons.PlayerPlay,

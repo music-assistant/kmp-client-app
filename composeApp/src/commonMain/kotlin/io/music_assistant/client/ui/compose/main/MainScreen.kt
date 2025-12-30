@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.Cog
+import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.ui.compose.common.VerticalHidingContainer
 import io.music_assistant.client.utils.NavScreen
 import kotlinx.coroutines.flow.collectLatest
@@ -87,12 +88,7 @@ fun MainScreen(navigateTo: (NavScreen) -> Unit) {
                     if (state is MainViewModel.PlayersState.Data) {
                         ExtendedFloatingActionButton(
                             modifier = Modifier.height(48.dp).padding(end = 8.dp),
-                            onClick = {
-                                (state as? MainViewModel.PlayersState.Data)?.selectedPlayer
-                                    ?.let { selected ->
-                                        navigateTo(NavScreen.Library(selected.libraryArgs))
-                                    }
-                            },
+                            onClick = {navigateTo(NavScreen.Library(MediaType.ARTIST)) },
                             text = {
                                 Text(
                                     text = "Media",
