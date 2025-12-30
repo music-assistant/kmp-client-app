@@ -461,57 +461,67 @@ private fun PlayersPager(
                     showQueue
                     && player.player.canSetVolume
                     && player.player.volumeLevel != null
-                    && player.playerId != playersState.localPlayerId
                 ) {
-                    var currentVolume by remember(player.player.volumeLevel) {
-                        mutableStateOf(player.player.volumeLevel)
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 64.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .alpha(if (player.player.canMute) 1F else 0.5f)
-                                .clickable(enabled = player.player.canMute) {
-                                    playerAction(player, PlayerAction.ToggleMute)
+                    if (player.playerId != playersState.localPlayerId) {
+                        var currentVolume by remember(player.player.volumeLevel) {
+                            mutableStateOf(player.player.volumeLevel)
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth().height(36.dp)
+                                .padding(horizontal = 64.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .alpha(if (player.player.canMute) 1F else 0.5f)
+                                    .clickable(enabled = player.player.canMute) {
+                                        playerAction(player, PlayerAction.ToggleMute)
+                                    },
+                                imageVector = if (player.player.volumeMuted)
+                                    Icons.AutoMirrored.Filled.VolumeMute
+                                else
+                                    Icons.AutoMirrored.Filled.VolumeUp,
+                                contentDescription = "Volume",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Slider(
+                                modifier = Modifier.weight(1f),
+                                value = currentVolume,
+                                valueRange = 0f..100f,
+                                onValueChange = {
+                                    currentVolume = it
+                                    playerAction(
+                                        player,
+                                        PlayerAction.VolumeSet(it.toDouble())
+                                    )
                                 },
-                            imageVector = if (player.player.volumeMuted)
-                                Icons.AutoMirrored.Filled.VolumeMute
-                            else
-                                Icons.AutoMirrored.Filled.VolumeUp,
-                            contentDescription = "Volume",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Slider(
-                            modifier = Modifier.weight(1f),
-                            value = currentVolume,
-                            valueRange = 0f..100f,
-                            onValueChange = {
-                                currentVolume = it
-                                playerAction(
-                                    player,
-                                    PlayerAction.VolumeSet(it.toDouble())
-                                )
-                            },
-                            thumb = {
-                                SliderDefaults.Thumb(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    thumbSize = androidx.compose.ui.unit.DpSize(16.dp, 16.dp),
-                                    colors = SliderDefaults.colors()
-                                        .copy(thumbColor = MaterialTheme.colorScheme.secondary),
-                                )
-                            },
-                            track = { sliderState ->
-                                SliderDefaults.Track(
-                                    sliderState = sliderState,
-                                    thumbTrackGapSize = 0.dp,
-                                    trackInsideCornerSize = 0.dp,
-                                    drawStopIndicator = null,
-                                    modifier = Modifier.height(4.dp)
-                                )
-                            }
+                                thumb = {
+                                    SliderDefaults.Thumb(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        thumbSize = androidx.compose.ui.unit.DpSize(16.dp, 16.dp),
+                                        colors = SliderDefaults.colors()
+                                            .copy(thumbColor = MaterialTheme.colorScheme.secondary),
+                                    )
+                                },
+                                track = { sliderState ->
+                                    SliderDefaults.Track(
+                                        sliderState = sliderState,
+                                        thumbTrackGapSize = 0.dp,
+                                        trackInsideCornerSize = 0.dp,
+                                        drawStopIndicator = null,
+                                        modifier = Modifier.height(4.dp)
+                                    )
+                                }
+                            )
+                        }
+                    } else {
+                        Text(
+                            modifier = Modifier.fillMaxWidth().height(36.dp),
+                            text = "use device buttons to adjust the volume",
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                         )
                     }
                 }
