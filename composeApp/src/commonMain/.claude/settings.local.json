@@ -6,7 +6,9 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(find:*)",
       "Bash(./gradlew compileKotlinMetadata:*)",
-      "Bash(./gradlew :composeApp:compileDebugKotlinAndroid:*)"
+      "Bash(./gradlew :composeApp:compileDebugKotlinAndroid:*)",
+      "Bash(tree:*)",
+      "Bash(wc:*)"
     ]
   }
 }

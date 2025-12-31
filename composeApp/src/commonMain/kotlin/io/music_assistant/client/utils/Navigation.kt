@@ -19,6 +19,7 @@ import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.ui.compose.home.HomeScreen
 import io.music_assistant.client.ui.compose.library.LibraryScreen
+import io.music_assistant.client.ui.compose.library2.Library2Screen
 import io.music_assistant.client.ui.compose.main.MainScreen
 import io.music_assistant.client.ui.compose.settings.SettingsScreen
 import kotlinx.serialization.Serializable
@@ -38,6 +39,9 @@ sealed interface NavScreen : NavKey {
 
     @Serializable
     data class Library(val type: MediaType?) : NavScreen
+
+    @Serializable
+    data class Library2(val type: MediaType?) : NavScreen
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,6 +71,7 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
                         subclass(NavScreen.Home::class, NavScreen.Home.serializer())
                         subclass(NavScreen.Settings::class, NavScreen.Settings.serializer())
                         subclass(NavScreen.Library::class, NavScreen.Library.serializer())
+                        subclass(NavScreen.Library2::class, NavScreen.Library2.serializer())
                     }
                 }
             }
@@ -133,6 +138,11 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
                 metadata = BottomSheetSceneStrategy.bottomSheet()
             ) {
                 LibraryScreen(it.type) { if (backStack.last() is NavScreen.Library) backStack.removeLastOrNull() }
+            }
+            entry<NavScreen.Library2>(
+                metadata = BottomSheetSceneStrategy.bottomSheet()
+            ) {
+                Library2Screen(it.type) { if (backStack.last() is NavScreen.Library2) backStack.removeLastOrNull() }
             }
         }
     )

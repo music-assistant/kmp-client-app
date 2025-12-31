@@ -180,7 +180,7 @@ fun LibraryRow(
                     }
                     // Fill remaining columns with spacers to keep grid alignment
                     repeat(3 - rowItems.size) {
-                        Spacer(modifier = Modifier.width(96.dp))
+                        Spacer(modifier = Modifier.padding(8.dp).width(96.dp))
                     }
                 }
             }

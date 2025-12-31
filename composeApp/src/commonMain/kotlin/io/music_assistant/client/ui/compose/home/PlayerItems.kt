@@ -117,6 +117,16 @@ fun CompactPlayerItem(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                } ?: run {
+                    if (item.queueInfo?.currentItem?.isPlayable == false) {
+                        Text(
+                            text = "Cannot play this item",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
 
@@ -201,6 +211,16 @@ fun FullPlayerItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+            } ?: run {
+                if (item.queueInfo?.currentItem?.isPlayable == false) {
+                    Text(
+                        text = "Cannot play this item",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
 

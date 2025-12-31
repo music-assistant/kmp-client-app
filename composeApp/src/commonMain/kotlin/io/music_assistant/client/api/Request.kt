@@ -268,6 +268,26 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
         )
     }
 
+    data object Track {
+
+        fun list(
+            favorite: Boolean? = null,
+            search: String? = null,
+            limit: Int = Int.MAX_VALUE,
+            offset: Int = 0,
+            orderBy: String? = null,
+        ) = Request(
+            command = "music/tracks/library_items",
+            args = buildJsonObject {
+                favorite?.let { put("favorite", JsonPrimitive(it)) }
+                search?.let { put("search", JsonPrimitive(it)) }
+                put("limit", JsonPrimitive(limit))
+                put("offset", JsonPrimitive(offset))
+                orderBy?.let { put("order_by", JsonPrimitive(it)) }
+            }
+        )
+    }
+
     data object Library {
 
         fun add(

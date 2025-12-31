@@ -39,7 +39,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -72,7 +71,6 @@ fun HomeScreen(
 
     var showPlayersView by remember { mutableStateOf(false) }
     var isQueueExpanded by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
 
     val recommendationsState = viewModel.recommendationsState.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle()
@@ -171,7 +169,7 @@ fun HomeScreen(
                             dataState,
                             serverUrl,
                             onItemClick = viewModel::onRecommendationItemClicked,
-                            onLibraryItemClick = { type -> navigateTo(NavScreen.Library(type)) },
+                            onLibraryItemClick = { type -> navigateTo(NavScreen.Library2(type)) },
                         )
 
                         Box(

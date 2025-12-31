@@ -6,6 +6,7 @@ import io.music_assistant.client.player.MediaPlayerController
 import io.music_assistant.client.settings.SettingsRepository
 import io.music_assistant.client.settings.provideSettings
 import io.music_assistant.client.ui.compose.library.LibraryViewModel
+import io.music_assistant.client.ui.compose.library2.Library2ViewModel
 import io.music_assistant.client.ui.compose.home.HomeScreenViewModel
 import io.music_assistant.client.ui.compose.main.MainViewModel
 import io.music_assistant.client.ui.compose.settings.SettingsViewModel
@@ -24,5 +25,6 @@ val sharedModule = module {
     factory { MainViewModel(get(), get(), get()) }
     factory { SettingsViewModel(get(), get()) }
     factory { LibraryViewModel(get(), get()) }
+    factory { Library2ViewModel(get()) }
     factory { HomeScreenViewModel(get(), get(), get()) }
 }

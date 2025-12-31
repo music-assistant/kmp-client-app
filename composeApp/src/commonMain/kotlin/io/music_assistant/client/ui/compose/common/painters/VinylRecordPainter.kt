@@ -67,8 +67,9 @@ class VinylRecordPainter(
             style = Fill
         )
 
-        val grooveRadii = if (cachedSize == size && cachedGrooveRadii != null) {
-            cachedGrooveRadii!!
+        val cache = cachedGrooveRadii
+        val grooveRadii = if (cachedSize == size && cache != null) {
+            cache
         } else {
             calculateGrooveRadii(labelRadius, radius).also {
                 cachedSize = size

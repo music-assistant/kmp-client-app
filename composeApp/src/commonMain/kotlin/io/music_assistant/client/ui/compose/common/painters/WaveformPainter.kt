@@ -28,8 +28,9 @@ class WaveformPainter(
         if (size.width <= 0f || size.height <= 0f) return
 
         // Check if we need to recalculate (size changed)
-        val points = if (cachedSize == size && cachedPoints != null) {
-            cachedPoints!!
+        val cache = cachedPoints
+        val points = if (cachedSize == size && cache != null) {
+            cache
         } else {
             calculateWaveform(size).also {
                 cachedSize = size
