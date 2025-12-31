@@ -45,7 +45,7 @@ import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.Cog
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.ui.compose.common.VerticalHidingContainer
-import io.music_assistant.client.utils.NavScreen
+import io.music_assistant.client.ui.compose.nav.NavScreen
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
 

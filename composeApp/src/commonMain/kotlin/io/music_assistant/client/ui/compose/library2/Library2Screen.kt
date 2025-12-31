@@ -4,6 +4,7 @@ package io.music_assistant.client.ui.compose.library2
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -88,23 +89,14 @@ private fun Library2(
 ) {
     val selectedTab = state.tabs.find { it.isSelected } ?: state.tabs.first()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Library") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
+        Row {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            }
             // Tab row
             PrimaryTabRow(
                 selectedTabIndex = state.tabs.indexOfFirst { it.isSelected }
@@ -126,18 +118,18 @@ private fun Library2(
                     )
                 }
             }
+        }
 
-            // Content area
-            Box(modifier = Modifier.fillMaxSize()) {
-                TabContent(
-                    tabState = selectedTab,
-                    serverUrl = serverUrl,
-                    onItemClick = onItemClick,
-                    onItemLongClick = onItemLongClick,
-                    onCreatePlaylistClick = onCreatePlaylistClick,
-                    onLoadMore = { onLoadMore(selectedTab.tab) }
-                )
-            }
+        // Content area
+        Box(modifier = Modifier.fillMaxSize()) {
+            TabContent(
+                tabState = selectedTab,
+                serverUrl = serverUrl,
+                onItemClick = onItemClick,
+                onItemLongClick = onItemLongClick,
+                onCreatePlaylistClick = onCreatePlaylistClick,
+                onLoadMore = { onLoadMore(selectedTab.tab) }
+            )
         }
     }
 }

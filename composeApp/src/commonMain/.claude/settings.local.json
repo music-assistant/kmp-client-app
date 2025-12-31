@@ -8,7 +8,8 @@
       "Bash(./gradlew compileKotlinMetadata:*)",
       "Bash(./gradlew :composeApp:compileDebugKotlinAndroid:*)",
       "Bash(tree:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(./gradlew:*)"
     ]
   }
 }

@@ -7,7 +7,7 @@ import io.music_assistant.client.ui.theme.AppTheme
 import io.music_assistant.client.ui.theme.SystemAppearance
 import io.music_assistant.client.ui.theme.ThemeSetting
 import io.music_assistant.client.ui.theme.ThemeViewModel
-import io.music_assistant.client.utils.NavigationRoot
+import io.music_assistant.client.ui.compose.nav.NavigationRoot
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
 

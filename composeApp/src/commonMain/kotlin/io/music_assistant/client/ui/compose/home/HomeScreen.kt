@@ -39,6 +39,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -49,8 +50,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.ui.NavDisplay
+import io.music_assistant.client.data.model.client.AppMediaItem
+import io.music_assistant.client.ui.compose.common.DataState
+import io.music_assistant.client.ui.compose.home.nav.HomeNavScreen
+import io.music_assistant.client.ui.compose.home.nav.rememberHomeNavBackStack
+import io.music_assistant.client.ui.compose.library2.Library2Screen
 import io.music_assistant.client.ui.compose.nav.BackHandler
-import io.music_assistant.client.utils.NavScreen
+import io.music_assistant.client.ui.compose.nav.NavScreen
+import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.flow.collectLatest
 import musicassistantclient.composeapp.generated.resources.Res
 import musicassistantclient.composeapp.generated.resources.ic_ma_logo
@@ -82,8 +93,10 @@ fun HomeScreen(
         pageCount = { data?.playerData?.size ?: 0 }
     )
 
-    // Only handle back when player view is shown to collapse it
-    // When disabled, system handles back press to close app
+    // Nested navigation backstack - hoisted to survive player view transitions
+    val homeBackStack = rememberHomeNavBackStack()
+
+    // Handle back when player view is shown
     BackHandler(enabled = showPlayersView) {
         showPlayersView = false
     }
@@ -162,14 +175,13 @@ fun HomeScreen(
                             .fillMaxSize()
                             .background(MaterialTheme.colorScheme.background)
                     ) {
-
-                        LandingPage(
-                            Modifier.weight(1f),
-                            connectionState,
-                            dataState,
-                            serverUrl,
-                            onItemClick = viewModel::onRecommendationItemClicked,
-                            onLibraryItemClick = { type -> navigateTo(NavScreen.Library2(type)) },
+                        HomeContent(
+                            modifier = Modifier.weight(1f),
+                            homeBackStack = homeBackStack,
+                            connectionState = connectionState,
+                            dataState = dataState,
+                            serverUrl = serverUrl,
+                            onRecommendationItemClick = viewModel::onRecommendationItemClicked
                         )
 
                         Box(
@@ -211,7 +223,6 @@ fun HomeScreen(
                                                 isQueueExpanded = !isQueueExpanded
                                             },
                                             onItemMoved = null,
-                                            navigateTo = navigateTo,
                                             queueAction = { action -> viewModel.queueAction(action) },
                                             settingsAction = viewModel::openPlayerSettings,
                                             dspSettingsAction = viewModel::openPlayerDspSettings,
@@ -296,7 +307,6 @@ fun HomeScreen(
                                                 viewModel.selectPlayer(currentPlayer)
                                                 viewModel.onPlayersSortChanged(newPlayers)
                                             },
-                                            navigateTo = navigateTo,
                                             queueAction = { action -> viewModel.queueAction(action) },
                                             settingsAction = viewModel::openPlayerSettings,
                                             dspSettingsAction = viewModel::openPlayerDspSettings,
@@ -316,4 +326,55 @@ fun HomeScreen(
             }
         }
     }
+}
+
+@Composable
+private fun HomeContent(
+    modifier: Modifier = Modifier,
+    homeBackStack: NavBackStack<*>,
+    connectionState: SessionState,
+    dataState: DataState<List<AppMediaItem.RecommendationFolder>>,
+    serverUrl: String?,
+    onRecommendationItemClick: (AppMediaItem) -> Unit,
+) {
+    @Suppress("UNCHECKED_CAST")
+    val typedBackStack = homeBackStack as NavBackStack<HomeNavScreen>
+
+//    val homeBottomSheetStrategy = remember { BottomSheetSceneStrategy<NavKey>() }
+//    val homeDialogStrategy = remember { DialogSceneStrategy<NavKey>() }
+    val saveableStateHolderForHome = rememberSaveableStateHolder()
+
+    // Handle back when library is open
+    BackHandler(enabled = typedBackStack.last() !is HomeNavScreen.Landing) {
+        typedBackStack.removeLastOrNull()
+    }
+
+    NavDisplay(
+        modifier = modifier,
+        backStack = typedBackStack,
+        onBack = { typedBackStack.removeLastOrNull() },
+//        sceneStrategy = homeBottomSheetStrategy.then(homeDialogStrategy),
+        entryDecorators = listOf(
+            rememberSaveableStateHolderNavEntryDecorator(saveableStateHolderForHome)
+        ),
+        entryProvider = entryProvider {
+            entry<HomeNavScreen.Landing> {
+                LandingPage(
+                    Modifier.fillMaxSize(),
+                    connectionState,
+                    dataState,
+                    serverUrl,
+                    onItemClick = onRecommendationItemClick,
+                    onLibraryItemClick = { type -> typedBackStack.add(HomeNavScreen.Library(type)) },
+                )
+            }
+
+            entry<HomeNavScreen.Library> {
+                Library2Screen(
+                    initialTabType = it.type,
+                    onBack = { typedBackStack.removeLastOrNull() }
+                )
+            }
+        }
+    )
 }

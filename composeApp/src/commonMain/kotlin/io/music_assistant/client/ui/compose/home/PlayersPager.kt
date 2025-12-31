@@ -47,11 +47,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.ui.compose.common.HorizontalPagerIndicator
-import io.music_assistant.client.ui.compose.common.OverflowMenuOption
-import io.music_assistant.client.ui.compose.common.OverflowMenuThreeDots
 import io.music_assistant.client.ui.compose.main.PlayerAction
 import io.music_assistant.client.ui.compose.main.QueueAction
-import io.music_assistant.client.utils.NavScreen
 import io.music_assistant.client.utils.conditional
 import kotlinx.coroutines.launch
 
@@ -67,7 +64,6 @@ internal fun PlayersPager(
     isQueueExpanded: Boolean,
     onQueueExpandedSwitch: () -> Unit,
     onItemMoved: ((Int) -> Unit)?,
-    navigateTo: (NavScreen) -> Unit,
     queueAction: (QueueAction) -> Unit,
     settingsAction: (String) -> Unit,
     dspSettingsAction: (String) -> Unit,
@@ -251,7 +247,6 @@ internal fun PlayersPager(
                         queue = queue,
                         isQueueExpanded = isQueueExpanded,
                         onQueueExpandedSwitch = { onQueueExpandedSwitch() },
-                        navigateTo = navigateTo,
                         serverUrl = serverUrl,
                         queueAction = queueAction,
                         players = playerDataList,

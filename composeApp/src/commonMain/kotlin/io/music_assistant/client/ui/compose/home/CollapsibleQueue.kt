@@ -33,9 +33,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import io.music_assistant.client.data.model.client.PlayerData
-import io.music_assistant.client.ui.compose.common.OverflowMenu
-import io.music_assistant.client.ui.compose.common.OverflowMenuOption
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,12 +50,13 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import compose.icons.TablerIcons
 import compose.icons.tablericons.GripVertical
+import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.client.Queue
-import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.ui.compose.common.DataState
+import io.music_assistant.client.ui.compose.common.OverflowMenu
+import io.music_assistant.client.ui.compose.common.OverflowMenuOption
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
 import io.music_assistant.client.ui.compose.main.QueueAction
-import io.music_assistant.client.utils.NavScreen
 import io.music_assistant.client.utils.conditional
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
@@ -71,7 +69,6 @@ fun CollapsibleQueue(
     queue: DataState<Queue>,
     isQueueExpanded: Boolean,
     onQueueExpandedSwitch: () -> Unit,
-    navigateTo: (NavScreen) -> Unit,
     serverUrl: String?,
     queueAction: (QueueAction) -> Unit,
     players: List<PlayerData> = emptyList(),
@@ -112,13 +109,6 @@ fun CollapsibleQueue(
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Add button
-                OutlinedButton(
-                    onClick = { navigateTo(NavScreen.Library(MediaType.ARTIST)) }
-                ) {
-                    Text("Library")
-                }
-
                 // Transfer button
                 OverflowMenu(
                     modifier = Modifier,
@@ -197,9 +187,6 @@ fun CollapsibleQueue(
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            OutlinedButton(onClick = { navigateTo(NavScreen.Library(MediaType.ARTIST)) }) {
-                                Text(text = "Browse Library")
-                            }
                         }
                     } else {
                         val currentItemId = queueData.info.currentItem?.id
