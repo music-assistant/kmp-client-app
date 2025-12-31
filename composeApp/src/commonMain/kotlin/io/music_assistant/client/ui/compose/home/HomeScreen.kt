@@ -55,6 +55,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import io.music_assistant.client.data.model.client.AppMediaItem
+import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.home.nav.HomeNavScreen
 import io.music_assistant.client.ui.compose.home.nav.rememberHomeNavBackStack
@@ -182,7 +183,8 @@ fun HomeScreen(
                             connectionState = connectionState,
                             dataState = dataState,
                             serverUrl = serverUrl,
-                            onRecommendationItemClick = viewModel::onRecommendationItemClicked
+                            onRecommendationItemClick = viewModel::onRecommendationItemClicked,
+                            onTrackPlayOption = viewModel::onTrackPlayOption
                         )
 
                         Box(
@@ -338,6 +340,7 @@ private fun HomeContent(
     dataState: DataState<List<AppMediaItem.RecommendationFolder>>,
     serverUrl: String?,
     onRecommendationItemClick: (AppMediaItem) -> Unit,
+    onTrackPlayOption: (AppMediaItem.Track, QueueOption) -> Unit,
 ) {
     @Suppress("UNCHECKED_CAST")
     val typedBackStack = homeBackStack as NavBackStack<HomeNavScreen>
@@ -374,16 +377,19 @@ private fun HomeContent(
                                 typedBackStack.add(
                                     HomeNavScreen.ItemDetails(
                                         itemId = item.itemId,
-                                        mediaType = item.mediaType
+                                        mediaType = item.mediaType,
+                                        providerId = item.provider
                                     )
                                 )
                             }
+
                             else -> {
                                 // For tracks and other types, play immediately
                                 onRecommendationItemClick(item)
                             }
                         }
                     },
+                    onTrackPlayOption = onTrackPlayOption,
                     onLibraryItemClick = { type -> typedBackStack.add(HomeNavScreen.Library(type)) },
                 )
             }
@@ -400,10 +406,12 @@ private fun HomeContent(
                                 typedBackStack.add(
                                     HomeNavScreen.ItemDetails(
                                         itemId = item.itemId,
-                                        mediaType = item.mediaType
+                                        mediaType = item.mediaType,
+                                        providerId = item.provider
                                     )
                                 )
                             }
+
                             else -> {
                                 // TODO: Handle track clicks or other item types
                             }
@@ -416,7 +424,17 @@ private fun HomeContent(
                 ItemDetailsScreen(
                     itemId = it.itemId,
                     mediaType = it.mediaType,
-                    onBack = { typedBackStack.removeLastOrNull() }
+                    providerId = it.providerId,
+                    onBack = { typedBackStack.removeLastOrNull() },
+                    onNavigateToItem = { itemId, mediaType, providerId ->
+                        typedBackStack.add(
+                            HomeNavScreen.ItemDetails(
+                                itemId = itemId,
+                                mediaType = mediaType,
+                                providerId = providerId
+                            )
+                        )
+                    }
                 )
             }
         }

@@ -71,18 +71,19 @@ class ItemDetailsViewModel(
                         // Also update sub-items if they were updated
                         updateSubItemIfNeeded(event.data)
                     }
+
                     else -> Unit
                 }
             }
         }
     }
 
-    fun loadItem(itemId: String, mediaType: MediaType) {
+    fun loadItem(itemId: String, mediaType: MediaType, providerId: String) {
         viewModelScope.launch {
             _state.update { it.copy(itemState = DataState.Loading()) }
 
             try {
-                val item = getItemById(itemId, mediaType)
+                val item = getItemById(itemId, mediaType, providerId)
                 if (item != null) {
                     _state.update { it.copy(itemState = DataState.Data(item)) }
                     loadSubItems(item)
@@ -96,18 +97,21 @@ class ItemDetailsViewModel(
         }
     }
 
-    private suspend fun getItemById(itemId: String, mediaType: MediaType): AppMediaItem? {
+    private suspend fun getItemById(
+        itemId: String,
+        mediaType: MediaType,
+        providerId: String
+    ): AppMediaItem? {
         val request = when (mediaType) {
-            MediaType.ARTIST -> Request.Artist.list()
-            MediaType.ALBUM -> Request.Album.list()
-            MediaType.PLAYLIST -> Request.Playlist.list()
+            MediaType.ARTIST -> Request.Artist.get(itemId, providerId)
+            MediaType.ALBUM -> Request.Album.get(itemId, providerId)
+            MediaType.PLAYLIST -> Request.Playlist.get(itemId, providerId)
             else -> return null
         }
 
         return apiClient.sendRequest(request)
-            .resultAs<List<ServerMediaItem>>()
-            ?.toAppMediaItemList()
-            ?.firstOrNull { it.itemId == itemId }
+            .resultAs<ServerMediaItem>()
+            ?.toAppMediaItem()
     }
 
     private fun loadSubItems(item: AppMediaItem) {
@@ -118,14 +122,17 @@ class ItemDetailsViewModel(
                 loadArtistAlbums(item.itemId, providerDomain)
                 loadArtistTracks(item.itemId, providerDomain)
             }
+
             is AppMediaItem.Album -> {
                 _state.update { it.copy(albumsState = DataState.NoData()) }
                 loadAlbumTracks(item.itemId, providerDomain)
             }
+
             is AppMediaItem.Playlist -> {
                 _state.update { it.copy(albumsState = DataState.NoData()) }
                 loadPlaylistTracks(item.itemId, providerDomain)
             }
+
             else -> {
                 _state.update {
                     it.copy(
@@ -255,6 +262,23 @@ class ItemDetailsViewModel(
             val queueId = mainDataSource.selectedPlayer?.queueOrPlayerId ?: return@launch
 
             item.uri?.let { uri ->
+                apiClient.sendRequest(
+                    Request.Library.play(
+                        media = listOf(uri),
+                        queueOrPlayerId = queueId,
+                        option = option,
+                        radioMode = false
+                    )
+                )
+            }
+        }
+    }
+
+    fun onTrackClick(track: AppMediaItem.Track, option: QueueOption) {
+        viewModelScope.launch {
+            val queueId = mainDataSource.selectedPlayer?.queueOrPlayerId ?: return@launch
+
+            track.uri?.let { uri ->
                 apiClient.sendRequest(
                     Request.Library.play(
                         media = listOf(uri),

@@ -35,6 +35,7 @@ import compose.icons.TablerIcons
 import compose.icons.tablericons.Plus
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.server.MediaType
+import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.ui.compose.common.DataState
 import org.koin.compose.koinInject
 
@@ -69,7 +70,7 @@ fun Library2Screen(
         onBack = onBack,
         onTabSelected = viewModel::onTabSelected,
         onItemClick = onItemClick,
-        onItemLongClick = viewModel::onItemLongClick,
+        onTrackClick = viewModel::onTrackClick,
         onCreatePlaylistClick = viewModel::onCreatePlaylistClick,
         onLoadMore = viewModel::loadMore
     )
@@ -81,8 +82,8 @@ private fun Library2(
     serverUrl: String?,
     onBack: () -> Unit,
     onTabSelected: (Library2ViewModel.Tab) -> Unit,
-    onItemClick: (io.music_assistant.client.data.model.client.AppMediaItem) -> Unit,
-    onItemLongClick: (io.music_assistant.client.data.model.client.AppMediaItem) -> Unit,
+    onItemClick: (AppMediaItem) -> Unit,
+    onTrackClick: (AppMediaItem.Track, QueueOption) -> Unit,
     onCreatePlaylistClick: () -> Unit,
     onLoadMore: (Library2ViewModel.Tab) -> Unit,
 ) {
@@ -125,7 +126,7 @@ private fun Library2(
                 tabState = selectedTab,
                 serverUrl = serverUrl,
                 onItemClick = onItemClick,
-                onItemLongClick = onItemLongClick,
+                onTrackClick = onTrackClick,
                 onCreatePlaylistClick = onCreatePlaylistClick,
                 onLoadMore = { onLoadMore(selectedTab.tab) }
             )
@@ -137,8 +138,8 @@ private fun Library2(
 private fun TabContent(
     tabState: Library2ViewModel.TabState,
     serverUrl: String?,
-    onItemClick: (io.music_assistant.client.data.model.client.AppMediaItem) -> Unit,
-    onItemLongClick: (io.music_assistant.client.data.model.client.AppMediaItem) -> Unit,
+    onItemClick: (AppMediaItem) -> Unit,
+    onTrackClick: (AppMediaItem.Track, QueueOption) -> Unit,
     onCreatePlaylistClick: () -> Unit,
     onLoadMore: () -> Unit,
 ) {
@@ -189,7 +190,7 @@ private fun TabContent(
                                 isLoadingMore = tabState.isLoadingMore,
                                 hasMore = tabState.hasMore,
                                 onItemClick = onItemClick,
-                                onItemLongClick = onItemLongClick,
+                                onTrackClick = onTrackClick,
                                 onLoadMore = onLoadMore,
                                 gridState = it
                             )

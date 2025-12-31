@@ -3,7 +3,7 @@ package io.music_assistant.client.ui.compose.common.items
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -46,17 +46,13 @@ import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderP
 @Composable
 private fun MediaItemWrapper(
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
         modifier = Modifier
             .wrapContentSize()
             .clip(RoundedCornerShape(8.dp))
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
-            )
+            .clickable(onClick = onClick)
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -70,7 +66,6 @@ private fun MediaItemWrapper(
  * @param item The track item to display
  * @param serverUrl Server URL for image loading
  * @param onClick Click handler
- * @param onLongClick Long click handler
  * @param itemSize Size of the item (default 96.dp)
  * @param showSubtitle Whether to show subtitle (default true)
  */
@@ -79,14 +74,10 @@ fun MediaItemTrack(
     item: AppMediaItem.Track,
     serverUrl: String?,
     onClick: (AppMediaItem.Track) -> Unit,
-    onLongClick: (AppMediaItem.Track) -> Unit,
     itemSize: Dp = 96.dp,
     showSubtitle: Boolean = true,
 ) {
-    MediaItemWrapper(
-        onClick = { onClick(item) },
-        onLongClick = { onLongClick(item) }
-    ) {
+    MediaItemWrapper(onClick = { onClick(item) }) {
         TrackImage(itemSize, item, serverUrl)
         Spacer(Modifier.height(4.dp))
         Text(
@@ -166,7 +157,6 @@ fun TrackImage(
  * @param item The artist item to display
  * @param serverUrl Server URL for image loading
  * @param onClick Click handler
- * @param onLongClick Long click handler
  * @param itemSize Size of the item (default 96.dp)
  * @param showSubtitle Whether to show subtitle (default true)
  */
@@ -175,14 +165,10 @@ fun MediaItemArtist(
     item: AppMediaItem.Artist,
     serverUrl: String?,
     onClick: (AppMediaItem.Artist) -> Unit,
-    onLongClick: (AppMediaItem.Artist) -> Unit,
     itemSize: Dp = 96.dp,
     showSubtitle: Boolean = true,
 ) {
-    MediaItemWrapper(
-        onClick = { onClick(item) },
-        onLongClick = { onLongClick(item) }
-    ) {
+    MediaItemWrapper(onClick = { onClick(item) }) {
         ArtistImage(itemSize, item, serverUrl)
         Spacer(Modifier.height(4.dp))
         Text(
@@ -243,7 +229,6 @@ fun ArtistImage(
  * @param item The album item to display
  * @param serverUrl Server URL for image loading
  * @param onClick Click handler
- * @param onLongClick Long click handler
  * @param itemSize Size of the item (default 96.dp)
  * @param showSubtitle Whether to show subtitle (default true)
  */
@@ -252,14 +237,10 @@ fun MediaItemAlbum(
     item: AppMediaItem.Album,
     serverUrl: String?,
     onClick: (AppMediaItem.Album) -> Unit,
-    onLongClick: (AppMediaItem.Album) -> Unit,
     itemSize: Dp = 96.dp,
     showSubtitle: Boolean = true,
 ) {
-    MediaItemWrapper(
-        onClick = { onClick(item) },
-        onLongClick = { onLongClick(item) }
-    ) {
+    MediaItemWrapper(onClick = { onClick(item) }) {
         AlbumImage(itemSize, item, serverUrl)
         Spacer(Modifier.height(4.dp))
         Text(
@@ -336,7 +317,6 @@ fun AlbumImage(
  * @param item The playlist item to display
  * @param serverUrl Server URL for image loading
  * @param onClick Click handler
- * @param onLongClick Long click handler
  * @param itemSize Size of the item (default 96.dp)
  * @param showSubtitle Whether to show subtitle (default true)
  */
@@ -345,14 +325,10 @@ fun MediaItemPlaylist(
     item: AppMediaItem.Playlist,
     serverUrl: String?,
     onClick: (AppMediaItem.Playlist) -> Unit,
-    onLongClick: (AppMediaItem.Playlist) -> Unit,
     itemSize: Dp = 96.dp,
     showSubtitle: Boolean = true,
 ) {
-    MediaItemWrapper(
-        onClick = { onClick(item) },
-        onLongClick = { onLongClick(item) }
-    ) {
+    MediaItemWrapper(onClick = { onClick(item) }) {
         PlaylistImage(itemSize, item, serverUrl)
         Spacer(Modifier.height(4.dp))
         Text(

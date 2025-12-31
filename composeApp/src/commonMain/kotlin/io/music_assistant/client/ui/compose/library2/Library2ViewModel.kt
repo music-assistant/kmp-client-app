@@ -5,9 +5,11 @@ import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
 import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
+import io.music_assistant.client.data.MainDataSource
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItemList
+import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.server.ServerMediaItem
 import io.music_assistant.client.data.model.server.events.MediaItemAddedEvent
 import io.music_assistant.client.data.model.server.events.MediaItemDeletedEvent
@@ -22,7 +24,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class Library2ViewModel(
-    private val apiClient: ServiceClient
+    private val apiClient: ServiceClient,
+    private val mainDataSource: MainDataSource
 ) : ViewModel() {
 
     companion object {
@@ -110,26 +113,33 @@ class Library2ViewModel(
         }
     }
 
-    fun onItemClick(item: AppMediaItem) {
-        // TODO: Navigate to item detail view or show overflow menu
-        Logger.d { "Item clicked: ${item.name} (${item::class.simpleName})" }
-    }
-
-    fun onItemLongClick(item: AppMediaItem) {
-        // TODO: Show context menu
-        Logger.d { "Item long-clicked: ${item.name}" }
-    }
-
     fun onCreatePlaylistClick() {
         // TODO: Show create playlist dialog
         Logger.d { "Create playlist clicked" }
+    }
+
+    fun onTrackClick(track: AppMediaItem.Track, option: QueueOption) {
+        viewModelScope.launch {
+            val queueId = mainDataSource.selectedPlayer?.queueOrPlayerId ?: return@launch
+
+            track.uri?.let { uri ->
+                apiClient.sendRequest(
+                    Request.Library.play(
+                        media = listOf(uri),
+                        queueOrPlayerId = queueId,
+                        option = option,
+                        radioMode = false
+                    )
+                )
+            }
+        }
     }
 
     private fun loadArtists() {
         viewModelScope.launch {
             updateTabState(Tab.ARTISTS, DataState.Loading())
             val result = apiClient.sendRequest(
-                Request.Artist.list(limit = PAGE_SIZE, offset = 0)
+                Request.Artist.listLibrary(limit = PAGE_SIZE, offset = 0)
             )
             result.resultAs<List<ServerMediaItem>>()
                 ?.toAppMediaItemList()
@@ -152,7 +162,7 @@ class Library2ViewModel(
         viewModelScope.launch {
             updateTabState(Tab.ALBUMS, DataState.Loading())
             val result = apiClient.sendRequest(
-                Request.Album.list(limit = PAGE_SIZE, offset = 0)
+                Request.Album.listLibrary(limit = PAGE_SIZE, offset = 0)
             )
             result.resultAs<List<ServerMediaItem>>()
                 ?.toAppMediaItemList()
@@ -175,7 +185,7 @@ class Library2ViewModel(
         viewModelScope.launch {
             updateTabState(Tab.PLAYLISTS, DataState.Loading())
             val result = apiClient.sendRequest(
-                Request.Playlist.list(limit = PAGE_SIZE, offset = 0)
+                Request.Playlist.listLibrary(limit = PAGE_SIZE, offset = 0)
             )
             result.resultAs<List<ServerMediaItem>>()
                 ?.toAppMediaItemList()
@@ -235,11 +245,11 @@ class Library2ViewModel(
 
             val result = when (tab) {
                 Tab.ARTISTS -> apiClient.sendRequest(
-                    Request.Artist.list(limit = PAGE_SIZE, offset = tabState.offset)
+                    Request.Artist.listLibrary(limit = PAGE_SIZE, offset = tabState.offset)
                 )
 
                 Tab.ALBUMS -> apiClient.sendRequest(
-                    Request.Album.list(limit = PAGE_SIZE, offset = tabState.offset)
+                    Request.Album.listLibrary(limit = PAGE_SIZE, offset = tabState.offset)
                 )
 
                 Tab.TRACKS -> apiClient.sendRequest(
@@ -247,7 +257,7 @@ class Library2ViewModel(
                 )
 
                 Tab.PLAYLISTS -> apiClient.sendRequest(
-                    Request.Playlist.list(limit = PAGE_SIZE, offset = tabState.offset)
+                    Request.Playlist.listLibrary(limit = PAGE_SIZE, offset = tabState.offset)
                 )
             }
 

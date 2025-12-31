@@ -44,11 +44,12 @@ import androidx.compose.ui.unit.dp
 import co.touchlab.kermit.Logger
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.server.MediaType
+import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.items.MediaItemAlbum
 import io.music_assistant.client.ui.compose.common.items.MediaItemArtist
 import io.music_assistant.client.ui.compose.common.items.MediaItemPlaylist
-import io.music_assistant.client.ui.compose.common.items.MediaItemTrack
+import io.music_assistant.client.ui.compose.common.items.TrackItemWithMenu
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
 import io.music_assistant.client.utils.SessionState
 
@@ -59,6 +60,7 @@ fun LandingPage(
     dataState: DataState<List<AppMediaItem.RecommendationFolder>>,
     serverUrl: String?,
     onItemClick: (AppMediaItem) -> Unit,
+    onTrackPlayOption: ((AppMediaItem.Track, QueueOption) -> Unit)? = null,
     onLibraryItemClick: (MediaType?) -> Unit,
 ) {
     val filteredData = remember(dataState) {
@@ -102,6 +104,7 @@ fun LandingPage(
                     serverUrl = serverUrl,
                     row = row,
                     onItemClick = onItemClick,
+                    onTrackPlayOption = onTrackPlayOption,
                     onAllClick = { row.rowItemType?.let { onLibraryItemClick(it) } },
                     mediaItems = row.items.orEmpty()
                 )
@@ -231,13 +234,13 @@ fun CategoryRow(
     serverUrl: String?,
     row: AppMediaItem.RecommendationFolder,
     onItemClick: (AppMediaItem) -> Unit,
+    onTrackPlayOption: ((AppMediaItem.Track, QueueOption) -> Unit)?,
     onAllClick: () -> Unit,
     mediaItems: List<AppMediaItem>
 ) {
     val isHomogenous = remember(mediaItems) {
         mediaItems.all { it::class == mediaItems.firstOrNull()?.let { first -> first::class } }
     }
-    val onLongItemClick: (AppMediaItem) -> Unit = {/*TODO*/ }
     Column {
         Row(
             modifier = Modifier
@@ -288,19 +291,20 @@ fun CategoryRow(
                 }
             ) { item ->
                 when (item) {
-                    is AppMediaItem.Track -> MediaItemTrack(
-                        item = item,
-                        serverUrl = serverUrl,
-                        onClick = { onItemClick(it) },
-                        onLongClick = { onLongItemClick(it) },
-                        itemSize = 96.dp
-                    )
+                    is AppMediaItem.Track -> {
+                        TrackItemWithMenu(
+                            item = item,
+                            serverUrl = serverUrl,
+                            itemSize = 96.dp,
+                            onTrackPlayOption = onTrackPlayOption,
+                            onItemClick = { onItemClick(it) }
+                        )
+                    }
 
                     is AppMediaItem.Artist -> MediaItemArtist(
                         item = item,
                         serverUrl = serverUrl,
                         onClick = { onItemClick(it) },
-                        onLongClick = { onLongItemClick(it) },
                         itemSize = 96.dp,
                         showSubtitle = !isHomogenous
                     )
@@ -309,7 +313,6 @@ fun CategoryRow(
                         item = item,
                         serverUrl = serverUrl,
                         onClick = { onItemClick(it) },
-                        onLongClick = { onLongItemClick(it) },
                         itemSize = 96.dp
                     )
 
@@ -317,7 +320,6 @@ fun CategoryRow(
                         item = item,
                         serverUrl = serverUrl,
                         onClick = { onItemClick(it) },
-                        onLongClick = { onLongItemClick(it) },
                         itemSize = 96.dp,
                         showSubtitle = !isHomogenous
                     )

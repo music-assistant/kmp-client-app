@@ -135,6 +135,29 @@ fun SettingsScreen(onBack: () -> Unit) {
                     }
                 }
 
+                // Track if we've already attempted auto-reconnect
+                var autoReconnectAttempted by remember { mutableStateOf(false) }
+
+                // Auto-reconnect on error if we have saved connection info
+                LaunchedEffect(sessionState) {
+                    val connInfo = savedConnectionInfo
+                    if (sessionState is SessionState.Disconnected.Error &&
+                        connInfo != null &&
+                        !autoReconnectAttempted) {
+                        // Mark that we've attempted reconnection
+                        autoReconnectAttempted = true
+                        // Attempt reconnection with saved connection info
+                        viewModel.attemptConnection(
+                            connInfo.host,
+                            connInfo.port.toString(),
+                            connInfo.isTls
+                        )
+                    } else if (sessionState is SessionState.Connected) {
+                        // Reset flag on successful connection
+                        autoReconnectAttempted = false
+                    }
+                }
+
                 // Auto-login after connection if credentials were provided
                 LaunchedEffect(sessionState, pendingLogin) {
                     val currentState = sessionState

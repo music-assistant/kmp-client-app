@@ -145,6 +145,12 @@ class HomeScreenViewModel(
         }
     }
 
+    fun onTrackPlayOption(track: AppMediaItem.Track, option: QueueOption) {
+        dataSource.selectedPlayer?.queueOrPlayerId?.let {
+            playItem(track, it, option)
+        }
+    }
+
     private fun stopJobs() {
         jobs.forEach { job -> job.cancel() }
         jobs.clear()

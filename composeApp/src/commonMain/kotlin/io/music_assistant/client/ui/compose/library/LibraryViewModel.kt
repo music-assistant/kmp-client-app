@@ -381,13 +381,13 @@ class LibraryViewModel(
     }
 
     private suspend fun loadArtists() {
-        refreshSimpleList(LibraryTab.Artists, Request.Artist.list()) { it is AppMediaItem.Artist }
+        refreshSimpleList(LibraryTab.Artists, Request.Artist.listLibrary()) { it is AppMediaItem.Artist }
     }
 
     private suspend fun loadPlaylists() {
         refreshSimpleList(
             LibraryTab.Playlists,
-            Request.Playlist.list()
+            Request.Playlist.listLibrary()
         ) { it is AppMediaItem.Playlist }
     }
 

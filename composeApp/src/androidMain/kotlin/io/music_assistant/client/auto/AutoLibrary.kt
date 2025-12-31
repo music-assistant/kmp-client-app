@@ -93,7 +93,7 @@ class AutoLibrary(
                 result.detach()
                 scope.launch {
                     result.sendResult(
-                        apiClient.sendRequest(Request.Artist.list())
+                        apiClient.sendRequest(Request.Artist.listLibrary())
                             .resultAs<List<ServerMediaItem>>()
                             ?.toAppMediaItemList()
                             ?.map {
@@ -110,7 +110,7 @@ class AutoLibrary(
                 result.detach()
                 scope.launch {
                     result.sendResult(
-                        apiClient.sendRequest(Request.Playlist.list())
+                        apiClient.sendRequest(Request.Playlist.listLibrary())
                             .resultAs<List<ServerMediaItem>>()
                             ?.toAppMediaItemList()
                             ?.map {

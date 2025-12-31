@@ -49,22 +49,24 @@ import io.music_assistant.client.ui.compose.common.OverflowMenuOption
 import io.music_assistant.client.ui.compose.common.items.AlbumImage
 import io.music_assistant.client.ui.compose.common.items.ArtistImage
 import io.music_assistant.client.ui.compose.common.items.MediaItemAlbum
-import io.music_assistant.client.ui.compose.common.items.MediaItemTrack
 import io.music_assistant.client.ui.compose.common.items.PlaylistImage
+import io.music_assistant.client.ui.compose.common.items.TrackItemWithMenu
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun ItemDetailsScreen(
     itemId: String,
     mediaType: MediaType,
+    providerId: String,
     onBack: () -> Unit,
+    onNavigateToItem: (String, MediaType, String) -> Unit,
 ) {
     val viewModel: ItemDetailsViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
 
     LaunchedEffect(itemId, mediaType) {
-        viewModel.loadItem(itemId, mediaType)
+        viewModel.loadItem(itemId, mediaType, providerId)
     }
 
     ItemDetailsContent(
@@ -73,8 +75,17 @@ fun ItemDetailsScreen(
         onBack = onBack,
         onFavoriteClick = viewModel::onFavoriteClick,
         onPlayClick = viewModel::onPlayClick,
-        onSubItemClick = { /* TODO: Navigate or play */ },
-        onSubItemLongClick = { /* TODO: Show context menu */ }
+        onSubItemClick = { item ->
+            when (item) {
+                is AppMediaItem.Artist,
+                is AppMediaItem.Album,
+                is AppMediaItem.Playlist -> {
+                    onNavigateToItem(item.itemId, item.mediaType, item.provider)
+                }
+                else -> Unit
+            }
+        },
+        onTrackClick = viewModel::onTrackClick
     )
 }
 
@@ -86,9 +97,8 @@ private fun ItemDetailsContent(
     onFavoriteClick: () -> Unit,
     onPlayClick: (QueueOption) -> Unit,
     onSubItemClick: (AppMediaItem) -> Unit,
-    onSubItemLongClick: (AppMediaItem) -> Unit,
+    onTrackClick: (AppMediaItem.Track, QueueOption) -> Unit,
 ) {
-
     Column {
         IconButton(onClick = onBack) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
@@ -147,7 +157,6 @@ private fun ItemDetailsContent(
                                             item = album,
                                             serverUrl = serverUrl,
                                             onClick = { onSubItemClick(album) },
-                                            onLongClick = { onSubItemLongClick(album) }
                                         )
                                     }
                                 }
@@ -176,11 +185,10 @@ private fun ItemDetailsContent(
                                     SectionHeader("Tracks")
                                 }
                                 items(tracksState.data) { track ->
-                                    MediaItemTrack(
+                                    TrackItemWithMenu(
                                         item = track,
                                         serverUrl = serverUrl,
-                                        onClick = { onSubItemClick(track) },
-                                        onLongClick = { onSubItemLongClick(track) }
+                                        onTrackPlayOption = onTrackClick
                                     )
                                 }
                             }

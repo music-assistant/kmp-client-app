@@ -21,10 +21,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.music_assistant.client.data.model.client.AppMediaItem
+import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.ui.compose.common.items.MediaItemAlbum
 import io.music_assistant.client.ui.compose.common.items.MediaItemArtist
 import io.music_assistant.client.ui.compose.common.items.MediaItemPlaylist
-import io.music_assistant.client.ui.compose.common.items.MediaItemTrack
+import io.music_assistant.client.ui.compose.common.items.TrackItemWithMenu
 
 @Composable
 fun AdaptiveMediaGrid(
@@ -34,11 +35,10 @@ fun AdaptiveMediaGrid(
     isLoadingMore: Boolean = false,
     hasMore: Boolean = true,
     onItemClick: (AppMediaItem) -> Unit,
-    onItemLongClick: (AppMediaItem) -> Unit,
+    onTrackClick: ((AppMediaItem.Track, QueueOption) -> Unit)? = null,
     onLoadMore: () -> Unit = {},
     gridState: LazyGridState = rememberLazyGridState(),
 ) {
-
     // Detect when we're near the end and trigger load more
     val shouldLoadMore by remember {
         derivedStateOf {
@@ -67,32 +67,31 @@ fun AdaptiveMediaGrid(
     ) {
         items(items, key = { it.itemId }) { item ->
             when (item) {
-                is AppMediaItem.Track -> MediaItemTrack(
-                    item = item,
-                    serverUrl = serverUrl,
-                    onClick = { onItemClick(it) },
-                    onLongClick = { onItemLongClick(it) }
-                )
+                is AppMediaItem.Track -> {
+                    TrackItemWithMenu(
+                        item = item,
+                        serverUrl = serverUrl,
+                        onTrackPlayOption = onTrackClick,
+                        onItemClick = { onItemClick(it) }
+                    )
+                }
 
                 is AppMediaItem.Artist -> MediaItemArtist(
                     item = item,
                     serverUrl = serverUrl,
                     onClick = { onItemClick(it) },
-                    onLongClick = { onItemLongClick(it) }
                 )
 
                 is AppMediaItem.Album -> MediaItemAlbum(
                     item = item,
                     serverUrl = serverUrl,
                     onClick = { onItemClick(it) },
-                    onLongClick = { onItemLongClick(it) }
                 )
 
                 is AppMediaItem.Playlist -> MediaItemPlaylist(
                     item = item,
                     serverUrl = serverUrl,
                     onClick = { onItemClick(it) },
-                    onLongClick = { onItemLongClick(it) }
                 )
 
                 else -> {

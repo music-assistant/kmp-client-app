@@ -152,7 +152,12 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
 
     data object Playlist {
 
-        fun list(
+        fun get(
+            itemId: String,
+            providerInstanceIdOrDomain: String,
+        ) = Library.get("playlists", itemId, providerInstanceIdOrDomain)
+
+        fun listLibrary(
             favorite: Boolean? = null,
             search: String? = null,
             limit: Int = Int.MAX_VALUE,
@@ -201,7 +206,12 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
 
     data object Artist {
 
-        fun list(
+        fun get(
+            itemId: String,
+            providerInstanceIdOrDomain: String,
+        ) = Library.get("artists", itemId, providerInstanceIdOrDomain)
+
+        fun listLibrary(
             favorite: Boolean? = null,
             search: String? = null,
             limit: Int = Int.MAX_VALUE,
@@ -241,7 +251,12 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
 
     data object Album {
 
-        fun list(
+        fun get(
+            itemId: String,
+            providerInstanceIdOrDomain: String,
+        ) = Library.get("albums", itemId, providerInstanceIdOrDomain)
+
+        fun listLibrary(
             favorite: Boolean? = null,
             search: String? = null,
             limit: Int = Int.MAX_VALUE,
@@ -289,6 +304,18 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
     }
 
     data object Library {
+
+        internal fun get(
+            kind: String,
+            itemId: String,
+            providerInstanceIdOrDomain: String,
+        ) = Request(
+            command = "music/$kind/get",
+            args = buildJsonObject {
+                put("item_id", JsonPrimitive(itemId))
+                put("provider_instance_id_or_domain", JsonPrimitive(providerInstanceIdOrDomain))
+            }
+        )
 
         fun add(
             itemUri: String,

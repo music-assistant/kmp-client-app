@@ -19,7 +19,8 @@ sealed interface HomeNavScreen : NavKey {
     @Serializable
     data class ItemDetails(
         val itemId: String,
-        val mediaType: MediaType
+        val mediaType: MediaType,
+        val providerId: String
     ) : HomeNavScreen
 }
 
