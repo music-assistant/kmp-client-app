@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -14,7 +15,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ExpandMore
@@ -44,8 +48,9 @@ import io.music_assistant.client.ui.compose.common.OverflowMenu
 import io.music_assistant.client.ui.compose.common.OverflowMenuOption
 import io.music_assistant.client.ui.compose.common.items.AlbumImage
 import io.music_assistant.client.ui.compose.common.items.ArtistImage
+import io.music_assistant.client.ui.compose.common.items.MediaItemAlbum
+import io.music_assistant.client.ui.compose.common.items.MediaItemTrack
 import io.music_assistant.client.ui.compose.common.items.PlaylistImage
-import io.music_assistant.client.ui.compose.library2.AdaptiveMediaGrid
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -112,11 +117,15 @@ private fun ItemDetailsContent(
 
             is DataState.Data -> {
                 val item = itemState.data
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize()
+                LazyVerticalGrid(
+                    modifier = Modifier.fillMaxSize(),
+                    columns = GridCells.Adaptive(minSize = 96.dp),
+                    contentPadding = PaddingValues(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Header section
-                    item {
+                    // Header section - spans full width
+                    item(span = { GridItemSpan(maxLineSpan) }) {
                         HeaderSection(
                             item = item,
                             serverUrl = serverUrl,
@@ -130,22 +139,22 @@ private fun ItemDetailsContent(
                         when (val albumsState = state.albumsState) {
                             is DataState.Data -> {
                                 if (albumsState.data.isNotEmpty()) {
-                                    item {
+                                    item(span = { GridItemSpan(maxLineSpan) }) {
                                         SectionHeader("Albums")
                                     }
-                                    item {
-                                        AdaptiveMediaGrid(
-                                            items = albumsState.data,
+                                    items(albumsState.data) { album ->
+                                        MediaItemAlbum(
+                                            item = album,
                                             serverUrl = serverUrl,
-                                            onItemClick = onSubItemClick,
-                                            onItemLongClick = onSubItemLongClick
+                                            onClick = { onSubItemClick(album) },
+                                            onLongClick = { onSubItemLongClick(album) }
                                         )
                                     }
                                 }
                             }
 
                             is DataState.Loading -> {
-                                item {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
                                     Box(
                                         modifier = Modifier.fillMaxWidth().padding(16.dp),
                                         contentAlignment = Alignment.Center
@@ -163,22 +172,22 @@ private fun ItemDetailsContent(
                     when (val tracksState = state.tracksState) {
                         is DataState.Data -> {
                             if (tracksState.data.isNotEmpty()) {
-                                item {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
                                     SectionHeader("Tracks")
                                 }
-                                item {
-                                    AdaptiveMediaGrid(
-                                        items = tracksState.data,
+                                items(tracksState.data) { track ->
+                                    MediaItemTrack(
+                                        item = track,
                                         serverUrl = serverUrl,
-                                        onItemClick = onSubItemClick,
-                                        onItemLongClick = onSubItemLongClick
+                                        onClick = { onSubItemClick(track) },
+                                        onLongClick = { onSubItemLongClick(track) }
                                     )
                                 }
                             }
                         }
 
                         is DataState.Loading -> {
-                            item {
+                            item(span = { GridItemSpan(maxLineSpan) }) {
                                 Box(
                                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                                     contentAlignment = Alignment.Center

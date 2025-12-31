@@ -268,7 +268,7 @@ class ItemDetailsViewModel(
     }
 
     private fun getProviderDomain(item: AppMediaItem): String {
-        return item.providerMappings?.firstOrNull()?.providerInstance ?: item.provider
+        return item.provider
     }
 
     private fun updateSubItemIfNeeded(serverItem: ServerMediaItem) {

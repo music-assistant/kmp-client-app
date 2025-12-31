@@ -296,7 +296,7 @@ fun AppMediaItem.toMediaDescription(
         .setMediaId("${itemId}__${uri}__${mediaType}__${provider}")
         .setTitle(name)
         .setSubtitle(subtitle)
-        .setMediaUri(Uri.parse(uri))
+        .setMediaUri(uri?.let { Uri.parse(it) })
         .setIconUri(imageInfo?.url(serverUrl)?.let { Uri.parse(it) } ?: defaultIconUri)
         .setExtras(Bundle().apply {
             putString(
