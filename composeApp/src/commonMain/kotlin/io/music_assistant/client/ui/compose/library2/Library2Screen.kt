@@ -20,10 +20,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,15 +33,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import compose.icons.TablerIcons
 import compose.icons.tablericons.Plus
+import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.ui.compose.common.DataState
-import io.music_assistant.client.ui.compose.library2.items.AdaptiveMediaGrid
 import org.koin.compose.koinInject
 
 @Composable
 fun Library2Screen(
     initialTabType: MediaType?,
     onBack: () -> Unit,
+    onItemClick: (AppMediaItem) -> Unit,
 ) {
     val viewModel: Library2ViewModel = koinInject()
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -69,7 +68,7 @@ fun Library2Screen(
         serverUrl = serverUrl,
         onBack = onBack,
         onTabSelected = viewModel::onTabSelected,
-        onItemClick = viewModel::onItemClick,
+        onItemClick = onItemClick,
         onItemLongClick = viewModel::onItemLongClick,
         onCreatePlaylistClick = viewModel::onCreatePlaylistClick,
         onLoadMore = viewModel::loadMore

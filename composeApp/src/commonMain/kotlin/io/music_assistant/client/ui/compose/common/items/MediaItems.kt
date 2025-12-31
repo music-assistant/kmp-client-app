@@ -83,52 +83,11 @@ fun MediaItemTrack(
     itemSize: Dp = 96.dp,
     showSubtitle: Boolean = true,
 ) {
-    val primary = MaterialTheme.colorScheme.primary
-    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
-    val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
-
     MediaItemWrapper(
         onClick = { onClick(item) },
         onLongClick = { onLongClick(item) }
     ) {
-        Box(
-            modifier = Modifier
-                .size(itemSize)
-                .clip(RoundedCornerShape(8.dp))
-                .background(primaryContainer)
-        ) {
-            val placeholder = rememberPlaceholderPainter(
-                backgroundColor = primaryContainer,
-                iconColor = onPrimaryContainer,
-                icon = Icons.Default.MusicNote
-            )
-            AsyncImage(
-                placeholder = placeholder,
-                fallback = placeholder,
-                model = item.imageInfo?.url(serverUrl),
-                contentDescription = item.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-
-            // Draw waveform overlay at the bottom
-            val waveformPainter = remember(onPrimaryContainer) {
-                WaveformPainter(
-                    waveColor = primary,
-                    thickness = 3f
-                )
-            }
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(20.dp)
-                    .align(Alignment.BottomCenter)
-            ) {
-                with(waveformPainter) {
-                    draw(size)
-                }
-            }
-        }
+        TrackImage(itemSize, item, serverUrl)
         Spacer(Modifier.height(4.dp))
         Text(
             text = item.name,
@@ -148,6 +107,55 @@ fun MediaItemTrack(
                 modifier = Modifier.width(itemSize),
                 textAlign = TextAlign.Center,
             )
+        }
+    }
+}
+
+@Composable
+fun TrackImage(
+    itemSize: Dp,
+    item: AppMediaItem.Track,
+    serverUrl: String?,
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
+    val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
+    Box(
+        modifier = Modifier
+            .size(itemSize)
+            .clip(RoundedCornerShape(8.dp))
+            .background(primaryContainer)
+    ) {
+        val placeholder = rememberPlaceholderPainter(
+            backgroundColor = primaryContainer,
+            iconColor = onPrimaryContainer,
+            icon = Icons.Default.MusicNote
+        )
+        AsyncImage(
+            placeholder = placeholder,
+            fallback = placeholder,
+            model = item.imageInfo?.url(serverUrl),
+            contentDescription = item.name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Draw waveform overlay at the bottom
+        val waveformPainter = remember(onPrimaryContainer) {
+            WaveformPainter(
+                waveColor = primary,
+                thickness = 3f
+            )
+        }
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(20.dp)
+                .align(Alignment.BottomCenter)
+        ) {
+            with(waveformPainter) {
+                draw(size)
+            }
         }
     }
 }
@@ -171,33 +179,11 @@ fun MediaItemArtist(
     itemSize: Dp = 96.dp,
     showSubtitle: Boolean = true,
 ) {
-    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
-    val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
-
     MediaItemWrapper(
         onClick = { onClick(item) },
         onLongClick = { onLongClick(item) }
     ) {
-        Box(
-            modifier = Modifier
-                .size(itemSize)
-                .clip(CircleShape)
-                .background(primaryContainer)
-        ) {
-            val placeholder = rememberPlaceholderPainter(
-                backgroundColor = primaryContainer,
-                iconColor = onPrimaryContainer,
-                icon = Icons.Default.Mic
-            )
-            AsyncImage(
-                placeholder = placeholder,
-                fallback = placeholder,
-                model = item.imageInfo?.url(serverUrl),
-                contentDescription = item.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+        ArtistImage(itemSize, item, serverUrl)
         Spacer(Modifier.height(4.dp))
         Text(
             modifier = Modifier.width(itemSize),
@@ -221,6 +207,36 @@ fun MediaItemArtist(
     }
 }
 
+@Composable
+fun ArtistImage(
+    itemSize: Dp,
+    item: AppMediaItem.Artist,
+    serverUrl: String?
+) {
+    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
+    val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
+    Box(
+        modifier = Modifier
+            .size(itemSize)
+            .clip(CircleShape)
+            .background(primaryContainer)
+    ) {
+        val placeholder = rememberPlaceholderPainter(
+            backgroundColor = primaryContainer,
+            iconColor = onPrimaryContainer,
+            icon = Icons.Default.Mic
+        )
+        AsyncImage(
+            placeholder = placeholder,
+            fallback = placeholder,
+            model = item.imageInfo?.url(serverUrl),
+            contentDescription = item.name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+}
+
 /**
  * Album media item with vinyl record design.
  *
@@ -240,49 +256,11 @@ fun MediaItemAlbum(
     itemSize: Dp = 96.dp,
     showSubtitle: Boolean = true,
 ) {
-    val primaryContainer = MaterialTheme.colorScheme.primary
-    val background = MaterialTheme.colorScheme.background
-
     MediaItemWrapper(
         onClick = { onClick(item) },
         onLongClick = { onLongClick(item) }
     ) {
-        Box(
-            modifier = Modifier
-                .size(itemSize)
-                .clip(RoundedCornerShape(8.dp))
-        ) {
-            val vinylRecord = remember(primaryContainer, background) {
-                VinylRecordPainter(
-                    recordColor = Color.DarkGray,
-                    labelColor = primaryContainer,
-                    holeColor = background
-                )
-            }
-            val stripWidth = 10.dp
-            val holeRadius = 16.dp
-
-            val cutStripShape = remember(stripWidth) { CutStripShape(stripWidth) }
-            val holeShape = remember(holeRadius) { HoleShape(holeRadius) }
-
-            Image(
-                painter = vinylRecord,
-                contentDescription = "Vinyl Record",
-                modifier = Modifier.fillMaxSize().clip(CircleShape)
-            )
-
-            AsyncImage(
-                placeholder = vinylRecord,
-                fallback = vinylRecord,
-                model = item.imageInfo?.url(serverUrl),
-                contentDescription = item.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(cutStripShape)
-                    .clip(holeShape)
-            )
-        }
+        AlbumImage(itemSize, item, serverUrl)
         Spacer(Modifier.height(4.dp))
         Text(
             modifier = Modifier.width(itemSize),
@@ -306,6 +284,52 @@ fun MediaItemAlbum(
     }
 }
 
+@Composable
+fun AlbumImage(
+    itemSize: Dp,
+    item: AppMediaItem.Album,
+    serverUrl: String?
+) {
+    val primaryContainer = MaterialTheme.colorScheme.primary
+    val background = MaterialTheme.colorScheme.background
+    Box(
+        modifier = Modifier
+            .size(itemSize)
+            .clip(RoundedCornerShape(8.dp))
+    ) {
+        val vinylRecord = remember(primaryContainer, background) {
+            VinylRecordPainter(
+                recordColor = Color.DarkGray,
+                labelColor = primaryContainer,
+                holeColor = background
+            )
+        }
+        val stripWidth = 10.dp
+        val holeRadius = 16.dp
+
+        val cutStripShape = remember(stripWidth) { CutStripShape(stripWidth) }
+        val holeShape = remember(holeRadius) { HoleShape(holeRadius) }
+
+        Image(
+            painter = vinylRecord,
+            contentDescription = "Vinyl Record",
+            modifier = Modifier.fillMaxSize().clip(CircleShape)
+        )
+
+        AsyncImage(
+            placeholder = vinylRecord,
+            fallback = vinylRecord,
+            model = item.imageInfo?.url(serverUrl),
+            contentDescription = item.name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(cutStripShape)
+                .clip(holeShape)
+        )
+    }
+}
+
 /**
  * Playlist media item.
  *
@@ -325,33 +349,11 @@ fun MediaItemPlaylist(
     itemSize: Dp = 96.dp,
     showSubtitle: Boolean = true,
 ) {
-    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
-    val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
-
     MediaItemWrapper(
         onClick = { onClick(item) },
         onLongClick = { onLongClick(item) }
     ) {
-        Box(
-            modifier = Modifier
-                .size(itemSize)
-                .clip(RoundedCornerShape(8.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            val placeholder = rememberPlaceholderPainter(
-                backgroundColor = primaryContainer,
-                iconColor = onPrimaryContainer,
-                icon = Icons.AutoMirrored.Filled.FeaturedPlayList
-            )
-            AsyncImage(
-                placeholder = placeholder,
-                fallback = placeholder,
-                model = item.imageInfo?.url(serverUrl),
-                contentDescription = item.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+        PlaylistImage(itemSize, item, serverUrl)
         Spacer(Modifier.height(4.dp))
         Text(
             modifier = Modifier.width(itemSize),
@@ -372,5 +374,35 @@ fun MediaItemPlaylist(
                 textAlign = TextAlign.Center,
             )
         }
+    }
+}
+
+@Composable
+fun PlaylistImage(
+    itemSize: Dp,
+    item: AppMediaItem.Playlist,
+    serverUrl: String?
+) {
+    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
+    val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
+    Box(
+        modifier = Modifier
+            .size(itemSize)
+            .clip(RoundedCornerShape(8.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        val placeholder = rememberPlaceholderPainter(
+            backgroundColor = primaryContainer,
+            iconColor = onPrimaryContainer,
+            icon = Icons.AutoMirrored.Filled.FeaturedPlayList
+        )
+        AsyncImage(
+            placeholder = placeholder,
+            fallback = placeholder,
+            model = item.imageInfo?.url(serverUrl),
+            contentDescription = item.name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }

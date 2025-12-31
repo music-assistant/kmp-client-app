@@ -1,4 +1,4 @@
-package io.music_assistant.client.ui.compose.library2.items
+package io.music_assistant.client.ui.compose.library2
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

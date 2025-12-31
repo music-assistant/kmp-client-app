@@ -18,8 +18,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.client.Player
+import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.ui.compose.common.HorizontalPagerIndicator
 import io.music_assistant.client.ui.compose.common.VerticalPagerIndicator
 

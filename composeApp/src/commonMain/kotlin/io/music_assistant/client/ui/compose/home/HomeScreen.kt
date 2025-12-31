@@ -58,6 +58,7 @@ import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.home.nav.HomeNavScreen
 import io.music_assistant.client.ui.compose.home.nav.rememberHomeNavBackStack
+import io.music_assistant.client.ui.compose.item.ItemDetailsScreen
 import io.music_assistant.client.ui.compose.library2.Library2Screen
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import io.music_assistant.client.ui.compose.nav.NavScreen
@@ -365,7 +366,24 @@ private fun HomeContent(
                     connectionState,
                     dataState,
                     serverUrl,
-                    onItemClick = onRecommendationItemClick,
+                    onItemClick = { item ->
+                        when (item) {
+                            is AppMediaItem.Artist,
+                            is AppMediaItem.Album,
+                            is AppMediaItem.Playlist -> {
+                                typedBackStack.add(
+                                    HomeNavScreen.ItemDetails(
+                                        itemId = item.itemId,
+                                        mediaType = item.mediaType
+                                    )
+                                )
+                            }
+                            else -> {
+                                // For tracks and other types, play immediately
+                                onRecommendationItemClick(item)
+                            }
+                        }
+                    },
                     onLibraryItemClick = { type -> typedBackStack.add(HomeNavScreen.Library(type)) },
                 )
             }
@@ -373,6 +391,31 @@ private fun HomeContent(
             entry<HomeNavScreen.Library> {
                 Library2Screen(
                     initialTabType = it.type,
+                    onBack = { typedBackStack.removeLastOrNull() },
+                    onItemClick = { item ->
+                        when (item) {
+                            is AppMediaItem.Artist,
+                            is AppMediaItem.Album,
+                            is AppMediaItem.Playlist -> {
+                                typedBackStack.add(
+                                    HomeNavScreen.ItemDetails(
+                                        itemId = item.itemId,
+                                        mediaType = item.mediaType
+                                    )
+                                )
+                            }
+                            else -> {
+                                // TODO: Handle track clicks or other item types
+                            }
+                        }
+                    }
+                )
+            }
+
+            entry<HomeNavScreen.ItemDetails> {
+                ItemDetailsScreen(
+                    itemId = it.itemId,
+                    mediaType = it.mediaType,
                     onBack = { typedBackStack.removeLastOrNull() }
                 )
             }

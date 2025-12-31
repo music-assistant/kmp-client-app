@@ -15,6 +15,12 @@ sealed interface HomeNavScreen : NavKey {
 
     @Serializable
     data class Library(val type: MediaType?) : HomeNavScreen
+
+    @Serializable
+    data class ItemDetails(
+        val itemId: String,
+        val mediaType: MediaType
+    ) : HomeNavScreen
 }
 
 @Composable
@@ -26,6 +32,7 @@ fun rememberHomeNavBackStack() = rememberNavBackStack(
                 polymorphic(NavKey::class) {
                     subclass(HomeNavScreen.Landing::class, HomeNavScreen.Landing.serializer())
                     subclass(HomeNavScreen.Library::class, HomeNavScreen.Library.serializer())
+                    subclass(HomeNavScreen.ItemDetails::class, HomeNavScreen.ItemDetails.serializer())
                 }
             }
         }

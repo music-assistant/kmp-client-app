@@ -54,7 +54,7 @@ import io.music_assistant.client.utils.isValidHost
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit, ) {
+fun SettingsScreen(onBack: () -> Unit) {
     val themeViewModel = koinViewModel<ThemeViewModel>()
     val theme = themeViewModel.theme.collectAsStateWithLifecycle(ThemeSetting.FollowSystem)
     val viewModel = koinViewModel<SettingsViewModel>()
