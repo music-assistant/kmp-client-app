@@ -1,4 +1,4 @@
-package io.music_assistant.client.ui.compose.library2.items
+package io.music_assistant.client.ui.compose.common.items
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -28,20 +28,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathOperation
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.music_assistant.client.data.model.client.AppMediaItem
@@ -49,8 +40,11 @@ import io.music_assistant.client.ui.compose.common.painters.VinylRecordPainter
 import io.music_assistant.client.ui.compose.common.painters.WaveformPainter
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
 
+/**
+ * Common wrapper for media items with click handling.
+ */
 @Composable
-private fun GridItemWrapper(
+private fun MediaItemWrapper(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
@@ -70,19 +64,33 @@ private fun GridItemWrapper(
     }
 }
 
+/**
+ * Track media item with waveform overlay.
+ *
+ * @param item The track item to display
+ * @param serverUrl Server URL for image loading
+ * @param onClick Click handler
+ * @param onLongClick Long click handler
+ * @param itemSize Size of the item (default 96.dp)
+ * @param showSubtitle Whether to show subtitle (default true)
+ */
 @Composable
-fun GridTrackItem(
+fun MediaItemTrack(
     item: AppMediaItem.Track,
     serverUrl: String?,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    onClick: (AppMediaItem.Track) -> Unit,
+    onLongClick: (AppMediaItem.Track) -> Unit,
+    itemSize: Dp = 96.dp,
+    showSubtitle: Boolean = true,
 ) {
-    val itemSize = 96.dp
     val primary = MaterialTheme.colorScheme.primary
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
 
-    GridItemWrapper(onClick, onLongClick) {
+    MediaItemWrapper(
+        onClick = { onClick(item) },
+        onLongClick = { onLongClick(item) }
+    ) {
         Box(
             modifier = Modifier
                 .size(itemSize)
@@ -130,30 +138,46 @@ fun GridTrackItem(
             modifier = Modifier.width(itemSize),
             textAlign = TextAlign.Center,
         )
-        Text(
-            text = item.subtitle.orEmpty(),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.width(itemSize),
-            textAlign = TextAlign.Center,
-        )
+        if (showSubtitle) {
+            Text(
+                text = item.subtitle.orEmpty(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.width(itemSize),
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
+/**
+ * Artist media item with circular image.
+ *
+ * @param item The artist item to display
+ * @param serverUrl Server URL for image loading
+ * @param onClick Click handler
+ * @param onLongClick Long click handler
+ * @param itemSize Size of the item (default 96.dp)
+ * @param showSubtitle Whether to show subtitle (default true)
+ */
 @Composable
-fun GridArtistItem(
+fun MediaItemArtist(
     item: AppMediaItem.Artist,
     serverUrl: String?,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    onClick: (AppMediaItem.Artist) -> Unit,
+    onLongClick: (AppMediaItem.Artist) -> Unit,
+    itemSize: Dp = 96.dp,
+    showSubtitle: Boolean = true,
 ) {
-    val itemSize = 96.dp
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
 
-    GridItemWrapper(onClick, onLongClick) {
+    MediaItemWrapper(
+        onClick = { onClick(item) },
+        onLongClick = { onLongClick(item) }
+    ) {
         Box(
             modifier = Modifier
                 .size(itemSize)
@@ -183,30 +207,46 @@ fun GridArtistItem(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        Text(
-            modifier = Modifier.width(itemSize),
-            text = item.subtitle.orEmpty(),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-        )
+        if (showSubtitle) {
+            Text(
+                modifier = Modifier.width(itemSize),
+                text = item.subtitle.orEmpty(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
+/**
+ * Album media item with vinyl record design.
+ *
+ * @param item The album item to display
+ * @param serverUrl Server URL for image loading
+ * @param onClick Click handler
+ * @param onLongClick Long click handler
+ * @param itemSize Size of the item (default 96.dp)
+ * @param showSubtitle Whether to show subtitle (default true)
+ */
 @Composable
-fun GridAlbumItem(
+fun MediaItemAlbum(
     item: AppMediaItem.Album,
     serverUrl: String?,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    onClick: (AppMediaItem.Album) -> Unit,
+    onLongClick: (AppMediaItem.Album) -> Unit,
+    itemSize: Dp = 96.dp,
+    showSubtitle: Boolean = true,
 ) {
-    val itemSize = 96.dp
     val primaryContainer = MaterialTheme.colorScheme.primary
     val background = MaterialTheme.colorScheme.background
 
-    GridItemWrapper(onClick, onLongClick) {
+    MediaItemWrapper(
+        onClick = { onClick(item) },
+        onLongClick = { onLongClick(item) }
+    ) {
         Box(
             modifier = Modifier
                 .size(itemSize)
@@ -252,30 +292,46 @@ fun GridAlbumItem(
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
         )
-        Text(
-            modifier = Modifier.width(itemSize),
-            text = item.subtitle.orEmpty(),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-        )
+        if (showSubtitle) {
+            Text(
+                modifier = Modifier.width(itemSize),
+                text = item.subtitle.orEmpty(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
+/**
+ * Playlist media item.
+ *
+ * @param item The playlist item to display
+ * @param serverUrl Server URL for image loading
+ * @param onClick Click handler
+ * @param onLongClick Long click handler
+ * @param itemSize Size of the item (default 96.dp)
+ * @param showSubtitle Whether to show subtitle (default true)
+ */
 @Composable
-fun GridPlaylistItem(
+fun MediaItemPlaylist(
     item: AppMediaItem.Playlist,
     serverUrl: String?,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    onClick: (AppMediaItem.Playlist) -> Unit,
+    onLongClick: (AppMediaItem.Playlist) -> Unit,
+    itemSize: Dp = 96.dp,
+    showSubtitle: Boolean = true,
 ) {
-    val itemSize = 96.dp
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
 
-    GridItemWrapper(onClick, onLongClick) {
+    MediaItemWrapper(
+        onClick = { onClick(item) },
+        onLongClick = { onLongClick(item) }
+    ) {
         Box(
             modifier = Modifier
                 .size(itemSize)
@@ -305,70 +361,16 @@ fun GridPlaylistItem(
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
         )
-        Text(
-            modifier = Modifier.width(itemSize),
-            text = item.subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
-// Custom shapes for album vinyl record effect
-class CutStripShape(private val stripWidth: Dp) : Shape {
-    override fun createOutline(
-        size: Size,
-        layoutDirection: LayoutDirection,
-        density: Density
-    ): Outline {
-        return Outline.Generic(Path().apply {
-            val stripPx = with(density) { stripWidth.toPx() }
-
-            // Defines the album cover area, excluding the rightmost strip
-            moveTo(0f, 0f)
-            lineTo(size.width - stripPx, 0f)
-            lineTo(size.width - stripPx, size.height)
-            lineTo(0f, size.height)
-            close()
-        })
-    }
-}
-
-class HoleShape(private val holeRadius: Dp) : Shape {
-    override fun createOutline(
-        size: Size,
-        layoutDirection: LayoutDirection,
-        density: Density
-    ): Outline {
-        val radiusPx = with(density) { holeRadius.toPx() }
-        val center = size.width / 2f
-
-        // Define the full cover path
-        val coverPath = Path().apply {
-            addRect(Rect(Offset.Zero, size))
-        }
-
-        // Define the hole path
-        val holePath = Path().apply {
-            val rect = Rect(
-                left = center - radiusPx,
-                top = center - radiusPx,
-                right = center + radiusPx,
-                bottom = center + radiusPx
+        if (showSubtitle) {
+            Text(
+                modifier = Modifier.width(itemSize),
+                text = item.subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
             )
-            addOval(oval = rect)
         }
-
-        // Subtract hole from cover
-        val finalPath = Path.combine(
-            operation = PathOperation.Difference,
-            path1 = coverPath,
-            path2 = holePath
-        )
-
-        return Outline.Generic(finalPath)
     }
 }

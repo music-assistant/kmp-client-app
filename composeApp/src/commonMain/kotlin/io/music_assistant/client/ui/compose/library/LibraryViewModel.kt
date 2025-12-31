@@ -406,7 +406,10 @@ class LibraryViewModel(
                 when (item) {
                     is AppMediaItem.Artist -> Request.Artist.getTracks(item.itemId, item.provider)
                     is AppMediaItem.Album -> Request.Album.getTracks(item.itemId, item.provider)
-                    is AppMediaItem.Playlist -> Request.Playlist.getTracks(item.itemId, item.provider)
+                    is AppMediaItem.Playlist -> Request.Playlist.getTracks(
+                        item.itemId,
+                        item.provider
+                    )
 
                     else -> return
                 }

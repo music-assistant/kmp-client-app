@@ -88,7 +88,7 @@ fun MainScreen(navigateTo: (NavScreen) -> Unit) {
                     if (state is MainViewModel.PlayersState.Data) {
                         ExtendedFloatingActionButton(
                             modifier = Modifier.height(48.dp).padding(end = 8.dp),
-                            onClick = {navigateTo(NavScreen.Library(MediaType.ARTIST)) },
+                            onClick = { navigateTo(NavScreen.Library(MediaType.ARTIST)) },
                             text = {
                                 Text(
                                     text = "Media",

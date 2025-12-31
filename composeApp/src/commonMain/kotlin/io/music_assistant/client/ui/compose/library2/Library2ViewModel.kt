@@ -237,12 +237,15 @@ class Library2ViewModel(
                 Tab.ARTISTS -> apiClient.sendRequest(
                     Request.Artist.list(limit = PAGE_SIZE, offset = tabState.offset)
                 )
+
                 Tab.ALBUMS -> apiClient.sendRequest(
                     Request.Album.list(limit = PAGE_SIZE, offset = tabState.offset)
                 )
+
                 Tab.TRACKS -> apiClient.sendRequest(
                     Request.Track.list(limit = PAGE_SIZE, offset = tabState.offset)
                 )
+
                 Tab.PLAYLISTS -> apiClient.sendRequest(
                     Request.Playlist.list(limit = PAGE_SIZE, offset = tabState.offset)
                 )
@@ -326,9 +329,11 @@ class Library2ViewModel(
                                 currentList + newItem
                             }
                         }
+
                         ListModification.Update -> {
                             currentList.map { if (it.itemId == newItem.itemId) newItem else it }
                         }
+
                         ListModification.Delete -> {
                             currentList.filter { it.itemId != newItem.itemId }
                         }

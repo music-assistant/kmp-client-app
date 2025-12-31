@@ -289,7 +289,8 @@ fun HomeScreen(
                                                 isQueueExpanded = !isQueueExpanded
                                             },
                                             onItemMoved = { indexShift ->
-                                                val currentPlayer = state.playerData[playerPagerState.currentPage].player
+                                                val currentPlayer =
+                                                    state.playerData[playerPagerState.currentPage].player
                                                 val newIndex =
                                                     (playerPagerState.currentPage + indexShift).coerceIn(
                                                         0,

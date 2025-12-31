@@ -21,6 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.music_assistant.client.data.model.client.AppMediaItem
+import io.music_assistant.client.ui.compose.common.items.MediaItemAlbum
+import io.music_assistant.client.ui.compose.common.items.MediaItemArtist
+import io.music_assistant.client.ui.compose.common.items.MediaItemPlaylist
+import io.music_assistant.client.ui.compose.common.items.MediaItemTrack
 
 @Composable
 fun AdaptiveMediaGrid(
@@ -63,30 +67,34 @@ fun AdaptiveMediaGrid(
     ) {
         items(items, key = { it.itemId }) { item ->
             when (item) {
-                is AppMediaItem.Track -> GridTrackItem(
+                is AppMediaItem.Track -> MediaItemTrack(
                     item = item,
                     serverUrl = serverUrl,
-                    onClick = { onItemClick(item) },
-                    onLongClick = { onItemLongClick(item) }
+                    onClick = { onItemClick(it) },
+                    onLongClick = { onItemLongClick(it) }
                 )
-                is AppMediaItem.Artist -> GridArtistItem(
+
+                is AppMediaItem.Artist -> MediaItemArtist(
                     item = item,
                     serverUrl = serverUrl,
-                    onClick = { onItemClick(item) },
-                    onLongClick = { onItemLongClick(item) }
+                    onClick = { onItemClick(it) },
+                    onLongClick = { onItemLongClick(it) }
                 )
-                is AppMediaItem.Album -> GridAlbumItem(
+
+                is AppMediaItem.Album -> MediaItemAlbum(
                     item = item,
                     serverUrl = serverUrl,
-                    onClick = { onItemClick(item) },
-                    onLongClick = { onItemLongClick(item) }
+                    onClick = { onItemClick(it) },
+                    onLongClick = { onItemLongClick(it) }
                 )
-                is AppMediaItem.Playlist -> GridPlaylistItem(
+
+                is AppMediaItem.Playlist -> MediaItemPlaylist(
                     item = item,
                     serverUrl = serverUrl,
-                    onClick = { onItemClick(item) },
-                    onLongClick = { onItemLongClick(item) }
+                    onClick = { onItemClick(it) },
+                    onLongClick = { onItemLongClick(it) }
                 )
+
                 else -> {
                     // Unsupported item type - skip
                 }

@@ -27,5 +27,5 @@ sealed interface QueueAction {
         val sourceId: String,
         val targetId: String,
         val autoplay: Boolean,
-    ): QueueAction
+    ) : QueueAction
 }
