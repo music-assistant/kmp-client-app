@@ -53,7 +53,8 @@ class Library2ViewModel(
 
     data class State(
         val tabs: List<TabState>,
-        val connectionState: SessionState
+        val connectionState: SessionState,
+        val showCreatePlaylistDialog: Boolean = false
     )
 
     private val connectionState = apiClient.sessionState
@@ -154,8 +155,18 @@ class Library2ViewModel(
     }
 
     fun onCreatePlaylistClick() {
-        // TODO: Show create playlist dialog
-        Logger.d { "Create playlist clicked" }
+        _state.update { it.copy(showCreatePlaylistDialog = true) }
+    }
+
+    fun onDismissCreatePlaylistDialog() {
+        _state.update { it.copy(showCreatePlaylistDialog = false) }
+    }
+
+    fun createPlaylist(name: String) {
+        viewModelScope.launch {
+            apiClient.sendRequest(Request.Playlist.create(name))
+            _state.update { it.copy(showCreatePlaylistDialog = false) }
+        }
     }
 
     fun onTrackClick(track: AppMediaItem.Track, option: QueueOption) {

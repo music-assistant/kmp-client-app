@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -23,11 +24,14 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -74,7 +78,9 @@ fun Library2Screen(
         onTrackClick = viewModel::onTrackClick,
         onCreatePlaylistClick = viewModel::onCreatePlaylistClick,
         onLoadMore = viewModel::loadMore,
-        onSearchQueryChanged = viewModel::onSearchQueryChanged
+        onSearchQueryChanged = viewModel::onSearchQueryChanged,
+        onDismissCreatePlaylistDialog = viewModel::onDismissCreatePlaylistDialog,
+        onCreatePlaylist = viewModel::createPlaylist
     )
 }
 
@@ -89,6 +95,8 @@ private fun Library2(
     onCreatePlaylistClick: () -> Unit,
     onLoadMore: (Library2ViewModel.Tab) -> Unit,
     onSearchQueryChanged: (Library2ViewModel.Tab, String) -> Unit,
+    onDismissCreatePlaylistDialog: () -> Unit,
+    onCreatePlaylist: (String) -> Unit,
 ) {
     val selectedTab = state.tabs.find { it.isSelected } ?: state.tabs.first()
 
@@ -148,6 +156,52 @@ private fun Library2(
             )
         }
     }
+
+    // Create Playlist Dialog
+    if (state.showCreatePlaylistDialog) {
+        CreatePlaylistDialog(
+            onDismiss = onDismissCreatePlaylistDialog,
+            onCreate = onCreatePlaylist
+        )
+    }
+}
+
+@Composable
+private fun CreatePlaylistDialog(
+    onDismiss: () -> Unit,
+    onCreate: (String) -> Unit,
+) {
+    var playlistName by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Create New Playlist") },
+        text = {
+            OutlinedTextField(
+                value = playlistName,
+                onValueChange = { playlistName = it },
+                label = { Text("Playlist name") },
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (playlistName.trim().isNotEmpty()) {
+                        onCreate(playlistName.trim())
+                    }
+                },
+                enabled = playlistName.trim().isNotEmpty()
+            ) {
+                Text("Create")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
