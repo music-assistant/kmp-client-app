@@ -63,6 +63,7 @@ import io.music_assistant.client.ui.compose.item.ItemDetailsScreen
 import io.music_assistant.client.ui.compose.library2.Library2Screen
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import io.music_assistant.client.ui.compose.nav.NavScreen
+import io.music_assistant.client.ui.compose.search.SearchScreen
 import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.flow.collectLatest
 import musicassistantclient.composeapp.generated.resources.Res
@@ -390,7 +391,13 @@ private fun HomeContent(
                         }
                     },
                     onTrackPlayOption = onTrackPlayOption,
-                    onLibraryItemClick = { type -> typedBackStack.add(HomeNavScreen.Library(type)) },
+                    onLibraryItemClick = { type ->
+                        if (type == null) {
+                            typedBackStack.add(HomeNavScreen.Search)
+                        } else {
+                            typedBackStack.add(HomeNavScreen.Library(type))
+                        }
+                    },
                 )
             }
 
@@ -425,6 +432,21 @@ private fun HomeContent(
                     itemId = it.itemId,
                     mediaType = it.mediaType,
                     providerId = it.providerId,
+                    onBack = { typedBackStack.removeLastOrNull() },
+                    onNavigateToItem = { itemId, mediaType, providerId ->
+                        typedBackStack.add(
+                            HomeNavScreen.ItemDetails(
+                                itemId = itemId,
+                                mediaType = mediaType,
+                                providerId = providerId
+                            )
+                        )
+                    }
+                )
+            }
+
+            entry<HomeNavScreen.Search> {
+                SearchScreen(
                     onBack = { typedBackStack.removeLastOrNull() },
                     onNavigateToItem = { itemId, mediaType, providerId ->
                         typedBackStack.add(

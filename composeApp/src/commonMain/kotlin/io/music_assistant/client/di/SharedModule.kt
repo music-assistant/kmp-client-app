@@ -10,6 +10,7 @@ import io.music_assistant.client.ui.compose.item.ItemDetailsViewModel
 import io.music_assistant.client.ui.compose.library.LibraryViewModel
 import io.music_assistant.client.ui.compose.library2.Library2ViewModel
 import io.music_assistant.client.ui.compose.main.MainViewModel
+import io.music_assistant.client.ui.compose.search.SearchViewModel
 import io.music_assistant.client.ui.compose.settings.SettingsViewModel
 import io.music_assistant.client.ui.theme.ThemeViewModel
 import org.koin.core.module.dsl.singleOf
@@ -29,4 +30,5 @@ val sharedModule = module {
     factory { Library2ViewModel(get(), get()) }
     factory { ItemDetailsViewModel(get(), get()) }
     factory { HomeScreenViewModel(get(), get(), get()) }
+    factory { SearchViewModel(get(), get()) }
 }

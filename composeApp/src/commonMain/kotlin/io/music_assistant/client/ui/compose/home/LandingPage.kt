@@ -129,7 +129,7 @@ fun LibraryRow(
                 Icons.AutoMirrored.Filled.FeaturedPlayList,
                 MediaType.PLAYLIST
             ),
-            LibraryItem("Search", Icons.Default.Search, null),
+            LibraryItem("Global search", Icons.Default.Search, null),
         )
     }
 
@@ -158,6 +158,7 @@ fun LibraryRow(
                 ) {
                     rowItems.forEach { item ->
                         LibraryItemCard(
+                            modifier = Modifier.weight(1f),
                             name = item.name,
                             icon = item.icon,
                             onClick = { onLibraryItemClick(item.type) }
@@ -165,7 +166,7 @@ fun LibraryRow(
                     }
                     // Fill remaining columns with spacers to keep grid alignment
                     repeat(3 - rowItems.size) {
-                        Spacer(modifier = Modifier.padding(8.dp).width(96.dp))
+                        Spacer(modifier = Modifier.weight(1f).padding(8.dp))
                     }
                 }
             }
@@ -175,17 +176,16 @@ fun LibraryRow(
 
 @Composable
 fun LibraryItemCard(
+    modifier: Modifier,
     name: String,
     icon: ImageVector,
     onClick: () -> Unit
 ) {
-    val width = 96.dp
-    val height = 48.dp
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .wrapContentSize()
             .clip(RoundedCornerShape(8.dp))
             .combinedClickable(onClick = onClick)
@@ -194,8 +194,7 @@ fun LibraryItemCard(
     ) {
         Box(
             modifier = Modifier
-                .width(width)
-                .height(height)
+                .height(64.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(primaryContainer),
             contentAlignment = Alignment.Center
@@ -217,7 +216,6 @@ fun LibraryItemCard(
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.width(width),
             textAlign = TextAlign.Center,
         )
     }
