@@ -93,7 +93,7 @@ private fun SearchContent(
             }
             // Search input
             OutlinedTextField(
-                modifier = Modifier.padding(horizontal = 8.dp).fillMaxWidth(),
+                modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth(),
                 value = state.searchState.query,
                 onValueChange = onQueryChanged,
                 label = {

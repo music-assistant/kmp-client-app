@@ -19,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -72,7 +73,8 @@ fun Library2Screen(
         onItemClick = onItemClick,
         onTrackClick = viewModel::onTrackClick,
         onCreatePlaylistClick = viewModel::onCreatePlaylistClick,
-        onLoadMore = viewModel::loadMore
+        onLoadMore = viewModel::loadMore,
+        onSearchQueryChanged = viewModel::onSearchQueryChanged
     )
 }
 
@@ -86,6 +88,7 @@ private fun Library2(
     onTrackClick: (AppMediaItem.Track, QueueOption) -> Unit,
     onCreatePlaylistClick: () -> Unit,
     onLoadMore: (Library2ViewModel.Tab) -> Unit,
+    onSearchQueryChanged: (Library2ViewModel.Tab, String) -> Unit,
 ) {
     val selectedTab = state.tabs.find { it.isSelected } ?: state.tabs.first()
 
@@ -119,6 +122,19 @@ private fun Library2(
                 }
             }
         }
+
+        // Quick search input
+        OutlinedTextField(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            value = selectedTab.searchQuery,
+            onValueChange = { onSearchQueryChanged(selectedTab.tab, it) },
+            label = {
+                Text(text = "Quick search")
+            },
+            singleLine = true
+        )
 
         // Content area
         Box(modifier = Modifier.fillMaxSize()) {
