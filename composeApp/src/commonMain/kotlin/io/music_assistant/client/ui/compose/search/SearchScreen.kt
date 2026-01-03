@@ -86,7 +86,7 @@ fun SearchScreen(
         onTrackClick = viewModel::onTrackClick,
         playlistAddingParameters = PlaylistAddingParameters(
             onLoadPlaylists = viewModel::getEditablePlaylists,
-            onAddToPlaylist = viewModel::addTrackToPlaylist
+            onAddToPlaylist = viewModel::addToPlaylist
         )
     )
 }

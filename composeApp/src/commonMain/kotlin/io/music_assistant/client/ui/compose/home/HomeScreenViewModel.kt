@@ -159,9 +159,9 @@ class HomeScreenViewModel(
         return playlistRepository.getEditablePlaylists()
     }
 
-    fun addTrackToPlaylist(track: AppMediaItem.Track, playlist: AppMediaItem.Playlist) {
+    fun addToPlaylist(mediaItem: AppMediaItem, playlist: AppMediaItem.Playlist) {
         viewModelScope.launch {
-            playlistRepository.addTrackToPlaylist(track, playlist)
+            playlistRepository.addToPlaylist(mediaItem, playlist)
                 .onSuccess { message ->
                     _toasts.emit(message)
                 }

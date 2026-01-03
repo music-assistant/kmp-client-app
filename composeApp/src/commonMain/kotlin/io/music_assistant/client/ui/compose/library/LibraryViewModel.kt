@@ -337,7 +337,7 @@ class LibraryViewModel(
         }
     }
 
-    fun addTrackToPlaylist(track: AppMediaItem.Track, playlist: AppMediaItem.Playlist) {
+    fun addToPlaylist(track: AppMediaItem.Track, playlist: AppMediaItem.Playlist) {
         viewModelScope.launch {
             apiClient.sendRequest(
                 Request.Playlist.addTracks(

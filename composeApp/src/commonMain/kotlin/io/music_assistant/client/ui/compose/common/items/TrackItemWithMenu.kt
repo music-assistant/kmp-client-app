@@ -168,5 +168,5 @@ fun TrackItemWithMenu(
 
 data class PlaylistAddingParameters(
     val onLoadPlaylists: suspend () -> List<AppMediaItem.Playlist>,
-    val onAddToPlaylist: (AppMediaItem.Track, AppMediaItem.Playlist) -> Unit
+    val onAddToPlaylist: (AppMediaItem, AppMediaItem.Playlist) -> Unit
 )

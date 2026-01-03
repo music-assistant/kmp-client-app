@@ -19,16 +19,16 @@ class PlaylistRepository(
             ?: emptyList()
     }
 
-    suspend fun addTrackToPlaylist(
-        track: AppMediaItem.Track,
+    suspend fun addToPlaylist(
+        mediaItem: AppMediaItem,
         playlist: AppMediaItem.Playlist
     ): Result<String> {
-        val trackUri = track.uri ?: return Result.failure(Exception("Track has no URI"))
+        val itemUri = mediaItem.uri ?: return Result.failure(Exception("Media item has no URI"))
 
         return apiClient.sendRequest(
             Request.Playlist.addTracks(
                 playlistId = playlist.itemId,
-                trackUris = listOf(trackUri),
+                trackUris = listOf(itemUri),
             )
         ).map { "Added to ${playlist.name}" }
     }

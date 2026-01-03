@@ -198,7 +198,7 @@ fun HomeScreen(
                             onTrackPlayOption = viewModel::onTrackPlayOption,
                             playlistAddingParameters = PlaylistAddingParameters(
                                 onLoadPlaylists = viewModel::getEditablePlaylists,
-                                onAddToPlaylist = viewModel::addTrackToPlaylist
+                                onAddToPlaylist = viewModel::addToPlaylist
                             ),
                         )
 

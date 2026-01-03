@@ -149,7 +149,7 @@ fun LibraryScreen(type: MediaType?, onBack: () -> Unit) {
             onBack()
         },
         onCreatePlaylist = viewModel::createPlaylist,
-        onAddToPlaylist = viewModel::addTrackToPlaylist
+        onAddToPlaylist = viewModel::addToPlaylist
     )
 }
 

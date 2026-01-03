@@ -95,7 +95,7 @@ fun Library2Screen(
         onCreatePlaylist = viewModel::createPlaylist,
         playlistAddingParameters = PlaylistAddingParameters(
             onLoadPlaylists = viewModel::getEditablePlaylists,
-            onAddToPlaylist = viewModel::addTrackToPlaylist
+            onAddToPlaylist = viewModel::addToPlaylist
         )
     )
 }

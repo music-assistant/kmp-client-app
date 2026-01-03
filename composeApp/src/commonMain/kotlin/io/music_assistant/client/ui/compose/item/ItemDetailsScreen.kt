@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,9 +33,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -55,6 +62,7 @@ import io.music_assistant.client.ui.compose.common.items.PlaylistAddingParameter
 import io.music_assistant.client.ui.compose.common.items.PlaylistImage
 import io.music_assistant.client.ui.compose.common.items.TrackItemWithMenu
 import io.music_assistant.client.ui.compose.common.rememberToastState
+import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -102,7 +110,7 @@ fun ItemDetailsScreen(
         onTrackClick = viewModel::onTrackClick,
         playlistAddingParameters = PlaylistAddingParameters(
             onLoadPlaylists = viewModel::getEditablePlaylists,
-            onAddToPlaylist = viewModel::addTrackToPlaylist
+            onAddToPlaylist = viewModel::addToPlaylist
         )
     )
 }
@@ -161,7 +169,9 @@ private fun ItemDetailsContent(
                                 item = item,
                                 serverUrl = serverUrl,
                                 onFavoriteClick = onFavoriteClick,
-                                onPlayClick = onPlayClick
+                                onPlayClick = onPlayClick,
+                                onLoadPlaylists = playlistAddingParameters.onLoadPlaylists,
+                                onAddToPlaylist = playlistAddingParameters.onAddToPlaylist
                             )
                         }
 
@@ -261,7 +271,13 @@ private fun HeaderSection(
     serverUrl: String?,
     onFavoriteClick: () -> Unit,
     onPlayClick: (QueueOption) -> Unit,
+    onLoadPlaylists: suspend () -> List<AppMediaItem.Playlist>,
+    onAddToPlaylist: (AppMediaItem, AppMediaItem.Playlist) -> Unit,
 ) {
+    var showPlaylistDialog by rememberSaveable { mutableStateOf(false) }
+    var playlists by remember { mutableStateOf<List<AppMediaItem.Playlist>>(emptyList()) }
+    var isLoadingPlaylists by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
     Row(
         modifier = Modifier
             .padding(horizontal = 16.dp)
@@ -319,7 +335,16 @@ private fun HeaderSection(
                     options = listOf(
                         OverflowMenuOption("Play Next") { onPlayClick(QueueOption.NEXT) },
                         OverflowMenuOption("Add to Queue") { onPlayClick(QueueOption.ADD) },
-                        OverflowMenuOption("Replace Queue") { onPlayClick(QueueOption.REPLACE) }
+                        OverflowMenuOption("Replace Queue") { onPlayClick(QueueOption.REPLACE) },
+                        OverflowMenuOption("Add to Playlist") {
+                            showPlaylistDialog = true
+                            // Load playlists when dialog opens
+                            coroutineScope.launch {
+                                isLoadingPlaylists = true
+                                playlists = onLoadPlaylists()
+                                isLoadingPlaylists = false
+                            }
+                        }
                     )
                 )
 
@@ -334,6 +359,58 @@ private fun HeaderSection(
                 )
             }
         }
+    }
+
+    // Add to Playlist dialog
+    if (showPlaylistDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showPlaylistDialog = false
+                playlists = emptyList()
+                isLoadingPlaylists = false
+            },
+            title = { Text("Add to Playlist") },
+            text = {
+                if (isLoadingPlaylists) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else if (playlists.isEmpty()) {
+                    Text("No editable playlists available")
+                } else {
+                    Column {
+                        playlists.forEach { playlist ->
+                            TextButton(
+                                onClick = {
+                                    onAddToPlaylist(item, playlist)
+                                    showPlaylistDialog = false
+                                    playlists = emptyList()
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = playlist.name,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = {
+                    showPlaylistDialog = false
+                    playlists = emptyList()
+                    isLoadingPlaylists = false
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
