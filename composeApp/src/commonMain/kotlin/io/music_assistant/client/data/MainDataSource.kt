@@ -438,6 +438,7 @@ class MainDataSource(
         launch {
             apiClient.events
                 .collect { event ->
+                    Logger.e(event.toString())
                     when (event) {
                         is PlayerUpdatedEvent -> {
                             _serverPlayers.value.takeIf { it.isNotEmpty() }?.let { players ->

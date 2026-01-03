@@ -12,6 +12,8 @@ import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppM
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.server.ServerMediaItem
+import io.music_assistant.client.data.model.server.events.MediaItemAddedEvent
+import io.music_assistant.client.data.model.server.events.MediaItemDeletedEvent
 import io.music_assistant.client.data.model.server.events.MediaItemUpdatedEvent
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.utils.SessionState
@@ -67,11 +69,56 @@ class ItemDetailsViewModel(
             apiClient.events.collect { event ->
                 when (event) {
                     is MediaItemUpdatedEvent -> {
-                        val currentItem = (_state.value.itemState as? DataState.Data)?.data
-                        if (event.data.itemId == currentItem?.itemId) {
-                            event.data.toAppMediaItem()?.let { updatedItem ->
-                                _state.update { it.copy(itemState = DataState.Data(updatedItem)) }
-                            }
+                        (_state.value.itemState as? DataState.Data)?.data?.let { current ->
+                            event.data.takeIf { current.hasAnyMappingFrom(it) }
+                                ?.toAppMediaItem()
+                                ?.let { updatedItem ->
+                                    _state.update {
+                                        it.copy(itemState = DataState.Data(updatedItem))
+                                    }
+                                }
+                        }
+
+                        // Also update sub-items if they were updated
+                        updateSubItemIfNeeded(event.data)
+                    }
+
+                    is MediaItemAddedEvent -> {
+                        (_state.value.itemState as? DataState.Data)?.data?.let { current ->
+                            event.data.takeIf { current.hasAnyMappingFrom(it) }
+                                ?.toAppMediaItem()
+                                ?.let { updatedItem ->
+                                    _state.update {
+                                        it.copy(itemState = DataState.Data(updatedItem))
+                                    }
+                                }
+                        }
+
+                        // Also update sub-items if they were updated
+                        updateSubItemIfNeeded(event.data)
+                    }
+
+                    is MediaItemDeletedEvent -> {
+                        (_state.value.itemState as? DataState.Data)?.data?.let { current ->
+                            event.data.takeIf { current.hasAnyMappingFrom(it) }
+                                // removing library provider from it
+                                ?.let {
+                                    it.providerMappings?.getOrNull(0)?.let { provider ->
+                                        it.copy(
+                                            itemId = provider.itemId,
+                                            provider = provider.providerInstance,
+                                            favorite = null,
+                                            uri = "${provider.providerInstance}://${it.mediaType.name.lowercase()}/${provider.itemId}"
+
+                                        )
+                                    }
+                                }
+                                ?.toAppMediaItem()
+                                ?.let { updatedItem ->
+                                    _state.update {
+                                        it.copy(itemState = DataState.Data(updatedItem))
+                                    }
+                                }
                         }
 
                         // Also update sub-items if they were updated
@@ -242,6 +289,22 @@ class ItemDetailsViewModel(
             } catch (e: Exception) {
                 Logger.e("Failed to load playlist tracks", e)
                 _state.update { it.copy(tracksState = DataState.Error()) }
+            }
+        }
+    }
+
+    fun onToLibraryClick() {
+        viewModelScope.launch {
+            val item = (_state.value.itemState as? DataState.Data)?.data ?: return@launch
+
+            if (item.isInLibrary) {
+                apiClient.sendRequest(
+                    Request.Library.remove(item.itemId, item.mediaType)
+                )
+            } else {
+                item.uri?.let {
+                    apiClient.sendRequest(Request.Library.add(item.uri))
+                }
             }
         }
     }

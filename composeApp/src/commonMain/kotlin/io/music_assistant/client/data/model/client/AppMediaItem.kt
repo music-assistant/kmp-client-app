@@ -36,6 +36,11 @@ abstract class AppMediaItem(
     fun hasAnyMappingFrom(other: AppMediaItem): Boolean =
         mappingsHashes.intersect(other.mappingsHashes).isNotEmpty()
 
+    fun hasAnyMappingFrom(other: ServerMediaItem): Boolean =
+        mappingsHashes
+            .intersect(providerMappings?.map { it.hashCode() }?.toSet() ?: emptySet())
+            .isNotEmpty()
+
     override fun equals(other: Any?): Boolean {
         return other is AppMediaItem
                 && itemId == other.itemId
@@ -120,7 +125,7 @@ abstract class AppMediaItem(
         //timestampAdded,
         //timestampModified,
     ) {
-        val rowItemType = when(itemId) {
+        val rowItemType = when (itemId) {
             "recently_added_tracks", "recent_favorite_tracks" -> MediaType.TRACK
             "recently_added_albums", "random_albums" -> MediaType.ALBUM
             "random_artists" -> MediaType.ARTIST

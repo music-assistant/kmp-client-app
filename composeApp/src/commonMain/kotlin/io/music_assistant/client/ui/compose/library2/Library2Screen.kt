@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -91,6 +92,7 @@ fun Library2Screen(
         onCreatePlaylistClick = viewModel::onCreatePlaylistClick,
         onLoadMore = viewModel::loadMore,
         onSearchQueryChanged = viewModel::onSearchQueryChanged,
+        onOnlyFavoritesClicked = viewModel::onOnlyFavoritesClicked,
         onDismissCreatePlaylistDialog = viewModel::onDismissCreatePlaylistDialog,
         onCreatePlaylist = viewModel::createPlaylist,
         playlistAddingParameters = PlaylistAddingParameters(
@@ -112,6 +114,7 @@ private fun Library2(
     onCreatePlaylistClick: () -> Unit,
     onLoadMore: (Library2ViewModel.Tab) -> Unit,
     onSearchQueryChanged: (Library2ViewModel.Tab, String) -> Unit,
+    onOnlyFavoritesClicked: (Library2ViewModel.Tab) -> Unit,
     onDismissCreatePlaylistDialog: () -> Unit,
     onCreatePlaylist: (String) -> Unit,
     playlistAddingParameters: PlaylistAddingParameters,
@@ -161,6 +164,14 @@ private fun Library2(
                     Text(text = "Quick search")
                 },
                 singleLine = true
+            )
+            FilterChip(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                selected = selectedTab.onlyFavorites,
+                onClick = { onOnlyFavoritesClicked(selectedTab.tab) },
+                label = {
+                    Text("Favorites")
+                }
             )
 
             // Content area

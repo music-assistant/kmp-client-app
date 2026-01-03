@@ -207,7 +207,10 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
             command = "music/playlists/remove_playlist_tracks",
             args = buildJsonObject {
                 put("db_playlist_id", JsonPrimitive(playlistId))
-                put("positions_to_remove", myJson.decodeFromString<JsonArray>(myJson.encodeToString(positions)))
+                put(
+                    "positions_to_remove",
+                    myJson.decodeFromString<JsonArray>(myJson.encodeToString(positions))
+                )
             }
         )
     }
@@ -331,6 +334,17 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
             command = "music/library/add_item",
             args = buildJsonObject {
                 put("item", JsonPrimitive(itemUri))
+            }
+        )
+
+        fun remove(
+            itemId: String,
+            mediaType: MediaType,
+        ) = Request(
+            command = "music/library/remove_item",
+            args = buildJsonObject {
+                put("library_item_id", JsonPrimitive(itemId))
+                put("media_type", JsonPrimitive(mediaType.name.lowercase()))
             }
         )
 

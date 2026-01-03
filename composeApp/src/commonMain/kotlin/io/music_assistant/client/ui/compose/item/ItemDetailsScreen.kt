@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.AlertDialog
@@ -94,6 +95,7 @@ fun ItemDetailsScreen(
         serverUrl = serverUrl,
         toastState = toastState,
         onBack = onBack,
+        onToLibraryClick = viewModel::onToLibraryClick,
         onFavoriteClick = viewModel::onFavoriteClick,
         onPlayClick = viewModel::onPlayClick,
         onSubItemClick = { item ->
@@ -122,6 +124,7 @@ private fun ItemDetailsContent(
     serverUrl: String?,
     toastState: ToastState,
     onBack: () -> Unit,
+    onToLibraryClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onPlayClick: (QueueOption) -> Unit,
     onSubItemClick: (AppMediaItem) -> Unit,
@@ -131,8 +134,31 @@ private fun ItemDetailsContent(
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         Column {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+            Row(
+                modifier = Modifier.padding(end = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                (state.itemState as? DataState.Data)?.data?.let { item ->
+                    if (item.isInLibrary) {
+                        if (item.favorite == true) {
+                            Icon(
+                                imageVector = Icons.Filled.Favorite,
+                                contentDescription = "Favorite",
+                                tint = Color(0xFFEF7BC4)
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.LibraryMusic,
+                            contentDescription = "In Library",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
             }
             when (val itemState = state.itemState) {
                 is DataState.Loading -> {
@@ -170,10 +196,12 @@ private fun ItemDetailsContent(
                             HeaderSection(
                                 item = item,
                                 serverUrl = serverUrl,
+                                onToLibraryClick = onToLibraryClick,
                                 onFavoriteClick = onFavoriteClick,
                                 onPlayClick = onPlayClick,
                                 playlistAddingParameters = playlistAddingParameters.takeIf { item is AppMediaItem.Track || item is AppMediaItem.Album },
-                            )
+
+                                )
                         }
 
                         // For Artist: Albums section
@@ -276,6 +304,7 @@ private fun ItemDetailsContent(
 private fun HeaderSection(
     item: AppMediaItem,
     serverUrl: String?,
+    onToLibraryClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onPlayClick: (QueueOption) -> Unit,
     playlistAddingParameters: PlaylistAddingParameters?,
@@ -301,7 +330,6 @@ private fun HeaderSection(
             modifier = Modifier.fillMaxHeight(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-
             Text(
                 text = item.name,
                 style = MaterialTheme.typography.headlineSmall
@@ -342,6 +370,18 @@ private fun HeaderSection(
                         add(OverflowMenuOption("Play Next") { onPlayClick(QueueOption.NEXT) })
                         add(OverflowMenuOption("Add to Queue") { onPlayClick(QueueOption.ADD) })
                         add(OverflowMenuOption("Replace Queue") { onPlayClick(QueueOption.REPLACE) })
+                        add(
+                            OverflowMenuOption(
+                                if (item.isInLibrary) "Remove from library"
+                                else "Add to library"
+                            ) { onToLibraryClick() })
+                        if (item.isInLibrary) {
+                            add(
+                                OverflowMenuOption(
+                                    if (item.favorite == true) "Unfavorite"
+                                    else "Favorite"
+                                ) { onFavoriteClick() })
+                        }
                         playlistAddingParameters?.let {
                             add(OverflowMenuOption("Add to Playlist") {
                                 showPlaylistDialog = true
@@ -354,16 +394,6 @@ private fun HeaderSection(
                             })
                         }
                     }
-                )
-
-                val isFavorite = item.favorite == true
-                Icon(
-                    modifier = Modifier.clickable { onFavoriteClick() },
-                    imageVector = if (isFavorite) Icons.Filled.Favorite
-                    else Icons.Outlined.FavoriteBorder,
-                    contentDescription = "Favorite",
-                    tint = if (isFavorite) Color(0xFFEF7BC4)
-                    else MaterialTheme.colorScheme.primary
                 )
             }
         }

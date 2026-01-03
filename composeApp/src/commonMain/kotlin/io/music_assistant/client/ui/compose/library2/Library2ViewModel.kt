@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -52,6 +51,7 @@ class Library2ViewModel(
         val hasMore: Boolean = true,
         val isLoadingMore: Boolean = false,
         val searchQuery: String = "",
+        val onlyFavorites: Boolean = false
     )
 
     data class State(
@@ -122,20 +122,21 @@ class Library2ViewModel(
         // Debounced search for each tab
         Tab.entries.forEach { tab ->
             viewModelScope.launch {
-                _state.map { state -> state.tabs.find { it.tab == tab }?.searchQuery ?: "" }
+                _state.map { state ->
+                    state.tabs.find { it.tab == tab }.let {
+                        Pair(
+                            it?.searchQuery ?: "",
+                            it?.onlyFavorites?.takeIf { favs -> favs })
+                    }
+                }
                     .distinctUntilChanged()
                     .debounce { 500 }
-                    .collect { query ->
-                        if (query.isNotEmpty()) {
-                            performSearch(tab)
-                        } else {
-                            // Clear search and reload tab
-                            when (tab) {
-                                Tab.ARTISTS -> loadArtists()
-                                Tab.ALBUMS -> loadAlbums()
-                                Tab.TRACKS -> loadTracks()
-                                Tab.PLAYLISTS -> loadPlaylists()
-                            }
+                    .collect {
+                        when (tab) {
+                            Tab.ARTISTS -> loadArtists()
+                            Tab.ALBUMS -> loadAlbums()
+                            Tab.TRACKS -> loadTracks()
+                            Tab.PLAYLISTS -> loadPlaylists()
                         }
                     }
             }
@@ -153,6 +154,18 @@ class Library2ViewModel(
             s.copy(tabs = s.tabs.map { tabState ->
                 if (tabState.tab == tab) {
                     tabState.copy(searchQuery = query)
+                } else {
+                    tabState
+                }
+            })
+        }
+    }
+
+    fun onOnlyFavoritesClicked(tab: Tab) {
+        _state.update { s ->
+            s.copy(tabs = s.tabs.map { tabState ->
+                if (tabState.tab == tab) {
+                    tabState.copy(onlyFavorites = !tabState.onlyFavorites)
                 } else {
                     tabState
                 }
@@ -207,10 +220,18 @@ class Library2ViewModel(
 
     private fun loadArtists() {
         viewModelScope.launch {
-            val searchQuery = _state.value.tabs.find { it.tab == Tab.ARTISTS }?.searchQuery?.takeIf { it.length >= 3 }
+            val searchQuery =
+                _state.value.tabs.find { it.tab == Tab.ARTISTS }?.searchQuery?.takeIf { it.length >= 3 }
+            val favoritesOnly =
+                _state.value.tabs.find { it.tab == Tab.ARTISTS }?.onlyFavorites?.takeIf { it }
             updateTabState(Tab.ARTISTS, DataState.Loading())
             val result = apiClient.sendRequest(
-                Request.Artist.listLibrary(limit = PAGE_SIZE, offset = 0, search = searchQuery)
+                Request.Artist.listLibrary(
+                    limit = PAGE_SIZE,
+                    offset = 0,
+                    search = searchQuery,
+                    favorite = favoritesOnly
+                )
             )
             result.resultAs<List<ServerMediaItem>>()
                 ?.toAppMediaItemList()
@@ -231,10 +252,18 @@ class Library2ViewModel(
 
     private fun loadAlbums() {
         viewModelScope.launch {
-            val searchQuery = _state.value.tabs.find { it.tab == Tab.ALBUMS }?.searchQuery?.takeIf { it.length >= 3 }
+            val searchQuery =
+                _state.value.tabs.find { it.tab == Tab.ALBUMS }?.searchQuery?.takeIf { it.length >= 3 }
+            val favoritesOnly =
+                _state.value.tabs.find { it.tab == Tab.ARTISTS }?.onlyFavorites?.takeIf { it }
             updateTabState(Tab.ALBUMS, DataState.Loading())
             val result = apiClient.sendRequest(
-                Request.Album.listLibrary(limit = PAGE_SIZE, offset = 0, search = searchQuery)
+                Request.Album.listLibrary(
+                    limit = PAGE_SIZE,
+                    offset = 0,
+                    search = searchQuery,
+                    favorite = favoritesOnly
+                )
             )
             result.resultAs<List<ServerMediaItem>>()
                 ?.toAppMediaItemList()
@@ -255,10 +284,18 @@ class Library2ViewModel(
 
     private fun loadPlaylists() {
         viewModelScope.launch {
-            val searchQuery = _state.value.tabs.find { it.tab == Tab.PLAYLISTS }?.searchQuery?.takeIf { it.length >= 3 }
+            val searchQuery =
+                _state.value.tabs.find { it.tab == Tab.PLAYLISTS }?.searchQuery?.takeIf { it.length >= 3 }
+            val favoritesOnly =
+                _state.value.tabs.find { it.tab == Tab.ARTISTS }?.onlyFavorites?.takeIf { it }
             updateTabState(Tab.PLAYLISTS, DataState.Loading())
             val result = apiClient.sendRequest(
-                Request.Playlist.listLibrary(limit = PAGE_SIZE, offset = 0, search = searchQuery)
+                Request.Playlist.listLibrary(
+                    limit = PAGE_SIZE,
+                    offset = 0,
+                    search = searchQuery,
+                    favorite = favoritesOnly
+                )
             )
             result.resultAs<List<ServerMediaItem>>()
                 ?.toAppMediaItemList()
@@ -279,10 +316,18 @@ class Library2ViewModel(
 
     private fun loadTracks() {
         viewModelScope.launch {
-            val searchQuery = _state.value.tabs.find { it.tab == Tab.TRACKS }?.searchQuery?.takeIf { it.length >= 0 }
+            val searchQuery =
+                _state.value.tabs.find { it.tab == Tab.TRACKS }?.searchQuery?.takeIf { it.length >= 0 }
+            val favoritesOnly =
+                _state.value.tabs.find { it.tab == Tab.ARTISTS }?.onlyFavorites?.takeIf { it }
             updateTabState(Tab.TRACKS, DataState.Loading())
             val result = apiClient.sendRequest(
-                Request.Track.list(limit = PAGE_SIZE, offset = 0, search = searchQuery)
+                Request.Track.list(
+                    limit = PAGE_SIZE,
+                    offset = 0,
+                    search = searchQuery,
+                    favorite = favoritesOnly
+                )
             )
             result.resultAs<List<ServerMediaItem>>()
                 ?.toAppMediaItemList()
@@ -321,19 +366,35 @@ class Library2ViewModel(
 
             val result = when (tab) {
                 Tab.ARTISTS -> apiClient.sendRequest(
-                    Request.Artist.listLibrary(limit = PAGE_SIZE, offset = tabState.offset, search = searchQuery)
+                    Request.Artist.listLibrary(
+                        limit = PAGE_SIZE,
+                        offset = tabState.offset,
+                        search = searchQuery
+                    )
                 )
 
                 Tab.ALBUMS -> apiClient.sendRequest(
-                    Request.Album.listLibrary(limit = PAGE_SIZE, offset = tabState.offset, search = searchQuery)
+                    Request.Album.listLibrary(
+                        limit = PAGE_SIZE,
+                        offset = tabState.offset,
+                        search = searchQuery
+                    )
                 )
 
                 Tab.TRACKS -> apiClient.sendRequest(
-                    Request.Track.list(limit = PAGE_SIZE, offset = tabState.offset, search = searchQuery)
+                    Request.Track.list(
+                        limit = PAGE_SIZE,
+                        offset = tabState.offset,
+                        search = searchQuery
+                    )
                 )
 
                 Tab.PLAYLISTS -> apiClient.sendRequest(
-                    Request.Playlist.listLibrary(limit = PAGE_SIZE, offset = tabState.offset, search = searchQuery)
+                    Request.Playlist.listLibrary(
+                        limit = PAGE_SIZE,
+                        offset = tabState.offset,
+                        search = searchQuery
+                    )
                 )
             }
 
