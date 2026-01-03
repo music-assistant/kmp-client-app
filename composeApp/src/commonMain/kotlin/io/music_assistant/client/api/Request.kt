@@ -202,6 +202,14 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
                 put("uris", myJson.decodeFromString<JsonArray>(myJson.encodeToString(trackUris)))
             }
         )
+
+        fun removeTracks(playlistId: String, trackUris: List<String>) = Request(
+            command = "music/playlists/remove_playlist_tracks",
+            args = buildJsonObject {
+                put("db_playlist_id", JsonPrimitive(playlistId))
+                put("uris", myJson.decodeFromString<JsonArray>(myJson.encodeToString(trackUris)))
+            }
+        )
     }
 
     data object Artist {

@@ -42,6 +42,9 @@ import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.ui.compose.common.DataState
+import io.music_assistant.client.ui.compose.common.ToastHost
+import io.music_assistant.client.ui.compose.common.items.PlaylistAddingParameters
+import io.music_assistant.client.ui.compose.common.rememberToastState
 import org.koin.compose.koinInject
 
 @Composable
@@ -53,6 +56,7 @@ fun Library2Screen(
     val viewModel: Library2ViewModel = koinInject()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
+    val toastState = rememberToastState()
 
     // Map MediaType to Tab
     val initialTab = when (initialTabType) {
@@ -69,9 +73,17 @@ fun Library2Screen(
         viewModel.onTabSelected(initialTab)
     }
 
+    // Collect toasts
+    LaunchedEffect(Unit) {
+        viewModel.toasts.collect { toast ->
+            toastState.showToast(toast)
+        }
+    }
+
     Library2(
         state = state,
         serverUrl = serverUrl,
+        toastState = toastState,
         onBack = onBack,
         onTabSelected = viewModel::onTabSelected,
         onItemClick = onItemClick,
@@ -80,7 +92,11 @@ fun Library2Screen(
         onLoadMore = viewModel::loadMore,
         onSearchQueryChanged = viewModel::onSearchQueryChanged,
         onDismissCreatePlaylistDialog = viewModel::onDismissCreatePlaylistDialog,
-        onCreatePlaylist = viewModel::createPlaylist
+        onCreatePlaylist = viewModel::createPlaylist,
+        playlistAddingParameters = PlaylistAddingParameters(
+            onLoadPlaylists = viewModel::getEditablePlaylists,
+            onAddToPlaylist = viewModel::addTrackToPlaylist
+        )
     )
 }
 
@@ -88,6 +104,7 @@ fun Library2Screen(
 private fun Library2(
     state: Library2ViewModel.State,
     serverUrl: String?,
+    toastState: io.music_assistant.client.ui.compose.common.ToastState,
     onBack: () -> Unit,
     onTabSelected: (Library2ViewModel.Tab) -> Unit,
     onItemClick: (AppMediaItem) -> Unit,
@@ -97,72 +114,84 @@ private fun Library2(
     onSearchQueryChanged: (Library2ViewModel.Tab, String) -> Unit,
     onDismissCreatePlaylistDialog: () -> Unit,
     onCreatePlaylist: (String) -> Unit,
+    playlistAddingParameters: PlaylistAddingParameters,
 ) {
     val selectedTab = state.tabs.find { it.isSelected } ?: state.tabs.first()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-    ) {
-        Row {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-            }
-            // Tab row
-            PrimaryTabRow(
-                selectedTabIndex = state.tabs.indexOfFirst { it.isSelected }
-            ) {
-                state.tabs.forEach { tabState ->
-                    Tab(
-                        selected = tabState.isSelected,
-                        onClick = { onTabSelected(tabState.tab) },
-                        text = {
-                            Text(
-                                when (tabState.tab) {
-                                    Library2ViewModel.Tab.ARTISTS -> "Artists"
-                                    Library2ViewModel.Tab.ALBUMS -> "Albums"
-                                    Library2ViewModel.Tab.TRACKS -> "Tracks"
-                                    Library2ViewModel.Tab.PLAYLISTS -> "Playlists"
-                                }
-                            )
-                        }
-                    )
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
+            Row {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+                // Tab row
+                PrimaryTabRow(
+                    selectedTabIndex = state.tabs.indexOfFirst { it.isSelected }
+                ) {
+                    state.tabs.forEach { tabState ->
+                        Tab(
+                            selected = tabState.isSelected,
+                            onClick = { onTabSelected(tabState.tab) },
+                            text = {
+                                Text(
+                                    when (tabState.tab) {
+                                        Library2ViewModel.Tab.ARTISTS -> "Artists"
+                                        Library2ViewModel.Tab.ALBUMS -> "Albums"
+                                        Library2ViewModel.Tab.TRACKS -> "Tracks"
+                                        Library2ViewModel.Tab.PLAYLISTS -> "Playlists"
+                                    }
+                                )
+                            }
+                        )
+                    }
                 }
             }
+
+            // Quick search input
+            OutlinedTextField(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                value = selectedTab.searchQuery,
+                onValueChange = { onSearchQueryChanged(selectedTab.tab, it) },
+                label = {
+                    Text(text = "Quick search")
+                },
+                singleLine = true
+            )
+
+            // Content area
+            Box(modifier = Modifier.fillMaxSize()) {
+                TabContent(
+                    tabState = selectedTab,
+                    serverUrl = serverUrl,
+                    onItemClick = onItemClick,
+                    onTrackClick = onTrackClick,
+                    onCreatePlaylistClick = onCreatePlaylistClick,
+                    onLoadMore = { onLoadMore(selectedTab.tab) },
+                    playlistAddingParameters = playlistAddingParameters
+                )
+            }
         }
 
-        // Quick search input
-        OutlinedTextField(
+        // Toast host
+        ToastHost(
+            toastState = toastState,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            value = selectedTab.searchQuery,
-            onValueChange = { onSearchQueryChanged(selectedTab.tab, it) },
-            label = {
-                Text(text = "Quick search")
-            },
-            singleLine = true
+                .fillMaxSize()
+                .padding(bottom = 48.dp)
         )
 
-        // Content area
-        Box(modifier = Modifier.fillMaxSize()) {
-            TabContent(
-                tabState = selectedTab,
-                serverUrl = serverUrl,
-                onItemClick = onItemClick,
-                onTrackClick = onTrackClick,
-                onCreatePlaylistClick = onCreatePlaylistClick,
-                onLoadMore = { onLoadMore(selectedTab.tab) }
+        // Create Playlist Dialog
+        if (state.showCreatePlaylistDialog) {
+            CreatePlaylistDialog(
+                onDismiss = onDismissCreatePlaylistDialog,
+                onCreate = onCreatePlaylist
             )
         }
-    }
-
-    // Create Playlist Dialog
-    if (state.showCreatePlaylistDialog) {
-        CreatePlaylistDialog(
-            onDismiss = onDismissCreatePlaylistDialog,
-            onCreate = onCreatePlaylist
-        )
     }
 }
 
@@ -212,6 +241,7 @@ private fun TabContent(
     onTrackClick: (AppMediaItem.Track, QueueOption) -> Unit,
     onCreatePlaylistClick: () -> Unit,
     onLoadMore: () -> Unit,
+    playlistAddingParameters: PlaylistAddingParameters
 ) {
     // Create separate grid states for each tab to preserve scroll position
     val artistsGridState = rememberLazyGridState()
@@ -262,7 +292,8 @@ private fun TabContent(
                                 onItemClick = onItemClick,
                                 onTrackClick = onTrackClick,
                                 onLoadMore = onLoadMore,
-                                gridState = it
+                                gridState = it,
+                                playlistAddingParameters = playlistAddingParameters
                             )
                         }
 

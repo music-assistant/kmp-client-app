@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,10 +38,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.ui.compose.common.DataState
+import io.music_assistant.client.ui.compose.common.ToastHost
 import io.music_assistant.client.ui.compose.common.items.MediaItemAlbum
 import io.music_assistant.client.ui.compose.common.items.MediaItemArtist
 import io.music_assistant.client.ui.compose.common.items.MediaItemPlaylist
+import io.music_assistant.client.ui.compose.common.items.PlaylistAddingParameters
 import io.music_assistant.client.ui.compose.common.items.TrackItemWithMenu
+import io.music_assistant.client.ui.compose.common.rememberToastState
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -51,10 +55,19 @@ fun SearchScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
+    val toastState = rememberToastState()
+
+    // Collect toasts
+    LaunchedEffect(Unit) {
+        viewModel.toasts.collect { toast ->
+            toastState.showToast(toast)
+        }
+    }
 
     SearchContent(
         state = state,
         serverUrl = serverUrl,
+        toastState = toastState,
         onBack = onBack,
         onQueryChanged = viewModel::onQueryChanged,
         onMediaTypeToggled = viewModel::onMediaTypeToggled,
@@ -70,7 +83,11 @@ fun SearchScreen(
                 else -> Unit
             }
         },
-        onTrackClick = viewModel::onTrackClick
+        onTrackClick = viewModel::onTrackClick,
+        playlistAddingParameters = PlaylistAddingParameters(
+            onLoadPlaylists = viewModel::getEditablePlaylists,
+            onAddToPlaylist = viewModel::addTrackToPlaylist
+        )
     )
 }
 
@@ -78,156 +95,169 @@ fun SearchScreen(
 private fun SearchContent(
     state: SearchViewModel.State,
     serverUrl: String?,
+    toastState: io.music_assistant.client.ui.compose.common.ToastState,
     onBack: () -> Unit,
     onQueryChanged: (String) -> Unit,
     onMediaTypeToggled: (MediaType, Boolean) -> Unit,
     onLibraryOnlyToggled: (Boolean) -> Unit,
     onItemClick: (AppMediaItem) -> Unit,
     onTrackClick: (AppMediaItem.Track, io.music_assistant.client.data.model.server.QueueOption) -> Unit,
+    playlistAddingParameters: PlaylistAddingParameters
 ) {
-    Column(Modifier.fillMaxSize()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // Back button
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Back button
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                }
+                // Search input
+                OutlinedTextField(
+                    modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth(),
+                    value = state.searchState.query,
+                    onValueChange = onQueryChanged,
+                    label = {
+                        Text(
+                            text = if (state.searchState.query.trim().length < 3)
+                                "Type at least 3 characters to search"
+                            else
+                                "Search query"
+                        )
+                    },
+                )
             }
-            // Search input
-            OutlinedTextField(
-                modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth(),
-                value = state.searchState.query,
-                onValueChange = onQueryChanged,
-                label = {
-                    Text(
-                        text = if (state.searchState.query.trim().length < 3)
-                            "Type at least 3 characters to search"
-                        else
-                            "Search query"
-                    )
-                },
+
+            // Search filters (always visible)
+            SearchFilters(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                searchState = state.searchState,
+                onMediaTypeToggled = onMediaTypeToggled,
+                onLibraryOnlyToggled = onLibraryOnlyToggled
             )
-        }
 
-        // Search filters (always visible)
-        SearchFilters(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            searchState = state.searchState,
-            onMediaTypeToggled = onMediaTypeToggled,
-            onLibraryOnlyToggled = onLibraryOnlyToggled
-        )
-
-        // Results
-        when (val resultsState = state.resultsState) {
-            is DataState.Loading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-
-            is DataState.Error -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Error loading search results",
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-
-            is DataState.Data -> {
-                val results = resultsState.data
-                val hasResults = results.artists.isNotEmpty() ||
-                        results.albums.isNotEmpty() ||
-                        results.tracks.isNotEmpty() ||
-                        results.playlists.isNotEmpty()
-
-                if (!hasResults) {
+            // Results
+            when (val resultsState = state.resultsState) {
+                is DataState.Loading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("No results found")
+                        CircularProgressIndicator()
                     }
-                } else {
-                    LazyVerticalGrid(
+                }
+
+                is DataState.Error -> {
+                    Box(
                         modifier = Modifier.fillMaxSize(),
-                        columns = GridCells.Adaptive(minSize = 96.dp),
-                        contentPadding = PaddingValues(8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        contentAlignment = Alignment.Center
                     ) {
-                        // Artists section
-                        if (results.artists.isNotEmpty()) {
-                            item(span = { GridItemSpan(maxLineSpan) }) {
-                                SectionHeader("Artists")
-                            }
-                            items(results.artists) { artist ->
-                                MediaItemArtist(
-                                    item = artist,
-                                    serverUrl = serverUrl,
-                                    onClick = { onItemClick(it) }
-                                )
-                            }
-                        }
+                        Text(
+                            text = "Error loading search results",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
 
-                        // Albums section
-                        if (results.albums.isNotEmpty()) {
-                            item(span = { GridItemSpan(maxLineSpan) }) {
-                                SectionHeader("Albums")
-                            }
-                            items(results.albums) { album ->
-                                MediaItemAlbum(
-                                    item = album,
-                                    serverUrl = serverUrl,
-                                    onClick = { onItemClick(it) }
-                                )
-                            }
-                        }
+                is DataState.Data -> {
+                    val results = resultsState.data
+                    val hasResults = results.artists.isNotEmpty() ||
+                            results.albums.isNotEmpty() ||
+                            results.tracks.isNotEmpty() ||
+                            results.playlists.isNotEmpty()
 
-                        // Tracks section
-                        if (results.tracks.isNotEmpty()) {
-                            item(span = { GridItemSpan(maxLineSpan) }) {
-                                SectionHeader("Tracks")
-                            }
-                            items(results.tracks) { track ->
-                                TrackItemWithMenu(
-                                    item = track,
-                                    serverUrl = serverUrl,
-                                    onTrackPlayOption = onTrackClick
-                                )
-                            }
+                    if (!hasResults) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("No results found")
                         }
-
-                        // Playlists section
-                        if (results.playlists.isNotEmpty()) {
-                            item(span = { GridItemSpan(maxLineSpan) }) {
-                                SectionHeader("Playlists")
+                    } else {
+                        LazyVerticalGrid(
+                            modifier = Modifier.fillMaxSize(),
+                            columns = GridCells.Adaptive(minSize = 96.dp),
+                            contentPadding = PaddingValues(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Artists section
+                            if (results.artists.isNotEmpty()) {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
+                                    SectionHeader("Artists")
+                                }
+                                items(results.artists) { artist ->
+                                    MediaItemArtist(
+                                        item = artist,
+                                        serverUrl = serverUrl,
+                                        onClick = { onItemClick(it) }
+                                    )
+                                }
                             }
-                            items(results.playlists) { playlist ->
-                                MediaItemPlaylist(
-                                    item = playlist,
-                                    serverUrl = serverUrl,
-                                    onClick = { onItemClick(it) }
-                                )
+
+                            // Albums section
+                            if (results.albums.isNotEmpty()) {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
+                                    SectionHeader("Albums")
+                                }
+                                items(results.albums) { album ->
+                                    MediaItemAlbum(
+                                        item = album,
+                                        serverUrl = serverUrl,
+                                        onClick = { onItemClick(it) }
+                                    )
+                                }
+                            }
+
+                            // Tracks section
+                            if (results.tracks.isNotEmpty()) {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
+                                    SectionHeader("Tracks")
+                                }
+                                items(results.tracks) { track ->
+                                    TrackItemWithMenu(
+                                        item = track,
+                                        serverUrl = serverUrl,
+                                        onTrackPlayOption = onTrackClick,
+                                        playlistAddingParameters = playlistAddingParameters,
+                                    )
+                                }
+                            }
+
+                            // Playlists section
+                            if (results.playlists.isNotEmpty()) {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
+                                    SectionHeader("Playlists")
+                                }
+                                items(results.playlists) { playlist ->
+                                    MediaItemPlaylist(
+                                        item = playlist,
+                                        serverUrl = serverUrl,
+                                        onClick = { onItemClick(it) }
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            is DataState.NoData -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Type at least 3 characters to search")
+                is DataState.NoData -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Type at least 3 characters to search")
+                    }
                 }
             }
         }
+
+        // Toast host
+        ToastHost(
+            toastState = toastState,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 48.dp)
+        )
     }
 }
 

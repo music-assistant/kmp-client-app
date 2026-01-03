@@ -57,6 +57,8 @@ import androidx.navigation3.ui.NavDisplay
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.ui.compose.common.DataState
+import io.music_assistant.client.ui.compose.common.items.PlaylistAddingParameters
+import io.music_assistant.client.ui.compose.common.rememberToastState
 import io.music_assistant.client.ui.compose.home.nav.HomeNavScreen
 import io.music_assistant.client.ui.compose.home.nav.rememberHomeNavBackStack
 import io.music_assistant.client.ui.compose.item.ItemDetailsScreen
@@ -78,9 +80,17 @@ fun HomeScreen(
     navigateTo: (NavScreen) -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
+    val toastState = rememberToastState()
 
     LaunchedEffect(Unit) {
         viewModel.links.collectLatest { url -> uriHandler.openUri(url) }
+    }
+
+    // Collect toasts
+    LaunchedEffect(Unit) {
+        viewModel.toasts.collect { toast ->
+            toastState.showToast(toast)
+        }
     }
 
     var showPlayersView by remember { mutableStateOf(false) }
@@ -185,7 +195,11 @@ fun HomeScreen(
                             dataState = dataState,
                             serverUrl = serverUrl,
                             onRecommendationItemClick = viewModel::onRecommendationItemClicked,
-                            onTrackPlayOption = viewModel::onTrackPlayOption
+                            onTrackPlayOption = viewModel::onTrackPlayOption,
+                            playlistAddingParameters = PlaylistAddingParameters(
+                                onLoadPlaylists = viewModel::getEditablePlaylists,
+                                onAddToPlaylist = viewModel::addTrackToPlaylist
+                            ),
                         )
 
                         Box(
@@ -342,6 +356,7 @@ private fun HomeContent(
     serverUrl: String?,
     onRecommendationItemClick: (AppMediaItem) -> Unit,
     onTrackPlayOption: (AppMediaItem.Track, QueueOption) -> Unit,
+    playlistAddingParameters: PlaylistAddingParameters
 ) {
     @Suppress("UNCHECKED_CAST")
     val typedBackStack = homeBackStack as NavBackStack<HomeNavScreen>
@@ -398,6 +413,7 @@ private fun HomeContent(
                             typedBackStack.add(HomeNavScreen.Library(type))
                         }
                     },
+                    playlistAddingParameters = playlistAddingParameters,
                 )
             }
 

@@ -16,7 +16,9 @@ import io.music_assistant.client.data.model.server.events.MediaItemUpdatedEvent
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.utils.SessionState
 import io.music_assistant.client.utils.resultAs
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -25,6 +27,7 @@ import kotlinx.coroutines.launch
 class ItemDetailsViewModel(
     private val apiClient: ServiceClient,
     private val mainDataSource: MainDataSource,
+    private val playlistRepository: io.music_assistant.client.data.PlaylistRepository
 ) : ViewModel() {
 
     data class State(
@@ -38,6 +41,9 @@ class ItemDetailsViewModel(
 
     val serverUrl =
         apiClient.sessionState.map { (it as? SessionState.Connected)?.serverInfo?.baseUrl }
+
+    private val _toasts = MutableSharedFlow<String>()
+    val toasts = _toasts.asSharedFlow()
 
     private val _state = MutableStateFlow(
         State(
@@ -288,6 +294,19 @@ class ItemDetailsViewModel(
                     )
                 )
             }
+        }
+    }
+
+    suspend fun getEditablePlaylists(): List<AppMediaItem.Playlist> {
+        return playlistRepository.getEditablePlaylists()
+    }
+
+    fun addTrackToPlaylist(track: AppMediaItem.Track, playlist: AppMediaItem.Playlist) {
+        viewModelScope.launch {
+            playlistRepository.addTrackToPlaylist(track, playlist)
+                .onSuccess { message ->
+                    _toasts.emit(message)
+                }
         }
     }
 

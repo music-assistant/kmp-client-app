@@ -46,11 +46,15 @@ import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.OverflowMenu
 import io.music_assistant.client.ui.compose.common.OverflowMenuOption
+import io.music_assistant.client.ui.compose.common.ToastHost
+import io.music_assistant.client.ui.compose.common.ToastState
 import io.music_assistant.client.ui.compose.common.items.AlbumImage
 import io.music_assistant.client.ui.compose.common.items.ArtistImage
 import io.music_assistant.client.ui.compose.common.items.MediaItemAlbum
+import io.music_assistant.client.ui.compose.common.items.PlaylistAddingParameters
 import io.music_assistant.client.ui.compose.common.items.PlaylistImage
 import io.music_assistant.client.ui.compose.common.items.TrackItemWithMenu
+import io.music_assistant.client.ui.compose.common.rememberToastState
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -64,14 +68,23 @@ fun ItemDetailsScreen(
     val viewModel: ItemDetailsViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
+    val toastState = rememberToastState()
 
     LaunchedEffect(itemId, mediaType) {
         viewModel.loadItem(itemId, mediaType, providerId)
     }
 
+    // Collect toasts
+    LaunchedEffect(Unit) {
+        viewModel.toasts.collect { toast ->
+            toastState.showToast(toast)
+        }
+    }
+
     ItemDetailsContent(
         state = state,
         serverUrl = serverUrl,
+        toastState = toastState,
         onBack = onBack,
         onFavoriteClick = viewModel::onFavoriteClick,
         onPlayClick = viewModel::onPlayClick,
@@ -82,10 +95,15 @@ fun ItemDetailsScreen(
                 is AppMediaItem.Playlist -> {
                     onNavigateToItem(item.itemId, item.mediaType, item.provider)
                 }
+
                 else -> Unit
             }
         },
-        onTrackClick = viewModel::onTrackClick
+        onTrackClick = viewModel::onTrackClick,
+        playlistAddingParameters = PlaylistAddingParameters(
+            onLoadPlaylists = viewModel::getEditablePlaylists,
+            onAddToPlaylist = viewModel::addTrackToPlaylist
+        )
     )
 }
 
@@ -93,70 +111,108 @@ fun ItemDetailsScreen(
 private fun ItemDetailsContent(
     state: ItemDetailsViewModel.State,
     serverUrl: String?,
+    toastState: ToastState,
     onBack: () -> Unit,
     onFavoriteClick: () -> Unit,
     onPlayClick: (QueueOption) -> Unit,
     onSubItemClick: (AppMediaItem) -> Unit,
     onTrackClick: (AppMediaItem.Track, QueueOption) -> Unit,
+    playlistAddingParameters: PlaylistAddingParameters
 ) {
-    Column {
-        IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-        }
-        when (val itemState = state.itemState) {
-            is DataState.Loading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
             }
-
-            is DataState.Error -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Error loading item",
-                        color = MaterialTheme.colorScheme.error
-                    )
+            when (val itemState = state.itemState) {
+                is DataState.Loading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
-            }
 
-            is DataState.Data -> {
-                val item = itemState.data
-                LazyVerticalGrid(
-                    modifier = Modifier.fillMaxSize(),
-                    columns = GridCells.Adaptive(minSize = 96.dp),
-                    contentPadding = PaddingValues(8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // Header section - spans full width
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        HeaderSection(
-                            item = item,
-                            serverUrl = serverUrl,
-                            onFavoriteClick = onFavoriteClick,
-                            onPlayClick = onPlayClick
+                is DataState.Error -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Error loading item",
+                            color = MaterialTheme.colorScheme.error
                         )
                     }
+                }
 
-                    // For Artist: Albums section
-                    if (item is AppMediaItem.Artist) {
-                        when (val albumsState = state.albumsState) {
-                            is DataState.Data -> {
-                                if (albumsState.data.isNotEmpty()) {
-                                    item(span = { GridItemSpan(maxLineSpan) }) {
-                                        SectionHeader("Albums")
+                is DataState.Data -> {
+                    val item = itemState.data
+                    LazyVerticalGrid(
+                        modifier = Modifier.fillMaxSize(),
+                        columns = GridCells.Adaptive(minSize = 96.dp),
+                        contentPadding = PaddingValues(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Header section - spans full width
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            HeaderSection(
+                                item = item,
+                                serverUrl = serverUrl,
+                                onFavoriteClick = onFavoriteClick,
+                                onPlayClick = onPlayClick
+                            )
+                        }
+
+                        // For Artist: Albums section
+                        if (item is AppMediaItem.Artist) {
+                            when (val albumsState = state.albumsState) {
+                                is DataState.Data -> {
+                                    if (albumsState.data.isNotEmpty()) {
+                                        item(span = { GridItemSpan(maxLineSpan) }) {
+                                            SectionHeader("Albums")
+                                        }
+                                        items(albumsState.data) { album ->
+                                            MediaItemAlbum(
+                                                item = album,
+                                                serverUrl = serverUrl,
+                                                onClick = { onSubItemClick(album) },
+                                            )
+                                        }
                                     }
-                                    items(albumsState.data) { album ->
-                                        MediaItemAlbum(
-                                            item = album,
+                                }
+
+                                is DataState.Loading -> {
+                                    item(span = { GridItemSpan(maxLineSpan) }) {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            CircularProgressIndicator()
+                                        }
+                                    }
+                                }
+
+                                else -> Unit
+                            }
+                        }
+
+                        // Tracks section (all types)
+                        when (val tracksState = state.tracksState) {
+                            is DataState.Data -> {
+                                if (tracksState.data.isNotEmpty()) {
+                                    item(span = { GridItemSpan(maxLineSpan) }) {
+                                        SectionHeader("Tracks")
+                                    }
+                                    items(tracksState.data) { track ->
+                                        TrackItemWithMenu(
+                                            item = track,
                                             serverUrl = serverUrl,
-                                            onClick = { onSubItemClick(album) },
+                                            onTrackPlayOption = onTrackClick,
+                                            // Don't show "add to playlist" for playlist items
+                                            playlistAddingParameters = playlistAddingParameters
+                                                .takeIf { item !is AppMediaItem.Playlist },
                                         )
                                     }
                                 }
@@ -176,51 +232,27 @@ private fun ItemDetailsContent(
                             else -> Unit
                         }
                     }
+                }
 
-                    // Tracks section (all types)
-                    when (val tracksState = state.tracksState) {
-                        is DataState.Data -> {
-                            if (tracksState.data.isNotEmpty()) {
-                                item(span = { GridItemSpan(maxLineSpan) }) {
-                                    SectionHeader("Tracks")
-                                }
-                                items(tracksState.data) { track ->
-                                    TrackItemWithMenu(
-                                        item = track,
-                                        serverUrl = serverUrl,
-                                        onTrackPlayOption = onTrackClick
-                                    )
-                                }
-                            }
-                        }
-
-                        is DataState.Loading -> {
-                            item(span = { GridItemSpan(maxLineSpan) }) {
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator()
-                                }
-                            }
-                        }
-
-                        else -> Unit
+                is DataState.NoData -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No data available")
                     }
                 }
             }
-
-            is DataState.NoData -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("No data available")
-                }
-            }
         }
-    }
 
+        // Toast host
+        ToastHost(
+            toastState = toastState,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 48.dp)
+        )
+    }
 }
 
 @Composable
@@ -293,7 +325,7 @@ private fun HeaderSection(
 
                 val isFavorite = item.favorite == true
                 Icon(
-                    modifier = Modifier.clickable{ onFavoriteClick() },
+                    modifier = Modifier.clickable { onFavoriteClick() },
                     imageVector = if (isFavorite) Icons.Filled.Favorite
                     else Icons.Outlined.FavoriteBorder,
                     contentDescription = "Favorite",

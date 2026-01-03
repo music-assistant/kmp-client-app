@@ -25,6 +25,7 @@ import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.ui.compose.common.items.MediaItemAlbum
 import io.music_assistant.client.ui.compose.common.items.MediaItemArtist
 import io.music_assistant.client.ui.compose.common.items.MediaItemPlaylist
+import io.music_assistant.client.ui.compose.common.items.PlaylistAddingParameters
 import io.music_assistant.client.ui.compose.common.items.TrackItemWithMenu
 
 @Composable
@@ -38,6 +39,7 @@ fun AdaptiveMediaGrid(
     onTrackClick: ((AppMediaItem.Track, QueueOption) -> Unit)? = null,
     onLoadMore: () -> Unit = {},
     gridState: LazyGridState = rememberLazyGridState(),
+   playlistAddingParameters: PlaylistAddingParameters,
 ) {
     // Detect when we're near the end and trigger load more
     val shouldLoadMore by remember {
@@ -72,7 +74,8 @@ fun AdaptiveMediaGrid(
                         item = item,
                         serverUrl = serverUrl,
                         onTrackPlayOption = onTrackClick,
-                        onItemClick = { onItemClick(it) }
+                        onItemClick = { onItemClick(it) },
+                        playlistAddingParameters = playlistAddingParameters
                     )
                 }
 

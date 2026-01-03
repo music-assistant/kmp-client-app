@@ -37,7 +37,8 @@ import kotlinx.coroutines.launch
 class HomeScreenViewModel(
     private val apiClient: ServiceClient,
     private val dataSource: MainDataSource,
-    private val settings: SettingsRepository
+    private val settings: SettingsRepository,
+    private val playlistRepository: io.music_assistant.client.data.PlaylistRepository
 ) : ViewModel() {
 
     private val jobs = mutableListOf<Job>()
@@ -47,6 +48,9 @@ class HomeScreenViewModel(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
     private val _links = MutableSharedFlow<String>()
     val links = _links.asSharedFlow()
+
+    private val _toasts = MutableSharedFlow<String>()
+    val toasts = _toasts.asSharedFlow()
 
     private val _recommendationsState = MutableStateFlow(
         RecommendationsState(
@@ -148,6 +152,19 @@ class HomeScreenViewModel(
     fun onTrackPlayOption(track: AppMediaItem.Track, option: QueueOption) {
         dataSource.selectedPlayer?.queueOrPlayerId?.let {
             playItem(track, it, option)
+        }
+    }
+
+    suspend fun getEditablePlaylists(): List<AppMediaItem.Playlist> {
+        return playlistRepository.getEditablePlaylists()
+    }
+
+    fun addTrackToPlaylist(track: AppMediaItem.Track, playlist: AppMediaItem.Playlist) {
+        viewModelScope.launch {
+            playlistRepository.addTrackToPlaylist(track, playlist)
+                .onSuccess { message ->
+                    _toasts.emit(message)
+                }
         }
     }
 

@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import co.touchlab.kermit.Logger
+import io.ktor.client.plugins.HttpPlainText
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
@@ -49,6 +50,7 @@ import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.items.MediaItemAlbum
 import io.music_assistant.client.ui.compose.common.items.MediaItemArtist
 import io.music_assistant.client.ui.compose.common.items.MediaItemPlaylist
+import io.music_assistant.client.ui.compose.common.items.PlaylistAddingParameters
 import io.music_assistant.client.ui.compose.common.items.TrackItemWithMenu
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
 import io.music_assistant.client.utils.SessionState
@@ -62,6 +64,7 @@ fun LandingPage(
     onItemClick: (AppMediaItem) -> Unit,
     onTrackPlayOption: ((AppMediaItem.Track, QueueOption) -> Unit)? = null,
     onLibraryItemClick: (MediaType?) -> Unit,
+    playlistAddingParameters: PlaylistAddingParameters,
 ) {
     val filteredData = remember(dataState) {
         if (dataState is DataState.Data) {
@@ -106,7 +109,8 @@ fun LandingPage(
                     onItemClick = onItemClick,
                     onTrackPlayOption = onTrackPlayOption,
                     onAllClick = { row.rowItemType?.let { onLibraryItemClick(it) } },
-                    mediaItems = row.items.orEmpty()
+                    mediaItems = row.items.orEmpty(),
+                    playlistAddingParameters = playlistAddingParameters,
                 )
             }
         }
@@ -234,7 +238,8 @@ fun CategoryRow(
     onItemClick: (AppMediaItem) -> Unit,
     onTrackPlayOption: ((AppMediaItem.Track, QueueOption) -> Unit)?,
     onAllClick: () -> Unit,
-    mediaItems: List<AppMediaItem>
+    mediaItems: List<AppMediaItem>,
+    playlistAddingParameters: PlaylistAddingParameters,
 ) {
     val isHomogenous = remember(mediaItems) {
         mediaItems.all { it::class == mediaItems.firstOrNull()?.let { first -> first::class } }
@@ -295,7 +300,8 @@ fun CategoryRow(
                             serverUrl = serverUrl,
                             itemSize = 96.dp,
                             onTrackPlayOption = onTrackPlayOption,
-                            onItemClick = { onItemClick(it) }
+                            onItemClick = { onItemClick(it) },
+                            playlistAddingParameters = playlistAddingParameters,
                         )
                     }
 

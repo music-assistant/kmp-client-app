@@ -18,7 +18,9 @@ import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.utils.SessionState
 import io.music_assistant.client.utils.resultAs
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -30,7 +32,8 @@ import kotlinx.coroutines.launch
 @OptIn(FlowPreview::class)
 class Library2ViewModel(
     private val apiClient: ServiceClient,
-    private val mainDataSource: MainDataSource
+    private val mainDataSource: MainDataSource,
+    private val playlistRepository: io.music_assistant.client.data.PlaylistRepository
 ) : ViewModel() {
 
     companion object {
@@ -61,6 +64,9 @@ class Library2ViewModel(
 
     val serverUrl =
         apiClient.sessionState.map { (it as? SessionState.Connected)?.serverInfo?.baseUrl }
+
+    private val _toasts = MutableSharedFlow<String>()
+    val toasts = _toasts.asSharedFlow()
 
     private val _state = MutableStateFlow(
         State(
@@ -166,6 +172,19 @@ class Library2ViewModel(
         viewModelScope.launch {
             apiClient.sendRequest(Request.Playlist.create(name))
             _state.update { it.copy(showCreatePlaylistDialog = false) }
+        }
+    }
+
+    suspend fun getEditablePlaylists(): List<AppMediaItem.Playlist> {
+        return playlistRepository.getEditablePlaylists()
+    }
+
+    fun addTrackToPlaylist(track: AppMediaItem.Track, playlist: AppMediaItem.Playlist) {
+        viewModelScope.launch {
+            playlistRepository.addTrackToPlaylist(track, playlist)
+                .onSuccess { message ->
+                    _toasts.emit(message)
+                }
         }
     }
 

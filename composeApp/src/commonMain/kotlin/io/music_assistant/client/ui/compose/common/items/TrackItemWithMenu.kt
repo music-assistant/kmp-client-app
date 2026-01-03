@@ -1,19 +1,29 @@
 package io.music_assistant.client.ui.compose.common.items
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.server.QueueOption
+import kotlinx.coroutines.launch
 
 /**
  * A reusable composable that displays a track item with a dropdown menu for queue actions.
@@ -27,9 +37,14 @@ fun TrackItemWithMenu(
     itemSize: Dp = 96.dp,
     onTrackPlayOption: ((AppMediaItem.Track, QueueOption) -> Unit)? = null,
     onItemClick: ((AppMediaItem.Track) -> Unit)? = null,
+    playlistAddingParameters: PlaylistAddingParameters? = null,
     modifier: Modifier = Modifier
 ) {
     var expandedTrackId by remember { mutableStateOf<String?>(null) }
+    var showPlaylistDialog by rememberSaveable { mutableStateOf(false) }
+    var playlists by remember { mutableStateOf<List<AppMediaItem.Playlist>>(emptyList()) }
+    var isLoadingPlaylists by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     if (onTrackPlayOption != null) {
         Box(modifier = modifier) {
@@ -71,6 +86,74 @@ fun TrackItemWithMenu(
                         expandedTrackId = null
                     }
                 )
+                if (playlistAddingParameters != null) {
+                    DropdownMenuItem(
+                        text = { Text("Add to Playlist") },
+                        onClick = {
+                            showPlaylistDialog = true
+                            expandedTrackId = null
+                            // Load playlists when dialog opens
+                            coroutineScope.launch {
+                                isLoadingPlaylists = true
+                                playlists = playlistAddingParameters.onLoadPlaylists()
+                                isLoadingPlaylists = false
+                            }
+                        }
+                    )
+                }
+            }
+
+            // Add to Playlist Dialog
+            if (showPlaylistDialog) {
+                AlertDialog(
+                    onDismissRequest = {
+                        showPlaylistDialog = false
+                        playlists = emptyList()
+                        isLoadingPlaylists = false
+                    },
+                    title = { Text("Add to Playlist") },
+                    text = {
+                        if (isLoadingPlaylists) {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        } else if (playlists.isEmpty()) {
+                            Text("No editable playlists available")
+                        } else {
+                            Column {
+                                playlists.forEach { playlist ->
+                                    TextButton(
+                                        onClick = {
+                                            playlistAddingParameters?.onAddToPlaylist
+                                                ?.invoke(item, playlist)
+                                            showPlaylistDialog = false
+                                            playlists = emptyList()
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = playlist.name,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {},
+                    dismissButton = {
+                        TextButton(onClick = {
+                            showPlaylistDialog = false
+                            playlists = emptyList()
+                            isLoadingPlaylists = false
+                        }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
             }
         }
     } else {
@@ -82,3 +165,8 @@ fun TrackItemWithMenu(
         )
     }
 }
+
+data class PlaylistAddingParameters(
+    val onLoadPlaylists: suspend () -> List<AppMediaItem.Playlist>,
+    val onAddToPlaylist: (AppMediaItem.Track, AppMediaItem.Playlist) -> Unit
+)
