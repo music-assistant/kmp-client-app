@@ -111,7 +111,8 @@ fun ItemDetailsScreen(
         playlistAddingParameters = PlaylistAddingParameters(
             onLoadPlaylists = viewModel::getEditablePlaylists,
             onAddToPlaylist = viewModel::addToPlaylist
-        )
+        ),
+        onRemoveFromPlaylist = viewModel::removeFromPlaylist
     )
 }
 
@@ -125,7 +126,8 @@ private fun ItemDetailsContent(
     onPlayClick: (QueueOption) -> Unit,
     onSubItemClick: (AppMediaItem) -> Unit,
     onTrackClick: (AppMediaItem.Track, QueueOption) -> Unit,
-    playlistAddingParameters: PlaylistAddingParameters
+    playlistAddingParameters: PlaylistAddingParameters,
+    onRemoveFromPlaylist: (String, Int) -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         Column {
@@ -170,8 +172,7 @@ private fun ItemDetailsContent(
                                 serverUrl = serverUrl,
                                 onFavoriteClick = onFavoriteClick,
                                 onPlayClick = onPlayClick,
-                                onLoadPlaylists = playlistAddingParameters.onLoadPlaylists,
-                                onAddToPlaylist = playlistAddingParameters.onAddToPlaylist
+                                playlistAddingParameters = playlistAddingParameters.takeIf { item is AppMediaItem.Track || item is AppMediaItem.Album },
                             )
                         }
 
@@ -215,15 +216,21 @@ private fun ItemDetailsContent(
                                     item(span = { GridItemSpan(maxLineSpan) }) {
                                         SectionHeader("Tracks")
                                     }
-                                    items(tracksState.data) { track ->
-                                        TrackItemWithMenu(
-                                            item = track,
-                                            serverUrl = serverUrl,
-                                            onTrackPlayOption = onTrackClick,
-                                            // Don't show "add to playlist" for playlist items
-                                            playlistAddingParameters = playlistAddingParameters
-                                                .takeIf { item !is AppMediaItem.Playlist },
-                                        )
+                                    tracksState.data.forEachIndexed { index, track ->
+                                        item {
+                                            TrackItemWithMenu(
+                                                item = track,
+                                                serverUrl = serverUrl,
+                                                onTrackPlayOption = onTrackClick,
+                                                // Don't show "add to playlist" for playlist items
+                                                playlistAddingParameters = playlistAddingParameters
+                                                    .takeIf { item !is AppMediaItem.Playlist },
+                                                // Show "remove from playlist" only for playlist items
+                                                onRemoveFromPlaylist = if (item is AppMediaItem.Playlist && item.isEditable == true) {
+                                                    { onRemoveFromPlaylist(item.itemId, index) }
+                                                } else null
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -271,8 +278,7 @@ private fun HeaderSection(
     serverUrl: String?,
     onFavoriteClick: () -> Unit,
     onPlayClick: (QueueOption) -> Unit,
-    onLoadPlaylists: suspend () -> List<AppMediaItem.Playlist>,
-    onAddToPlaylist: (AppMediaItem, AppMediaItem.Playlist) -> Unit,
+    playlistAddingParameters: PlaylistAddingParameters?,
 ) {
     var showPlaylistDialog by rememberSaveable { mutableStateOf(false) }
     var playlists by remember { mutableStateOf<List<AppMediaItem.Playlist>>(emptyList()) }
@@ -332,20 +338,22 @@ private fun HeaderSection(
                             contentDescription = null
                         )
                     },
-                    options = listOf(
-                        OverflowMenuOption("Play Next") { onPlayClick(QueueOption.NEXT) },
-                        OverflowMenuOption("Add to Queue") { onPlayClick(QueueOption.ADD) },
-                        OverflowMenuOption("Replace Queue") { onPlayClick(QueueOption.REPLACE) },
-                        OverflowMenuOption("Add to Playlist") {
-                            showPlaylistDialog = true
-                            // Load playlists when dialog opens
-                            coroutineScope.launch {
-                                isLoadingPlaylists = true
-                                playlists = onLoadPlaylists()
-                                isLoadingPlaylists = false
-                            }
+                    options = buildList {
+                        add(OverflowMenuOption("Play Next") { onPlayClick(QueueOption.NEXT) })
+                        add(OverflowMenuOption("Add to Queue") { onPlayClick(QueueOption.ADD) })
+                        add(OverflowMenuOption("Replace Queue") { onPlayClick(QueueOption.REPLACE) })
+                        playlistAddingParameters?.let {
+                            add(OverflowMenuOption("Add to Playlist") {
+                                showPlaylistDialog = true
+                                // Load playlists when dialog opens
+                                coroutineScope.launch {
+                                    isLoadingPlaylists = true
+                                    playlists = it.onLoadPlaylists()
+                                    isLoadingPlaylists = false
+                                }
+                            })
                         }
-                    )
+                    }
                 )
 
                 val isFavorite = item.favorite == true
@@ -385,7 +393,7 @@ private fun HeaderSection(
                         playlists.forEach { playlist ->
                             TextButton(
                                 onClick = {
-                                    onAddToPlaylist(item, playlist)
+                                    playlistAddingParameters?.onAddToPlaylist(item, playlist)
                                     showPlaylistDialog = false
                                     playlists = emptyList()
                                 },

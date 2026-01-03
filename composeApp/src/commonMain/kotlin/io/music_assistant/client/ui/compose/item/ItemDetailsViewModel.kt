@@ -310,6 +310,19 @@ class ItemDetailsViewModel(
         }
     }
 
+    fun removeFromPlaylist(playlistId: String, position: Int) {
+        viewModelScope.launch {
+            playlistRepository.removeFromPlaylist(playlistId, position)
+                .onSuccess {
+                    // Reload tracks after removal
+                    val currentItem = (state.value.itemState as? DataState.Data)?.data
+                    if (currentItem != null) {
+                        loadSubItems(currentItem)
+                    }
+                }
+        }
+    }
+
     private fun getProviderDomain(item: AppMediaItem): String {
         return item.provider
     }

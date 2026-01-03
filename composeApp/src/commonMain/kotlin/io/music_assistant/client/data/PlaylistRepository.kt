@@ -32,4 +32,16 @@ class PlaylistRepository(
             )
         ).map { "Added to ${playlist.name}" }
     }
+
+    suspend fun removeFromPlaylist(
+        playlistId: String,
+        position: Int
+    ): Result<Unit> {
+        return apiClient.sendRequest(
+            Request.Playlist.removeTracks(
+                playlistId = playlistId,
+                positions = listOf(position + 1) // +1 because server uses 1-based indexing
+            )
+        ).map { }
+    }
 }

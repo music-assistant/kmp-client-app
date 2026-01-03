@@ -38,6 +38,7 @@ fun TrackItemWithMenu(
     onTrackPlayOption: ((AppMediaItem.Track, QueueOption) -> Unit)? = null,
     onItemClick: ((AppMediaItem.Track) -> Unit)? = null,
     playlistAddingParameters: PlaylistAddingParameters? = null,
+    onRemoveFromPlaylist: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var expandedTrackId by remember { mutableStateOf<String?>(null) }
@@ -98,6 +99,15 @@ fun TrackItemWithMenu(
                                 playlists = playlistAddingParameters.onLoadPlaylists()
                                 isLoadingPlaylists = false
                             }
+                        }
+                    )
+                }
+                if (onRemoveFromPlaylist != null) {
+                    DropdownMenuItem(
+                        text = { Text("Remove from Playlist") },
+                        onClick = {
+                            onRemoveFromPlaylist()
+                            expandedTrackId = null
                         }
                     )
                 }
