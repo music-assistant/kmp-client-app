@@ -69,7 +69,7 @@ import io.music_assistant.client.ui.compose.search.SearchScreen
 import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.flow.collectLatest
 import musicassistantclient.composeapp.generated.resources.Res
-import musicassistantclient.composeapp.generated.resources.ic_ma_logo
+import musicassistantclient.composeapp.generated.resources.mass
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -137,7 +137,7 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Image(
-                        painter = painterResource(Res.drawable.ic_ma_logo),
+                        painter = painterResource(Res.drawable.mass),
                         contentDescription = "Music Assistant Logo",
                         modifier = Modifier.size(48.dp)
                     )

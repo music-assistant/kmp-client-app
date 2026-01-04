@@ -216,6 +216,7 @@ private fun ItemDetailsContent(
                                                 item = album,
                                                 serverUrl = serverUrl,
                                                 onClick = { onSubItemClick(album) },
+                                                showProvider = true
                                             )
                                         }
                                     }
@@ -255,7 +256,8 @@ private fun ItemDetailsContent(
                                                 // Show "remove from playlist" only for playlist items
                                                 onRemoveFromPlaylist = if (item is AppMediaItem.Playlist && item.isEditable == true) {
                                                     { onRemoveFromPlaylist(item.itemId, index) }
-                                                } else null
+                                                } else null,
+                                                showProvider = true
                                             )
                                         }
                                     }
