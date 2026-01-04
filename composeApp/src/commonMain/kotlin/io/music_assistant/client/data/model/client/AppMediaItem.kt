@@ -38,7 +38,7 @@ abstract class AppMediaItem(
 
     fun hasAnyMappingFrom(other: ServerMediaItem): Boolean =
         mappingsHashes
-            .intersect(providerMappings?.map { it.hashCode() }?.toSet() ?: emptySet())
+            .intersect(other.providerMappings?.map { it.hashCode() }?.toSet() ?: emptySet())
             .isNotEmpty()
 
     override fun equals(other: Any?): Boolean {
