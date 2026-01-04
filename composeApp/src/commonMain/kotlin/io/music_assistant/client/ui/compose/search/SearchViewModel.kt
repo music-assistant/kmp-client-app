@@ -49,10 +49,10 @@ class SearchViewModel(
             searchState = SearchState(
                 query = "",
                 mediaTypes = listOf(
-                    MediaTypeSelect(MediaType.ARTIST, true),
-                    MediaTypeSelect(MediaType.ALBUM, true),
-                    MediaTypeSelect(MediaType.TRACK, true),
-                    MediaTypeSelect(MediaType.PLAYLIST, true),
+                    MediaTypeSelect(MediaType.ARTIST, false),
+                    MediaTypeSelect(MediaType.ALBUM, false),
+                    MediaTypeSelect(MediaType.TRACK, false),
+                    MediaTypeSelect(MediaType.PLAYLIST, false),
                 ),
                 libraryOnly = false
             ),

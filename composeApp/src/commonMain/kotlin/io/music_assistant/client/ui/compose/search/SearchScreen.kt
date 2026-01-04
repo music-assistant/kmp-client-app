@@ -180,6 +180,22 @@ private fun SearchContent(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            // Tracks section
+                            if (results.tracks.isNotEmpty()) {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
+                                    SectionHeader("Tracks")
+                                }
+                                items(results.tracks) { track ->
+                                    TrackItemWithMenu(
+                                        item = track,
+                                        serverUrl = serverUrl,
+                                        onTrackPlayOption = onTrackClick,
+                                        playlistAddingParameters = playlistAddingParameters,
+                                        showProvider = true
+                                    )
+                                }
+                            }
+
                             // Artists section
                             if (results.artists.isNotEmpty()) {
                                 item(span = { GridItemSpan(maxLineSpan) }) {
@@ -205,22 +221,6 @@ private fun SearchContent(
                                         item = album,
                                         serverUrl = serverUrl,
                                         onClick = { onItemClick(it) },
-                                        showProvider = true
-                                    )
-                                }
-                            }
-
-                            // Tracks section
-                            if (results.tracks.isNotEmpty()) {
-                                item(span = { GridItemSpan(maxLineSpan) }) {
-                                    SectionHeader("Tracks")
-                                }
-                                items(results.tracks) { track ->
-                                    TrackItemWithMenu(
-                                        item = track,
-                                        serverUrl = serverUrl,
-                                        onTrackPlayOption = onTrackClick,
-                                        playlistAddingParameters = playlistAddingParameters,
                                         showProvider = true
                                     )
                                 }
