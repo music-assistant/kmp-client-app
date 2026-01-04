@@ -39,6 +39,8 @@ fun TrackItemWithMenu(
     onItemClick: ((AppMediaItem.Track) -> Unit)? = null,
     playlistAddingParameters: PlaylistAddingParameters? = null,
     onRemoveFromPlaylist: (() -> Unit)? = null,
+    onLibraryClick: ((AppMediaItem) -> Unit),
+    onFavoriteClick: ((AppMediaItem) -> Unit),
     showProvider: Boolean = false,
     serverUrl: String?
 ) {
@@ -88,6 +90,28 @@ fun TrackItemWithMenu(
                     expandedTrackId = null
                 }
             )
+
+
+            DropdownMenuItem(
+                text = { Text(if (item.isInLibrary) "Remove from Library" else "Add to Library") },
+                onClick = {
+                    onLibraryClick(item)
+                    expandedTrackId = null
+                }
+            )
+
+
+            // Favorite management (only for library items)
+            if (item.isInLibrary) {
+                DropdownMenuItem(
+                    text = { Text(if (item.favorite == true) "Unfavorite" else "Favorite") },
+                    onClick = {
+                        onFavoriteClick(item)
+                        expandedTrackId = null
+                    }
+                )
+            }
+
             if (playlistAddingParameters != null) {
                 DropdownMenuItem(
                     text = { Text("Add to Playlist") },

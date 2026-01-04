@@ -59,6 +59,7 @@ import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.items.PlaylistAddingParameters
 import io.music_assistant.client.ui.compose.common.rememberToastState
+import io.music_assistant.client.ui.compose.common.viewmodel.LibraryActionsViewModel
 import io.music_assistant.client.ui.compose.home.nav.HomeNavScreen
 import io.music_assistant.client.ui.compose.home.nav.rememberHomeNavBackStack
 import io.music_assistant.client.ui.compose.item.ItemDetailsScreen
@@ -77,6 +78,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun HomeScreen(
     viewModel: HomeScreenViewModel = koinViewModel(),
+    actionsViewModel: LibraryActionsViewModel = koinViewModel(),
     navigateTo: (NavScreen) -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
@@ -200,6 +202,8 @@ fun HomeScreen(
                                 onLoadPlaylists = viewModel::getEditablePlaylists,
                                 onAddToPlaylist = viewModel::addToPlaylist
                             ),
+                            onLibraryClick = actionsViewModel::onLibraryClick,
+                            onFavoriteClick = actionsViewModel::onFavoriteClick
                         )
 
                         Box(
@@ -356,7 +360,9 @@ private fun HomeContent(
     serverUrl: String?,
     onRecommendationItemClick: (AppMediaItem) -> Unit,
     onTrackPlayOption: (AppMediaItem.Track, QueueOption) -> Unit,
-    playlistAddingParameters: PlaylistAddingParameters
+    playlistAddingParameters: PlaylistAddingParameters,
+    onLibraryClick: (AppMediaItem) -> Unit,
+    onFavoriteClick: (AppMediaItem) -> Unit
 ) {
     @Suppress("UNCHECKED_CAST")
     val typedBackStack = homeBackStack as NavBackStack<HomeNavScreen>
@@ -414,6 +420,8 @@ private fun HomeContent(
                         }
                     },
                     playlistAddingParameters = playlistAddingParameters,
+                    onLibraryClick = onLibraryClick,
+                    onFavoriteClick = onFavoriteClick
                 )
             }
 

@@ -63,6 +63,8 @@ fun LandingPage(
     onTrackPlayOption: ((AppMediaItem.Track, QueueOption) -> Unit),
     onLibraryItemClick: (MediaType?) -> Unit,
     playlistAddingParameters: PlaylistAddingParameters,
+    onLibraryClick: ((AppMediaItem) -> Unit),
+    onFavoriteClick: ((AppMediaItem) -> Unit),
 ) {
     val filteredData = remember(dataState) {
         if (dataState is DataState.Data) {
@@ -109,6 +111,8 @@ fun LandingPage(
                     onAllClick = { row.rowItemType?.let { onLibraryItemClick(it) } },
                     mediaItems = row.items.orEmpty(),
                     playlistAddingParameters = playlistAddingParameters,
+                    onLibraryClick = onLibraryClick,
+                    onFavoriteClick = onFavoriteClick
                 )
             }
         }
@@ -238,6 +242,8 @@ fun CategoryRow(
     onAllClick: () -> Unit,
     mediaItems: List<AppMediaItem>,
     playlistAddingParameters: PlaylistAddingParameters,
+    onLibraryClick: ((AppMediaItem) -> Unit),
+    onFavoriteClick: ((AppMediaItem) -> Unit)
 ) {
     val isHomogenous = remember(mediaItems) {
         mediaItems.all { it::class == mediaItems.firstOrNull()?.let { first -> first::class } }
@@ -300,6 +306,8 @@ fun CategoryRow(
                             onTrackPlayOption = onTrackPlayOption,
                             onItemClick = { onItemClick(it) },
                             playlistAddingParameters = playlistAddingParameters,
+                            onLibraryClick = onLibraryClick,
+                            onFavoriteClick = onFavoriteClick
                         )
                     }
 

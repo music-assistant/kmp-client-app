@@ -6,8 +6,13 @@ import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.data.MainDataSource
 import io.music_assistant.client.data.model.client.AppMediaItem
+import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItemList
 import io.music_assistant.client.data.model.server.MediaType
+import io.music_assistant.client.data.model.server.ServerMediaItem
+import io.music_assistant.client.data.model.server.events.MediaItemAddedEvent
+import io.music_assistant.client.data.model.server.events.MediaItemDeletedEvent
+import io.music_assistant.client.data.model.server.events.MediaItemUpdatedEvent
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.server.SearchResult
 import io.music_assistant.client.ui.compose.common.DataState
@@ -76,6 +81,20 @@ class SearchViewModel(
                     }
                 }
         }
+
+        // Listen to real-time events for track updates
+        viewModelScope.launch {
+            apiClient.events.collect { event ->
+                when (event) {
+                    is MediaItemUpdatedEvent,
+                    is MediaItemAddedEvent,
+                    is MediaItemDeletedEvent -> {
+                        event.data?.let { updateSearchResultsIfNeeded(it) }
+                    }
+                    else -> Unit
+                }
+            }
+        }
     }
 
     fun onQueryChanged(query: String) {
@@ -128,6 +147,22 @@ class SearchViewModel(
                 .onSuccess { message ->
                     _toasts.emit(message)
                 }
+        }
+    }
+
+    private fun updateSearchResultsIfNeeded(serverItem: ServerMediaItem) {
+        val resultsData = (_state.value.resultsState as? DataState.Data)?.data
+        if (resultsData != null) {
+            val updatedTracks = resultsData.tracks.map { track ->
+                if (track.hasAnyMappingFrom(serverItem)) {
+                    serverItem.toAppMediaItem() as? AppMediaItem.Track ?: track
+                } else {
+                    track
+                }
+            }
+            _state.update {
+                it.copy(resultsState = DataState.Data(resultsData.copy(tracks = updatedTracks)))
+            }
         }
     }
 

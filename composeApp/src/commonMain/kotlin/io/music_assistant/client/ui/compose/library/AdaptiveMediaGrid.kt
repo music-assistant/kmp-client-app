@@ -40,6 +40,8 @@ fun AdaptiveMediaGrid(
     onLoadMore: () -> Unit = {},
     gridState: LazyGridState = rememberLazyGridState(),
     playlistAddingParameters: PlaylistAddingParameters,
+    onLibraryClick: ((AppMediaItem) -> Unit),
+    onFavoriteClick: ((AppMediaItem) -> Unit),
 ) {
     // Detect when we're near the end and trigger load more
     val shouldLoadMore by remember {
@@ -75,7 +77,9 @@ fun AdaptiveMediaGrid(
                         serverUrl = serverUrl,
                         onTrackPlayOption = onTrackClick,
                         onItemClick = { onItemClick(it) },
-                        playlistAddingParameters = playlistAddingParameters
+                        playlistAddingParameters = playlistAddingParameters,
+                        onLibraryClick = onLibraryClick,
+                        onFavoriteClick = onFavoriteClick
                     )
                 }
 

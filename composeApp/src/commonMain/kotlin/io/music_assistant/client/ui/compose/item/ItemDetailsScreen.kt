@@ -62,6 +62,7 @@ import io.music_assistant.client.ui.compose.common.items.PlaylistAddingParameter
 import io.music_assistant.client.ui.compose.common.items.PlaylistImage
 import io.music_assistant.client.ui.compose.common.items.TrackItemWithMenu
 import io.music_assistant.client.ui.compose.common.rememberToastState
+import io.music_assistant.client.ui.compose.common.viewmodel.LibraryActionsViewModel
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -74,6 +75,7 @@ fun ItemDetailsScreen(
     onNavigateToItem: (String, MediaType, String) -> Unit,
 ) {
     val viewModel: ItemDetailsViewModel = koinViewModel()
+    val actionsViewModel: LibraryActionsViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
     val toastState = rememberToastState()
@@ -94,8 +96,8 @@ fun ItemDetailsScreen(
         serverUrl = serverUrl,
         toastState = toastState,
         onBack = onBack,
-        onToLibraryClick = viewModel::onToLibraryClick,
-        onFavoriteClick = viewModel::onFavoriteClick,
+        onToLibraryClick = actionsViewModel::onLibraryClick,
+        onFavoriteClick = actionsViewModel::onFavoriteClick,
         onPlayClick = viewModel::onPlayClick,
         onSubItemClick = { item ->
             when (item) {
@@ -113,7 +115,9 @@ fun ItemDetailsScreen(
             onLoadPlaylists = viewModel::getEditablePlaylists,
             onAddToPlaylist = viewModel::addToPlaylist
         ),
-        onRemoveFromPlaylist = viewModel::removeFromPlaylist
+        onRemoveFromPlaylist = viewModel::removeFromPlaylist,
+        onTrackLibraryClick = actionsViewModel::onLibraryClick,
+        onTrackFavoriteClick = actionsViewModel::onFavoriteClick
     )
 }
 
@@ -123,13 +127,15 @@ private fun ItemDetailsContent(
     serverUrl: String?,
     toastState: ToastState,
     onBack: () -> Unit,
-    onToLibraryClick: () -> Unit,
-    onFavoriteClick: () -> Unit,
+    onToLibraryClick: (AppMediaItem) -> Unit,
+    onFavoriteClick: (AppMediaItem) -> Unit,
     onPlayClick: (QueueOption) -> Unit,
     onSubItemClick: (AppMediaItem) -> Unit,
     onTrackClick: (AppMediaItem.Track, QueueOption) -> Unit,
     playlistAddingParameters: PlaylistAddingParameters,
-    onRemoveFromPlaylist: (String, Int) -> Unit
+    onRemoveFromPlaylist: (String, Int) -> Unit,
+    onTrackLibraryClick: (AppMediaItem) -> Unit,
+    onTrackFavoriteClick: (AppMediaItem) -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         Column {
@@ -195,8 +201,8 @@ private fun ItemDetailsContent(
                             HeaderSection(
                                 item = item,
                                 serverUrl = serverUrl,
-                                onToLibraryClick = onToLibraryClick,
-                                onFavoriteClick = onFavoriteClick,
+                                onToLibraryClick = { onToLibraryClick(item) },
+                                onFavoriteClick = { onFavoriteClick(item) },
                                 onPlayClick = onPlayClick,
                                 playlistAddingParameters = playlistAddingParameters.takeIf { item is AppMediaItem.Track || item is AppMediaItem.Album },
 
@@ -257,7 +263,9 @@ private fun ItemDetailsContent(
                                                 onRemoveFromPlaylist = if (item is AppMediaItem.Playlist && item.isEditable == true) {
                                                     { onRemoveFromPlaylist(item.itemId, index) }
                                                 } else null,
-                                                showProvider = true
+                                                showProvider = true,
+                                                onLibraryClick = onTrackLibraryClick,
+                                                onFavoriteClick = onTrackFavoriteClick
                                             )
                                         }
                                     }

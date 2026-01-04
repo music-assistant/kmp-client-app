@@ -45,13 +45,15 @@ import io.music_assistant.client.ui.compose.common.items.MediaItemPlaylist
 import io.music_assistant.client.ui.compose.common.items.PlaylistAddingParameters
 import io.music_assistant.client.ui.compose.common.items.TrackItemWithMenu
 import io.music_assistant.client.ui.compose.common.rememberToastState
+import io.music_assistant.client.ui.compose.common.viewmodel.LibraryActionsViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun SearchScreen(
     onBack: () -> Unit,
     onNavigateToItem: (String, MediaType, String) -> Unit,
-    viewModel: SearchViewModel = koinViewModel()
+    viewModel: SearchViewModel = koinViewModel(),
+    actionsViewModel: LibraryActionsViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
@@ -87,7 +89,9 @@ fun SearchScreen(
         playlistAddingParameters = PlaylistAddingParameters(
             onLoadPlaylists = viewModel::getEditablePlaylists,
             onAddToPlaylist = viewModel::addToPlaylist
-        )
+        ),
+        onLibraryClick = actionsViewModel::onLibraryClick,
+        onFavoriteClick = actionsViewModel::onFavoriteClick
     )
 }
 
@@ -102,7 +106,9 @@ private fun SearchContent(
     onLibraryOnlyToggled: (Boolean) -> Unit,
     onItemClick: (AppMediaItem) -> Unit,
     onTrackClick: (AppMediaItem.Track, io.music_assistant.client.data.model.server.QueueOption) -> Unit,
-    playlistAddingParameters: PlaylistAddingParameters
+    playlistAddingParameters: PlaylistAddingParameters,
+    onLibraryClick: (AppMediaItem) -> Unit,
+    onFavoriteClick: (AppMediaItem) -> Unit
 ) {
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
@@ -191,7 +197,9 @@ private fun SearchContent(
                                         serverUrl = serverUrl,
                                         onTrackPlayOption = onTrackClick,
                                         playlistAddingParameters = playlistAddingParameters,
-                                        showProvider = true
+                                        showProvider = true,
+                                        onLibraryClick = onLibraryClick,
+                                        onFavoriteClick = onFavoriteClick
                                     )
                                 }
                             }

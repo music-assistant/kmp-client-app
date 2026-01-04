@@ -293,38 +293,6 @@ class ItemDetailsViewModel(
         }
     }
 
-    fun onToLibraryClick() {
-        viewModelScope.launch {
-            val item = (_state.value.itemState as? DataState.Data)?.data ?: return@launch
-
-            if (item.isInLibrary) {
-                apiClient.sendRequest(
-                    Request.Library.remove(item.itemId, item.mediaType)
-                )
-            } else {
-                item.uri?.let {
-                    apiClient.sendRequest(Request.Library.add(item.uri))
-                }
-            }
-        }
-    }
-
-    fun onFavoriteClick() {
-        viewModelScope.launch {
-            val item = (_state.value.itemState as? DataState.Data)?.data ?: return@launch
-
-            if (item.favorite == true) {
-                apiClient.sendRequest(
-                    Request.Library.removeFavorite(item.itemId, item.mediaType)
-                )
-            } else {
-                item.uri?.let {
-                    apiClient.sendRequest(Request.Library.addFavorite(it))
-                }
-            }
-        }
-    }
-
     fun onPlayClick(option: QueueOption) {
         viewModelScope.launch {
             val item = (_state.value.itemState as? DataState.Data)?.data ?: return@launch

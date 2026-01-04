@@ -6,12 +6,17 @@ import co.touchlab.kermit.Logger
 import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.data.MainDataSource
+import io.music_assistant.client.data.PlaylistRepository
 import io.music_assistant.client.data.model.client.AppMediaItem
+import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItemList
 import io.music_assistant.client.data.model.client.Player
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.server.ServerMediaItem
+import io.music_assistant.client.data.model.server.events.MediaItemAddedEvent
+import io.music_assistant.client.data.model.server.events.MediaItemDeletedEvent
+import io.music_assistant.client.data.model.server.events.MediaItemUpdatedEvent
 import io.music_assistant.client.settings.SettingsRepository
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.action.PlayerAction
@@ -38,7 +43,7 @@ class HomeScreenViewModel(
     private val apiClient: ServiceClient,
     private val dataSource: MainDataSource,
     private val settings: SettingsRepository,
-    private val playlistRepository: io.music_assistant.client.data.PlaylistRepository
+    private val playlistRepository: PlaylistRepository
 ) : ViewModel() {
 
     private val jobs = mutableListOf<Job>()
@@ -129,6 +134,20 @@ class HomeScreenViewModel(
                 }
             }
         }
+
+        // Listen to real-time events for track updates in recommendations
+        viewModelScope.launch {
+            apiClient.events.collect { event ->
+                when (event) {
+                    is MediaItemUpdatedEvent,
+                    is MediaItemAddedEvent,
+                    is MediaItemDeletedEvent -> {
+                        event.data?.let { updateRecommendationsIfNeeded(it) }
+                    }
+                    else -> Unit
+                }
+            }
+        }
     }
 
     private fun loadRecommendations() {
@@ -165,6 +184,36 @@ class HomeScreenViewModel(
                 .onSuccess { message ->
                     _toasts.emit(message)
                 }
+        }
+    }
+
+    private fun updateRecommendationsIfNeeded(serverItem: ServerMediaItem) {
+        val recommendationsData = (_recommendationsState.value.recommendations as? DataState.Data)?.data
+        if (recommendationsData != null) {
+            val updated = recommendationsData.map { row ->
+                row.items?.let { itemsList ->
+                    val updatedItems = itemsList.map { item ->
+                        if (item is AppMediaItem.Track && item.hasAnyMappingFrom(serverItem)) {
+                            serverItem.toAppMediaItem() as? AppMediaItem.Track ?: item
+                        } else {
+                            item
+                        }
+                    }
+                    // Create new RecommendationFolder with updated items
+                    AppMediaItem.RecommendationFolder(
+                        itemId = row.itemId,
+                        provider = row.provider,
+                        name = row.name,
+                        providerMappings = row.providerMappings,
+                        uri = row.uri,
+                        image = row.image,
+                        items = updatedItems
+                    )
+                } ?: row
+            }
+            _recommendationsState.update {
+                it.copy(recommendations = DataState.Data(updated))
+            }
         }
     }
 

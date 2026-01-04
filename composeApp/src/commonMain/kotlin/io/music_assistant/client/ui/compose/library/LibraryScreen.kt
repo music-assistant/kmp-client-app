@@ -46,6 +46,7 @@ import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.ToastHost
 import io.music_assistant.client.ui.compose.common.items.PlaylistAddingParameters
 import io.music_assistant.client.ui.compose.common.rememberToastState
+import io.music_assistant.client.ui.compose.common.viewmodel.LibraryActionsViewModel
 import org.koin.compose.koinInject
 
 @Composable
@@ -55,6 +56,7 @@ fun LibraryScreen(
     onItemClick: (AppMediaItem) -> Unit,
 ) {
     val viewModel: LibraryViewModel = koinInject()
+    val actionsViewModel: LibraryActionsViewModel = koinInject()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
     val toastState = rememberToastState()
@@ -98,7 +100,9 @@ fun LibraryScreen(
         playlistAddingParameters = PlaylistAddingParameters(
             onLoadPlaylists = viewModel::getEditablePlaylists,
             onAddToPlaylist = viewModel::addToPlaylist
-        )
+        ),
+        onLibraryClick = actionsViewModel::onLibraryClick,
+        onFavoriteClick = actionsViewModel::onFavoriteClick
     )
 }
 
@@ -118,6 +122,8 @@ private fun Library(
     onDismissCreatePlaylistDialog: () -> Unit,
     onCreatePlaylist: (String) -> Unit,
     playlistAddingParameters: PlaylistAddingParameters,
+    onLibraryClick: (AppMediaItem) -> Unit,
+    onFavoriteClick: (AppMediaItem) -> Unit,
 ) {
     val selectedTab = state.tabs.find { it.isSelected } ?: state.tabs.first()
 
@@ -183,7 +189,9 @@ private fun Library(
                     onTrackClick = onTrackClick,
                     onCreatePlaylistClick = onCreatePlaylistClick,
                     onLoadMore = { onLoadMore(selectedTab.tab) },
-                    playlistAddingParameters = playlistAddingParameters
+                    playlistAddingParameters = playlistAddingParameters,
+                    onLibraryClick = onLibraryClick,
+                    onFavoriteClick = onFavoriteClick
                 )
             }
         }
@@ -252,7 +260,9 @@ private fun TabContent(
     onTrackClick: (AppMediaItem.Track, QueueOption) -> Unit,
     onCreatePlaylistClick: () -> Unit,
     onLoadMore: () -> Unit,
-    playlistAddingParameters: PlaylistAddingParameters
+    playlistAddingParameters: PlaylistAddingParameters,
+    onLibraryClick: (AppMediaItem) -> Unit,
+    onFavoriteClick: (AppMediaItem) -> Unit
 ) {
     // Create separate grid states for each tab to preserve scroll position
     val artistsGridState = rememberLazyGridState()
@@ -304,7 +314,9 @@ private fun TabContent(
                                 onTrackClick = onTrackClick,
                                 onLoadMore = onLoadMore,
                                 gridState = it,
-                                playlistAddingParameters = playlistAddingParameters
+                                playlistAddingParameters = playlistAddingParameters,
+                                onLibraryClick = onLibraryClick,
+                                onFavoriteClick = onFavoriteClick
                             )
                         }
 
