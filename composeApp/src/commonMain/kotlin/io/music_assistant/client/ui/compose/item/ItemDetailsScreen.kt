@@ -58,11 +58,10 @@ import io.music_assistant.client.ui.compose.common.ToastState
 import io.music_assistant.client.ui.compose.common.items.AlbumImage
 import io.music_assistant.client.ui.compose.common.items.ArtistImage
 import io.music_assistant.client.ui.compose.common.items.MediaItemAlbum
-import io.music_assistant.client.ui.compose.common.items.PlaylistAddingParameters
 import io.music_assistant.client.ui.compose.common.items.PlaylistImage
 import io.music_assistant.client.ui.compose.common.items.TrackItemWithMenu
 import io.music_assistant.client.ui.compose.common.rememberToastState
-import io.music_assistant.client.ui.compose.common.viewmodel.LibraryActionsViewModel
+import io.music_assistant.client.ui.compose.common.viewmodel.ActionsViewModel
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -75,7 +74,7 @@ fun ItemDetailsScreen(
     onNavigateToItem: (String, MediaType, String) -> Unit,
 ) {
     val viewModel: ItemDetailsViewModel = koinViewModel()
-    val actionsViewModel: LibraryActionsViewModel = koinViewModel()
+    val actionsViewModel: ActionsViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
     val toastState = rememberToastState()
@@ -96,8 +95,6 @@ fun ItemDetailsScreen(
         serverUrl = serverUrl,
         toastState = toastState,
         onBack = onBack,
-        onToLibraryClick = actionsViewModel::onLibraryClick,
-        onFavoriteClick = actionsViewModel::onFavoriteClick,
         onPlayClick = viewModel::onPlayClick,
         onSubItemClick = { item ->
             when (item) {
@@ -111,13 +108,21 @@ fun ItemDetailsScreen(
             }
         },
         onTrackClick = viewModel::onTrackClick,
-        playlistAddingParameters = PlaylistAddingParameters(
-            onLoadPlaylists = viewModel::getEditablePlaylists,
-            onAddToPlaylist = viewModel::addToPlaylist
+        playlistAddingActions = ActionsViewModel.PlaylistAddingActions(
+            onLoadPlaylists = actionsViewModel::getEditablePlaylists,
+            onAddToPlaylist = actionsViewModel::addToPlaylist
         ),
-        onRemoveFromPlaylist = viewModel::removeFromPlaylist,
-        onTrackLibraryClick = actionsViewModel::onLibraryClick,
-        onTrackFavoriteClick = actionsViewModel::onFavoriteClick
+        onRemoveFromPlaylist = { id, pos ->
+            actionsViewModel.removeFromPlaylist(
+                id,
+                pos,
+                viewModel::reload
+            )
+        },
+        libraryActions = ActionsViewModel.LibraryActions(
+            onLibraryClick = actionsViewModel::onLibraryClick,
+            onFavoriteClick = actionsViewModel::onFavoriteClick
+        ),
     )
 }
 
@@ -127,15 +132,12 @@ private fun ItemDetailsContent(
     serverUrl: String?,
     toastState: ToastState,
     onBack: () -> Unit,
-    onToLibraryClick: (AppMediaItem) -> Unit,
-    onFavoriteClick: (AppMediaItem) -> Unit,
     onPlayClick: (QueueOption) -> Unit,
     onSubItemClick: (AppMediaItem) -> Unit,
     onTrackClick: (AppMediaItem.Track, QueueOption) -> Unit,
-    playlistAddingParameters: PlaylistAddingParameters,
+    playlistAddingActions: ActionsViewModel.PlaylistAddingActions,
     onRemoveFromPlaylist: (String, Int) -> Unit,
-    onTrackLibraryClick: (AppMediaItem) -> Unit,
-    onTrackFavoriteClick: (AppMediaItem) -> Unit
+    libraryActions: ActionsViewModel.LibraryActions,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         Column {
@@ -201,12 +203,10 @@ private fun ItemDetailsContent(
                             HeaderSection(
                                 item = item,
                                 serverUrl = serverUrl,
-                                onToLibraryClick = { onToLibraryClick(item) },
-                                onFavoriteClick = { onFavoriteClick(item) },
                                 onPlayClick = onPlayClick,
-                                playlistAddingParameters = playlistAddingParameters.takeIf { item is AppMediaItem.Track || item is AppMediaItem.Album },
-
-                                )
+                                playlistAddingActions = playlistAddingActions.takeIf { item is AppMediaItem.Track || item is AppMediaItem.Album },
+                                libraryActions = libraryActions,
+                            )
                         }
 
                         // For Artist: Albums section
@@ -257,15 +257,14 @@ private fun ItemDetailsContent(
                                                 serverUrl = serverUrl,
                                                 onTrackPlayOption = onTrackClick,
                                                 // Don't show "add to playlist" for playlist items
-                                                playlistAddingParameters = playlistAddingParameters
+                                                playlistAddingActions = playlistAddingActions
                                                     .takeIf { item !is AppMediaItem.Playlist },
                                                 // Show "remove from playlist" only for playlist items
                                                 onRemoveFromPlaylist = if (item is AppMediaItem.Playlist && item.isEditable == true) {
                                                     { onRemoveFromPlaylist(item.itemId, index) }
                                                 } else null,
+                                                libraryActions = libraryActions,
                                                 showProvider = true,
-                                                onLibraryClick = onTrackLibraryClick,
-                                                onFavoriteClick = onTrackFavoriteClick
                                             )
                                         }
                                     }
@@ -313,10 +312,9 @@ private fun ItemDetailsContent(
 private fun HeaderSection(
     item: AppMediaItem,
     serverUrl: String?,
-    onToLibraryClick: () -> Unit,
-    onFavoriteClick: () -> Unit,
     onPlayClick: (QueueOption) -> Unit,
-    playlistAddingParameters: PlaylistAddingParameters?,
+    playlistAddingActions: ActionsViewModel.PlaylistAddingActions?,
+    libraryActions: ActionsViewModel.LibraryActions
 ) {
     var showPlaylistDialog by rememberSaveable { mutableStateOf(false) }
     var playlists by remember { mutableStateOf<List<AppMediaItem.Playlist>>(emptyList()) }
@@ -383,15 +381,15 @@ private fun HeaderSection(
                             OverflowMenuOption(
                                 if (item.isInLibrary) "Remove from library"
                                 else "Add to library"
-                            ) { onToLibraryClick() })
+                            ) { libraryActions.onLibraryClick(item) })
                         if (item.isInLibrary) {
                             add(
                                 OverflowMenuOption(
                                     if (item.favorite == true) "Unfavorite"
                                     else "Favorite"
-                                ) { onFavoriteClick() })
+                                ) { libraryActions.onFavoriteClick(item) })
                         }
-                        playlistAddingParameters?.let {
+                        playlistAddingActions?.let {
                             add(OverflowMenuOption("Add to Playlist") {
                                 showPlaylistDialog = true
                                 // Load playlists when dialog opens
@@ -432,7 +430,7 @@ private fun HeaderSection(
                         playlists.forEach { playlist ->
                             TextButton(
                                 onClick = {
-                                    playlistAddingParameters?.onAddToPlaylist(item, playlist)
+                                    playlistAddingActions?.onAddToPlaylist(item, playlist)
                                     showPlaylistDialog = false
                                     playlists = emptyList()
                                 },

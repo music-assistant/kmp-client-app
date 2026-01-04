@@ -29,7 +29,6 @@ import kotlinx.coroutines.launch
 class ItemDetailsViewModel(
     private val apiClient: ServiceClient,
     private val mainDataSource: MainDataSource,
-    private val playlistRepository: io.music_assistant.client.data.PlaylistRepository
 ) : ViewModel() {
 
     data class State(
@@ -168,22 +167,21 @@ class ItemDetailsViewModel(
     }
 
     private fun loadSubItems(item: AppMediaItem) {
-        val providerDomain = getProviderDomain(item)
 
         when (item) {
             is AppMediaItem.Artist -> {
-                loadArtistAlbums(item.itemId, providerDomain)
-                loadArtistTracks(item.itemId, providerDomain)
+                loadArtistAlbums(item.itemId, item.provider)
+                loadArtistTracks(item.itemId, item.provider)
             }
 
             is AppMediaItem.Album -> {
                 _state.update { it.copy(albumsState = DataState.NoData()) }
-                loadAlbumTracks(item.itemId, providerDomain)
+                loadAlbumTracks(item.itemId, item.provider)
             }
 
             is AppMediaItem.Playlist -> {
                 _state.update { it.copy(albumsState = DataState.NoData()) }
-                loadPlaylistTracks(item.itemId, providerDomain)
+                loadPlaylistTracks(item.itemId, item.provider)
             }
 
             else -> {
@@ -245,7 +243,7 @@ class ItemDetailsViewModel(
         }
     }
 
-    private fun loadAlbumTracks(itemId: String, providerDomain: String) {
+    private fun loadAlbumTracks(itemId: String, provider: String) {
         viewModelScope.launch {
             _state.update { it.copy(tracksState = DataState.Loading()) }
 
@@ -253,7 +251,7 @@ class ItemDetailsViewModel(
                 val tracks = apiClient.sendRequest(
                     Request.Album.getTracks(
                         itemId = itemId,
-                        providerInstanceIdOrDomain = providerDomain,
+                        providerInstanceIdOrDomain = provider,
                         inLibraryOnly = false
                     )
                 ).resultAs<List<ServerMediaItem>>()
@@ -269,7 +267,7 @@ class ItemDetailsViewModel(
         }
     }
 
-    private fun loadPlaylistTracks(itemId: String, providerDomain: String) {
+    private fun loadPlaylistTracks(itemId: String, provider: String) {
         viewModelScope.launch {
             _state.update { it.copy(tracksState = DataState.Loading()) }
 
@@ -277,7 +275,7 @@ class ItemDetailsViewModel(
                 val tracks = apiClient.sendRequest(
                     Request.Playlist.getTracks(
                         itemId = itemId,
-                        providerInstanceIdOrDomain = providerDomain,
+                        providerInstanceIdOrDomain = provider,
                         forceRefresh = null
                     )
                 ).resultAs<List<ServerMediaItem>>()
@@ -328,34 +326,11 @@ class ItemDetailsViewModel(
         }
     }
 
-    suspend fun getEditablePlaylists(): List<AppMediaItem.Playlist> {
-        return playlistRepository.getEditablePlaylists()
-    }
-
-    fun addToPlaylist(mediaItem: AppMediaItem, playlist: AppMediaItem.Playlist) {
-        viewModelScope.launch {
-            playlistRepository.addToPlaylist(mediaItem, playlist)
-                .onSuccess { message ->
-                    _toasts.emit(message)
-                }
+    fun reload() {
+        // Reload tracks
+        (state.value.itemState as? DataState.Data)?.data?.let {
+            loadSubItems(it)
         }
-    }
-
-    fun removeFromPlaylist(playlistId: String, position: Int) {
-        viewModelScope.launch {
-            playlistRepository.removeFromPlaylist(playlistId, position)
-                .onSuccess {
-                    // Reload tracks after removal
-                    val currentItem = (state.value.itemState as? DataState.Data)?.data
-                    if (currentItem != null) {
-                        loadSubItems(currentItem)
-                    }
-                }
-        }
-    }
-
-    private fun getProviderDomain(item: AppMediaItem): String {
-        return item.provider
     }
 
     private fun updateSubItemIfNeeded(serverItem: ServerMediaItem) {

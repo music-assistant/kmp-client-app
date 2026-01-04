@@ -37,15 +37,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.server.MediaType
+import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.ToastHost
+import io.music_assistant.client.ui.compose.common.ToastState
 import io.music_assistant.client.ui.compose.common.items.MediaItemAlbum
 import io.music_assistant.client.ui.compose.common.items.MediaItemArtist
 import io.music_assistant.client.ui.compose.common.items.MediaItemPlaylist
-import io.music_assistant.client.ui.compose.common.items.PlaylistAddingParameters
 import io.music_assistant.client.ui.compose.common.items.TrackItemWithMenu
 import io.music_assistant.client.ui.compose.common.rememberToastState
-import io.music_assistant.client.ui.compose.common.viewmodel.LibraryActionsViewModel
+import io.music_assistant.client.ui.compose.common.viewmodel.ActionsViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -53,7 +54,7 @@ fun SearchScreen(
     onBack: () -> Unit,
     onNavigateToItem: (String, MediaType, String) -> Unit,
     viewModel: SearchViewModel = koinViewModel(),
-    actionsViewModel: LibraryActionsViewModel = koinViewModel()
+    actionsViewModel: ActionsViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
@@ -61,7 +62,7 @@ fun SearchScreen(
 
     // Collect toasts
     LaunchedEffect(Unit) {
-        viewModel.toasts.collect { toast ->
+        actionsViewModel.toasts.collect { toast ->
             toastState.showToast(toast)
         }
     }
@@ -86,12 +87,14 @@ fun SearchScreen(
             }
         },
         onTrackClick = viewModel::onTrackClick,
-        playlistAddingParameters = PlaylistAddingParameters(
-            onLoadPlaylists = viewModel::getEditablePlaylists,
-            onAddToPlaylist = viewModel::addToPlaylist
+        playlistAddingActions = ActionsViewModel.PlaylistAddingActions(
+            onLoadPlaylists = actionsViewModel::getEditablePlaylists,
+            onAddToPlaylist = actionsViewModel::addToPlaylist
         ),
-        onLibraryClick = actionsViewModel::onLibraryClick,
-        onFavoriteClick = actionsViewModel::onFavoriteClick
+        libraryActions = ActionsViewModel.LibraryActions(
+            onLibraryClick = actionsViewModel::onLibraryClick,
+            onFavoriteClick = actionsViewModel::onFavoriteClick
+        )
     )
 }
 
@@ -99,16 +102,15 @@ fun SearchScreen(
 private fun SearchContent(
     state: SearchViewModel.State,
     serverUrl: String?,
-    toastState: io.music_assistant.client.ui.compose.common.ToastState,
+    toastState: ToastState,
     onBack: () -> Unit,
     onQueryChanged: (String) -> Unit,
     onMediaTypeToggled: (MediaType, Boolean) -> Unit,
     onLibraryOnlyToggled: (Boolean) -> Unit,
     onItemClick: (AppMediaItem) -> Unit,
-    onTrackClick: (AppMediaItem.Track, io.music_assistant.client.data.model.server.QueueOption) -> Unit,
-    playlistAddingParameters: PlaylistAddingParameters,
-    onLibraryClick: (AppMediaItem) -> Unit,
-    onFavoriteClick: (AppMediaItem) -> Unit
+    onTrackClick: (AppMediaItem.Track, QueueOption) -> Unit,
+    playlistAddingActions: ActionsViewModel.PlaylistAddingActions,
+    libraryActions: ActionsViewModel.LibraryActions,
 ) {
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
@@ -196,10 +198,9 @@ private fun SearchContent(
                                         item = track,
                                         serverUrl = serverUrl,
                                         onTrackPlayOption = onTrackClick,
-                                        playlistAddingParameters = playlistAddingParameters,
+                                        playlistAddingActions = playlistAddingActions,
+                                        libraryActions = libraryActions,
                                         showProvider = true,
-                                        onLibraryClick = onLibraryClick,
-                                        onFavoriteClick = onFavoriteClick
                                     )
                                 }
                             }

@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.server.QueueOption
+import io.music_assistant.client.ui.compose.common.viewmodel.ActionsViewModel
 import kotlinx.coroutines.launch
 
 /**
@@ -37,10 +38,9 @@ fun TrackItemWithMenu(
     itemSize: Dp = 96.dp,
     onTrackPlayOption: ((AppMediaItem.Track, QueueOption) -> Unit),
     onItemClick: ((AppMediaItem.Track) -> Unit)? = null,
-    playlistAddingParameters: PlaylistAddingParameters? = null,
+    playlistAddingActions: ActionsViewModel.PlaylistAddingActions? = null,
     onRemoveFromPlaylist: (() -> Unit)? = null,
-    onLibraryClick: ((AppMediaItem) -> Unit),
-    onFavoriteClick: ((AppMediaItem) -> Unit),
+    libraryActions: ActionsViewModel.LibraryActions,
     showProvider: Boolean = false,
     serverUrl: String?
 ) {
@@ -95,7 +95,7 @@ fun TrackItemWithMenu(
             DropdownMenuItem(
                 text = { Text(if (item.isInLibrary) "Remove from Library" else "Add to Library") },
                 onClick = {
-                    onLibraryClick(item)
+                    libraryActions.onLibraryClick(item)
                     expandedTrackId = null
                 }
             )
@@ -106,13 +106,13 @@ fun TrackItemWithMenu(
                 DropdownMenuItem(
                     text = { Text(if (item.favorite == true) "Unfavorite" else "Favorite") },
                     onClick = {
-                        onFavoriteClick(item)
+                        libraryActions.onFavoriteClick(item)
                         expandedTrackId = null
                     }
                 )
             }
 
-            if (playlistAddingParameters != null) {
+            if (playlistAddingActions != null) {
                 DropdownMenuItem(
                     text = { Text("Add to Playlist") },
                     onClick = {
@@ -121,7 +121,7 @@ fun TrackItemWithMenu(
                         // Load playlists when dialog opens
                         coroutineScope.launch {
                             isLoadingPlaylists = true
-                            playlists = playlistAddingParameters.onLoadPlaylists()
+                            playlists = playlistAddingActions.onLoadPlaylists()
                             isLoadingPlaylists = false
                         }
                     }
@@ -162,7 +162,7 @@ fun TrackItemWithMenu(
                             playlists.forEach { playlist ->
                                 TextButton(
                                     onClick = {
-                                        playlistAddingParameters?.onAddToPlaylist
+                                        playlistAddingActions?.onAddToPlaylist
                                             ?.invoke(item, playlist)
                                         showPlaylistDialog = false
                                         playlists = emptyList()
@@ -193,7 +193,4 @@ fun TrackItemWithMenu(
     }
 }
 
-data class PlaylistAddingParameters(
-    val onLoadPlaylists: suspend () -> List<AppMediaItem.Playlist>,
-    val onAddToPlaylist: (AppMediaItem, AppMediaItem.Playlist) -> Unit
-)
+

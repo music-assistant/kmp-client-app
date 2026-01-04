@@ -48,9 +48,9 @@ import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.items.MediaItemAlbum
 import io.music_assistant.client.ui.compose.common.items.MediaItemArtist
 import io.music_assistant.client.ui.compose.common.items.MediaItemPlaylist
-import io.music_assistant.client.ui.compose.common.items.PlaylistAddingParameters
 import io.music_assistant.client.ui.compose.common.items.TrackItemWithMenu
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
+import io.music_assistant.client.ui.compose.common.viewmodel.ActionsViewModel
 import io.music_assistant.client.utils.SessionState
 
 @Composable
@@ -62,9 +62,8 @@ fun LandingPage(
     onItemClick: (AppMediaItem) -> Unit,
     onTrackPlayOption: ((AppMediaItem.Track, QueueOption) -> Unit),
     onLibraryItemClick: (MediaType?) -> Unit,
-    playlistAddingParameters: PlaylistAddingParameters,
-    onLibraryClick: ((AppMediaItem) -> Unit),
-    onFavoriteClick: ((AppMediaItem) -> Unit),
+    playlistAddingActions: ActionsViewModel.PlaylistAddingActions,
+    libraryActions: ActionsViewModel.LibraryActions,
 ) {
     val filteredData = remember(dataState) {
         if (dataState is DataState.Data) {
@@ -110,9 +109,8 @@ fun LandingPage(
                     onTrackPlayOption = onTrackPlayOption,
                     onAllClick = { row.rowItemType?.let { onLibraryItemClick(it) } },
                     mediaItems = row.items.orEmpty(),
-                    playlistAddingParameters = playlistAddingParameters,
-                    onLibraryClick = onLibraryClick,
-                    onFavoriteClick = onFavoriteClick
+                    playlistAddingActions = playlistAddingActions,
+                    libraryActions = libraryActions,
                 )
             }
         }
@@ -241,9 +239,8 @@ fun CategoryRow(
     onTrackPlayOption: ((AppMediaItem.Track, QueueOption) -> Unit),
     onAllClick: () -> Unit,
     mediaItems: List<AppMediaItem>,
-    playlistAddingParameters: PlaylistAddingParameters,
-    onLibraryClick: ((AppMediaItem) -> Unit),
-    onFavoriteClick: ((AppMediaItem) -> Unit)
+    playlistAddingActions: ActionsViewModel.PlaylistAddingActions,
+    libraryActions: ActionsViewModel.LibraryActions,
 ) {
     val isHomogenous = remember(mediaItems) {
         mediaItems.all { it::class == mediaItems.firstOrNull()?.let { first -> first::class } }
@@ -305,9 +302,8 @@ fun CategoryRow(
                             itemSize = 96.dp,
                             onTrackPlayOption = onTrackPlayOption,
                             onItemClick = { onItemClick(it) },
-                            playlistAddingParameters = playlistAddingParameters,
-                            onLibraryClick = onLibraryClick,
-                            onFavoriteClick = onFavoriteClick
+                            playlistAddingActions = playlistAddingActions,
+                            libraryActions = libraryActions,
                         )
                     }
 

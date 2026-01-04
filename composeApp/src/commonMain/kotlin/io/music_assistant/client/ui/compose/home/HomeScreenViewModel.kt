@@ -6,7 +6,6 @@ import co.touchlab.kermit.Logger
 import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.data.MainDataSource
-import io.music_assistant.client.data.PlaylistRepository
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItemList
@@ -43,7 +42,6 @@ class HomeScreenViewModel(
     private val apiClient: ServiceClient,
     private val dataSource: MainDataSource,
     private val settings: SettingsRepository,
-    private val playlistRepository: PlaylistRepository
 ) : ViewModel() {
 
     private val jobs = mutableListOf<Job>()
@@ -54,8 +52,7 @@ class HomeScreenViewModel(
     private val _links = MutableSharedFlow<String>()
     val links = _links.asSharedFlow()
 
-    private val _toasts = MutableSharedFlow<String>()
-    val toasts = _toasts.asSharedFlow()
+
 
     private val _recommendationsState = MutableStateFlow(
         RecommendationsState(
@@ -171,19 +168,6 @@ class HomeScreenViewModel(
     fun onTrackPlayOption(track: AppMediaItem.Track, option: QueueOption) {
         dataSource.selectedPlayer?.queueOrPlayerId?.let {
             playItem(track, it, option)
-        }
-    }
-
-    suspend fun getEditablePlaylists(): List<AppMediaItem.Playlist> {
-        return playlistRepository.getEditablePlaylists()
-    }
-
-    fun addToPlaylist(mediaItem: AppMediaItem, playlist: AppMediaItem.Playlist) {
-        viewModelScope.launch {
-            playlistRepository.addToPlaylist(mediaItem, playlist)
-                .onSuccess { message ->
-                    _toasts.emit(message)
-                }
         }
     }
 

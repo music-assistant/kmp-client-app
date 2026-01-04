@@ -44,9 +44,8 @@ import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.ToastHost
-import io.music_assistant.client.ui.compose.common.items.PlaylistAddingParameters
 import io.music_assistant.client.ui.compose.common.rememberToastState
-import io.music_assistant.client.ui.compose.common.viewmodel.LibraryActionsViewModel
+import io.music_assistant.client.ui.compose.common.viewmodel.ActionsViewModel
 import org.koin.compose.koinInject
 
 @Composable
@@ -56,7 +55,7 @@ fun LibraryScreen(
     onItemClick: (AppMediaItem) -> Unit,
 ) {
     val viewModel: LibraryViewModel = koinInject()
-    val actionsViewModel: LibraryActionsViewModel = koinInject()
+    val actionsViewModel: ActionsViewModel = koinInject()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val serverUrl by viewModel.serverUrl.collectAsStateWithLifecycle(null)
     val toastState = rememberToastState()
@@ -78,7 +77,7 @@ fun LibraryScreen(
 
     // Collect toasts
     LaunchedEffect(Unit) {
-        viewModel.toasts.collect { toast ->
+        actionsViewModel.toasts.collect { toast ->
             toastState.showToast(toast)
         }
     }
@@ -97,12 +96,14 @@ fun LibraryScreen(
         onOnlyFavoritesClicked = viewModel::onOnlyFavoritesClicked,
         onDismissCreatePlaylistDialog = viewModel::onDismissCreatePlaylistDialog,
         onCreatePlaylist = viewModel::createPlaylist,
-        playlistAddingParameters = PlaylistAddingParameters(
-            onLoadPlaylists = viewModel::getEditablePlaylists,
-            onAddToPlaylist = viewModel::addToPlaylist
+        playlistAddingActions = ActionsViewModel.PlaylistAddingActions(
+            onLoadPlaylists = actionsViewModel::getEditablePlaylists,
+            onAddToPlaylist = actionsViewModel::addToPlaylist
         ),
-        onLibraryClick = actionsViewModel::onLibraryClick,
-        onFavoriteClick = actionsViewModel::onFavoriteClick
+        libraryActions = ActionsViewModel.LibraryActions(
+            onLibraryClick = actionsViewModel::onLibraryClick,
+            onFavoriteClick = actionsViewModel::onFavoriteClick
+        ),
     )
 }
 
@@ -121,9 +122,8 @@ private fun Library(
     onOnlyFavoritesClicked: (LibraryViewModel.Tab) -> Unit,
     onDismissCreatePlaylistDialog: () -> Unit,
     onCreatePlaylist: (String) -> Unit,
-    playlistAddingParameters: PlaylistAddingParameters,
-    onLibraryClick: (AppMediaItem) -> Unit,
-    onFavoriteClick: (AppMediaItem) -> Unit,
+    playlistAddingActions: ActionsViewModel.PlaylistAddingActions,
+    libraryActions: ActionsViewModel.LibraryActions,
 ) {
     val selectedTab = state.tabs.find { it.isSelected } ?: state.tabs.first()
 
@@ -189,9 +189,8 @@ private fun Library(
                     onTrackClick = onTrackClick,
                     onCreatePlaylistClick = onCreatePlaylistClick,
                     onLoadMore = { onLoadMore(selectedTab.tab) },
-                    playlistAddingParameters = playlistAddingParameters,
-                    onLibraryClick = onLibraryClick,
-                    onFavoriteClick = onFavoriteClick
+                    playlistAddingActions = playlistAddingActions,
+                    libraryActions = libraryActions,
                 )
             }
         }
@@ -260,9 +259,8 @@ private fun TabContent(
     onTrackClick: (AppMediaItem.Track, QueueOption) -> Unit,
     onCreatePlaylistClick: () -> Unit,
     onLoadMore: () -> Unit,
-    playlistAddingParameters: PlaylistAddingParameters,
-    onLibraryClick: (AppMediaItem) -> Unit,
-    onFavoriteClick: (AppMediaItem) -> Unit
+    playlistAddingActions: ActionsViewModel.PlaylistAddingActions,
+    libraryActions: ActionsViewModel.LibraryActions,
 ) {
     // Create separate grid states for each tab to preserve scroll position
     val artistsGridState = rememberLazyGridState()
@@ -314,9 +312,8 @@ private fun TabContent(
                                 onTrackClick = onTrackClick,
                                 onLoadMore = onLoadMore,
                                 gridState = it,
-                                playlistAddingParameters = playlistAddingParameters,
-                                onLibraryClick = onLibraryClick,
-                                onFavoriteClick = onFavoriteClick
+                                playlistAddingActions = playlistAddingActions,
+                                libraryActions = libraryActions,
                             )
                         }
 

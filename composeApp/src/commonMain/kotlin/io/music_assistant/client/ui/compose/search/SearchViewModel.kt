@@ -9,19 +9,17 @@ import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItemList
 import io.music_assistant.client.data.model.server.MediaType
+import io.music_assistant.client.data.model.server.QueueOption
+import io.music_assistant.client.data.model.server.SearchResult
 import io.music_assistant.client.data.model.server.ServerMediaItem
 import io.music_assistant.client.data.model.server.events.MediaItemAddedEvent
 import io.music_assistant.client.data.model.server.events.MediaItemDeletedEvent
 import io.music_assistant.client.data.model.server.events.MediaItemUpdatedEvent
-import io.music_assistant.client.data.model.server.QueueOption
-import io.music_assistant.client.data.model.server.SearchResult
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -37,15 +35,11 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
 class SearchViewModel(
     private val apiClient: ServiceClient,
     private val mainDataSource: MainDataSource,
-    private val playlistRepository: io.music_assistant.client.data.PlaylistRepository
 ) : ViewModel() {
 
     val serverUrl = apiClient.sessionState.map {
         (it as? SessionState.Connected)?.serverInfo?.baseUrl
     }
-
-    private val _toasts = MutableSharedFlow<String>()
-    val toasts = _toasts.asSharedFlow()
 
     val searchJob = AtomicReference<Job?>(null)
 
@@ -134,19 +128,6 @@ class SearchViewModel(
                     )
                 )
             }
-        }
-    }
-
-    suspend fun getEditablePlaylists(): List<AppMediaItem.Playlist> {
-        return playlistRepository.getEditablePlaylists()
-    }
-
-    fun addToPlaylist(mediaItem: AppMediaItem, playlist: AppMediaItem.Playlist) {
-        viewModelScope.launch {
-            playlistRepository.addToPlaylist(mediaItem, playlist)
-                .onSuccess { message ->
-                    _toasts.emit(message)
-                }
         }
     }
 
