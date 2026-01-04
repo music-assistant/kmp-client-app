@@ -20,6 +20,8 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
     @SerialName("message_id") val messageId: String = Uuid.random().toString()
 ) {
     data object Player {
+        fun all() = Request(command = "players/all")
+
         fun simpleCommand(
             playerId: String,
             command: String
@@ -64,6 +66,8 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
     }
 
     data object Queue {
+
+        fun all() = Request(command = "player_queues/all")
 
         fun items(
             queueId: String,
@@ -401,6 +405,8 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
         )
 
         fun recommendations() = Request(command = "music/recommendations")
+
+        fun providersManifests() = Request(command = "providers/manifests")
 
         internal fun subItems(
             command: String,

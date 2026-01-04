@@ -359,9 +359,6 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
         }
     }
 
-    suspend fun sendCommand(command: String): Result<Answer> =
-        sendRequest(Request(command = command))
-
     suspend fun sendRequest(request: Request): Result<Answer> = suspendCoroutine { continuation ->
         pendingResponses[request.messageId] = { response ->
             if (response.json.contains("error_code")) {

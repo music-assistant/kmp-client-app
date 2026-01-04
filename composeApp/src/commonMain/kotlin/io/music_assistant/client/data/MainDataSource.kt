@@ -13,6 +13,7 @@ import io.music_assistant.client.data.model.client.Queue
 import io.music_assistant.client.data.model.client.QueueInfo
 import io.music_assistant.client.data.model.client.QueueInfo.Companion.toQueue
 import io.music_assistant.client.data.model.client.QueueTrack.Companion.toQueueTrack
+import io.music_assistant.client.data.model.server.ProviderManifest
 import io.music_assistant.client.data.model.server.RepeatMode
 import io.music_assistant.client.data.model.server.ServerPlayer
 import io.music_assistant.client.data.model.server.ServerQueue
@@ -71,6 +72,8 @@ class MainDataSource(
 
     private val _serverPlayers = MutableStateFlow<List<Player>>(emptyList())
     private val _queueInfos = MutableStateFlow<List<QueueInfo>>(emptyList())
+
+    private val _providersManifests = MutableStateFlow<Map<String, Any>>(emptyMap())
 
     private val _players =
         combine(_serverPlayers, settings.playersSorting) { players, sortedIds ->
@@ -146,6 +149,7 @@ class MainDataSource(
                         if (it.dataConnectionState == DataConnectionState.Authenticated) {
                             initSendspinIfEnabled()
                             updatePlayersAndQueues()
+                            updateProvidersManifests()
                         } else {
                             stopSendspin()
                             _serverPlayers.update { emptyList() }
@@ -189,7 +193,6 @@ class MainDataSource(
         }
         launch {
             selectedPlayerIndex.filterNotNull().collect {
-                Logger.e("Refreshing queue for selected player index: $it")
                 refreshPlayerQueueItems(playersData.value[it])
             }
         }
@@ -438,7 +441,6 @@ class MainDataSource(
         launch {
             apiClient.events
                 .collect { event ->
-                    Logger.e(event.toString())
                     when (event) {
                         is PlayerUpdatedEvent -> {
                             _serverPlayers.value.takeIf { it.isNotEmpty() }?.let { players ->
@@ -544,18 +546,30 @@ class MainDataSource(
     }
 
     private fun updatePlayersAndQueues() {
-        log.i { "Updating players" }
+        log.i { "Updating players and queues" }
         launch {
-            apiClient.sendCommand("players/all")
+            apiClient.sendRequest(Request.Player.all())
                 .resultAs<List<ServerPlayer>>()?.map { it.toPlayer() }
                 ?.let { list ->
                     _serverPlayers.update {
                         list.filter { it.shouldBeShown }
                     }
                 }
-            apiClient.sendCommand("player_queues/all")
+        }
+        launch {
+            apiClient.sendRequest(Request.Queue.all())
                 .resultAs<List<ServerQueue>>()?.map { it.toQueue() }?.let { list ->
                     _queueInfos.update { list }
+                }
+        }
+    }
+
+    private fun updateProvidersManifests() {
+        launch {
+            apiClient.sendRequest(Request.Library.providersManifests())
+                .resultAs<List<ProviderManifest>>()?.filter { it.type == "music" }?.let { manifests ->
+                    manifests.forEach { m -> Logger.e("${m.domain} ${m.icon} ${m.iconSvg}") }
+                    _providersManifests.update { manifests.associateBy { pm -> pm.domain } }
                 }
         }
     }

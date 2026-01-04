@@ -80,28 +80,29 @@ fun LandingPage(
         }
     }
 
-    if (connectionState !is SessionState.Connected || dataState !is DataState.Data) {
-        Box(
-            modifier = modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator()
-        }
-    } else {
-        LazyColumn(
-            modifier = modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 16.dp)
-        ) {
-            // Your library row
-            item {
-                LibraryRow(onLibraryItemClick = onLibraryItemClick)
-            }
 
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 16.dp)
+    ) {
+        // Your library row
+        item {
+            LibraryRow(onLibraryItemClick = onLibraryItemClick)
+        }
+        if (connectionState !is SessionState.Connected || dataState !is DataState.Data) {
+            item {
+                Box(
+                    modifier = modifier.fillMaxWidth().height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+        } else {
             items(
                 items = filteredData,
                 key = { it.itemId }
             ) { row ->
-                Logger.e("Row ID : ${row.itemId}, Name: ${row.name}, Items count: ${row.items?.size}")
                 CategoryRow(
                     serverUrl = serverUrl,
                     row = row,
@@ -304,6 +305,7 @@ fun CategoryRow(
                             onItemClick = { onItemClick(it) },
                             playlistActions = playlistActions,
                             libraryActions = libraryActions,
+                            showProvider = true
                         )
                     }
 
@@ -312,14 +314,16 @@ fun CategoryRow(
                         serverUrl = serverUrl,
                         onClick = { onItemClick(it) },
                         itemSize = 96.dp,
-                        showSubtitle = !isHomogenous
+                        showSubtitle = !isHomogenous,
+                        showProvider = true
                     )
 
                     is AppMediaItem.Album -> MediaItemAlbum(
                         item = item,
                         serverUrl = serverUrl,
                         onClick = { onItemClick(it) },
-                        itemSize = 96.dp
+                        itemSize = 96.dp,
+                        showProvider = true
                     )
 
                     is AppMediaItem.Playlist -> MediaItemPlaylist(
@@ -327,7 +331,8 @@ fun CategoryRow(
                         serverUrl = serverUrl,
                         onClick = { onItemClick(it) },
                         itemSize = 96.dp,
-                        showSubtitle = !isHomogenous
+                        showSubtitle = !isHomogenous,
+                        showProvider = true
                     )
 
                     else -> {}
