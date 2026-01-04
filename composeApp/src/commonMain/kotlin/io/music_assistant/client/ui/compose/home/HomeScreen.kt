@@ -62,7 +62,7 @@ import io.music_assistant.client.ui.compose.common.rememberToastState
 import io.music_assistant.client.ui.compose.home.nav.HomeNavScreen
 import io.music_assistant.client.ui.compose.home.nav.rememberHomeNavBackStack
 import io.music_assistant.client.ui.compose.item.ItemDetailsScreen
-import io.music_assistant.client.ui.compose.library2.Library2Screen
+import io.music_assistant.client.ui.compose.library.LibraryScreen
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import io.music_assistant.client.ui.compose.nav.NavScreen
 import io.music_assistant.client.ui.compose.search.SearchScreen
@@ -418,7 +418,7 @@ private fun HomeContent(
             }
 
             entry<HomeNavScreen.Library> {
-                Library2Screen(
+                LibraryScreen(
                     initialTabType = it.type,
                     onBack = { typedBackStack.removeLastOrNull() },
                     onItemClick = { item ->

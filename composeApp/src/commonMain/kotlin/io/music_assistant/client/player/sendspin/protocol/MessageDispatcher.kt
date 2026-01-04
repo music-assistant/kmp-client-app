@@ -7,7 +7,6 @@ import io.music_assistant.client.player.sendspin.model.*
 import io.music_assistant.client.utils.myJson
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -48,7 +47,8 @@ class MessageDispatcher(
     private val _streamClearEvent = MutableSharedFlow<StreamClearMessage>(extraBufferCapacity = 1)
     val streamClearEvent: Flow<StreamClearMessage> = _streamClearEvent.asSharedFlow()
 
-    private val _serverCommandEvent = MutableSharedFlow<ServerCommandMessage>(extraBufferCapacity = 5)
+    private val _serverCommandEvent =
+        MutableSharedFlow<ServerCommandMessage>(extraBufferCapacity = 5)
     val serverCommandEvent: Flow<ServerCommandMessage> = _serverCommandEvent.asSharedFlow()
 
     suspend fun start() {
@@ -99,42 +99,52 @@ class MessageDispatcher(
                     val message = myJson.decodeFromJsonElement<ServerHelloMessage>(json)
                     handleServerHello(message)
                 }
+
                 "server/time" -> {
                     val message = myJson.decodeFromJsonElement<ServerTimeMessage>(json)
                     handleServerTime(message)
                 }
+
                 "stream/start" -> {
                     val message = myJson.decodeFromJsonElement<StreamStartMessage>(json)
                     handleStreamStart(message)
                 }
+
                 "stream/end" -> {
                     val message = myJson.decodeFromJsonElement<StreamEndMessage>(json)
                     handleStreamEnd(message)
                 }
+
                 "stream/clear" -> {
                     val message = myJson.decodeFromJsonElement<StreamClearMessage>(json)
                     handleStreamClear(message)
                 }
+
                 "stream/metadata" -> {
                     val message = myJson.decodeFromJsonElement<StreamMetadataMessage>(json)
                     handleStreamMetadata(message)
                 }
+
                 "session/update" -> {
                     val message = myJson.decodeFromJsonElement<SessionUpdateMessage>(json)
                     handleSessionUpdate(message)
                 }
+
                 "server/command" -> {
                     val message = myJson.decodeFromJsonElement<ServerCommandMessage>(json)
                     handleServerCommand(message)
                 }
+
                 "group/update" -> {
                     val message = myJson.decodeFromJsonElement<GroupUpdateMessage>(json)
                     handleGroupUpdate(message)
                 }
+
                 "server/state" -> {
                     val message = myJson.decodeFromJsonElement<ServerStateMessage>(json)
                     handleServerState(message)
                 }
+
                 else -> {
                     logger.w { "Unknown message type: $type" }
                 }

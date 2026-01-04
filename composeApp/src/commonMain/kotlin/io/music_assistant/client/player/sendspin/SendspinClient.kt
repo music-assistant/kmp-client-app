@@ -4,10 +4,25 @@ import co.touchlab.kermit.Logger
 import io.music_assistant.client.player.MediaPlayerController
 import io.music_assistant.client.player.sendspin.audio.AudioStreamManager
 import io.music_assistant.client.player.sendspin.connection.WebSocketHandler
-import io.music_assistant.client.player.sendspin.model.*
+import io.music_assistant.client.player.sendspin.model.CommandValue
+import io.music_assistant.client.player.sendspin.model.PlayerStateObject
+import io.music_assistant.client.player.sendspin.model.PlayerStateValue
+import io.music_assistant.client.player.sendspin.model.ServerCommandMessage
+import io.music_assistant.client.player.sendspin.model.StreamMetadataPayload
 import io.music_assistant.client.player.sendspin.protocol.MessageDispatcher
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlin.coroutines.CoroutineContext
 
 class SendspinClient(
@@ -28,7 +43,8 @@ class SendspinClient(
     private val audioStreamManager = AudioStreamManager(clockSynchronizer, mediaPlayerController)
 
     // State flows
-    private val _connectionState = MutableStateFlow<SendspinConnectionState>(SendspinConnectionState.Idle)
+    private val _connectionState =
+        MutableStateFlow<SendspinConnectionState>(SendspinConnectionState.Idle)
     val connectionState: StateFlow<SendspinConnectionState> = _connectionState.asStateFlow()
 
     private val _playbackState = MutableStateFlow<SendspinPlaybackState>(SendspinPlaybackState.Idle)
@@ -139,12 +155,15 @@ class SendspinClient(
                             )
                         }
                     }
+
                     is ProtocolState.Streaming -> {
                         _playbackState.value = SendspinPlaybackState.Buffering
                     }
+
                     ProtocolState.Disconnected -> {
                         _connectionState.value = SendspinConnectionState.Idle
                     }
+
                     else -> {}
                 }
             }
@@ -235,6 +254,7 @@ class SendspinClient(
                     reportState(PlayerStateValue.SYNCHRONIZED)
                 }
             }
+
             "mute" -> {
                 playerCmd.mute?.let { muted ->
                     logger.i { "Setting mute to $muted" }
@@ -243,6 +263,7 @@ class SendspinClient(
                     reportState(PlayerStateValue.SYNCHRONIZED)
                 }
             }
+
             else -> {
                 logger.w { "Unknown server command: ${playerCmd.command}" }
             }
@@ -274,7 +295,8 @@ class SendspinClient(
 
                     // Only report if we're still streaming and synchronized
                     if (_playbackState.value == SendspinPlaybackState.Synchronized ||
-                        _playbackState.value is SendspinPlaybackState.Playing) {
+                        _playbackState.value is SendspinPlaybackState.Playing
+                    ) {
 
                         logger.d { "Periodic state report: SYNCHRONIZED" }
                         reportState(PlayerStateValue.SYNCHRONIZED)

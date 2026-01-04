@@ -115,14 +115,17 @@ class AudioStreamManager(
                 logger.i { "Using PCM decoder (passthrough)" }
                 PcmDecoder()
             }
+
             "flac" -> {
                 logger.w { "FLAC decoder not yet implemented, server should send PCM" }
                 FlacDecoder()
             }
+
             "opus" -> {
                 logger.w { "OPUS decoder not yet implemented, server should send PCM" }
                 OpusDecoder()
             }
+
             else -> {
                 logger.w { "Unknown codec $codec, using PCM decoder" }
                 PcmDecoder()
@@ -214,12 +217,15 @@ class AudioStreamManager(
                             logger.w { "Dropped late chunk: ${(currentLocalTime - chunkPlaybackTime) / 1000}ms late" }
                             updateBufferState()
                         }
+
                         chunkPlaybackTime > currentLocalTime + EARLY_THRESHOLD -> {
                             // Chunk is too early, wait
-                            val delayMs = ((chunkPlaybackTime - currentLocalTime) / 1000).coerceAtMost(100)
+                            val delayMs =
+                                ((chunkPlaybackTime - currentLocalTime) / 1000).coerceAtMost(100)
                             logger.d { "Chunk too early, waiting ${delayMs}ms (diff=${timeDiff / 1000}ms)" }
                             delay(delayMs)
                         }
+
                         else -> {
                             // Chunk is ready to play
                             playChunk(chunk)

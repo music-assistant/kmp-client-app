@@ -25,12 +25,12 @@ class SettingsViewModel(
     }
 
     fun logout() {
+        // TODO logout on Settings page?
         viewModelScope.launch { apiClient.logout() }
     }
 
     // Sendspin settings
     val sendspinEnabled = settings.sendspinEnabled
-    val sendspinClientId = settings.sendspinClientId
     val sendspinDeviceName = settings.sendspinDeviceName
     val sendspinPort = settings.sendspinPort
     val sendspinPath = settings.sendspinPath

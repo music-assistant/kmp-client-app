@@ -32,6 +32,7 @@ data class PlayerData(
                                         newQueueData.copy(items = oldQueueData.items)
                                     )
                                 }
+
                                 else -> other.queue
                             }
                         }

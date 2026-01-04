@@ -75,7 +75,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     ) { scaffoldPadding ->
         Column(
             modifier = Modifier
-                .background(color = MaterialTheme.colorScheme.background)
+                .background(color = MaterialTheme.colorScheme.background) 
                 .fillMaxSize()
                 .padding(scaffoldPadding)
                 .consumeWindowInsets(scaffoldPadding)
@@ -143,7 +143,8 @@ fun SettingsScreen(onBack: () -> Unit) {
                     val connInfo = savedConnectionInfo
                     if (sessionState is SessionState.Disconnected.Error &&
                         connInfo != null &&
-                        !autoReconnectAttempted) {
+                        !autoReconnectAttempted
+                    ) {
                         // Mark that we've attempted reconnection
                         autoReconnectAttempted = true
                         // Attempt reconnection with saved connection info

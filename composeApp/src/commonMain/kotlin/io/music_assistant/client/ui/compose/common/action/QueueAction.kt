@@ -1,4 +1,4 @@
-package io.music_assistant.client.ui.compose.main
+package io.music_assistant.client.ui.compose.common.action
 
 sealed interface QueueAction {
 

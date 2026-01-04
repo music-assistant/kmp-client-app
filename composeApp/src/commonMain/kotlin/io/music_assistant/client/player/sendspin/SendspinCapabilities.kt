@@ -1,6 +1,12 @@
 package io.music_assistant.client.player.sendspin
 
-import io.music_assistant.client.player.sendspin.model.*
+import io.music_assistant.client.player.sendspin.model.AudioCodec
+import io.music_assistant.client.player.sendspin.model.AudioFormatSpec
+import io.music_assistant.client.player.sendspin.model.ClientHelloPayload
+import io.music_assistant.client.player.sendspin.model.DeviceInfo
+import io.music_assistant.client.player.sendspin.model.MetadataSupport
+import io.music_assistant.client.player.sendspin.model.PlayerSupport
+import io.music_assistant.client.player.sendspin.model.VersionedRole
 
 object SendspinCapabilities {
     fun buildClientHello(config: SendspinConfig): ClientHelloPayload {

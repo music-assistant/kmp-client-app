@@ -14,6 +14,7 @@ import androidx.navigation3.scene.OverlayScene
 import androidx.navigation3.scene.Scene
 import androidx.navigation3.scene.SceneStrategy
 import androidx.navigation3.scene.SceneStrategyScope
+import io.music_assistant.client.utils.BottomSheetSceneStrategy.Companion.bottomSheet
 
 internal class BottomSheetScene<T : Any>(
     override val key: T,

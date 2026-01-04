@@ -11,6 +11,6 @@ data class QueueUpdatedEvent(
     @SerialName("event") override val event: EventType,
     @SerialName("object_id") override val objectId: String? = null,
     @SerialName("data") override val data: ServerQueue
-): Event<ServerQueue> {
+) : Event<ServerQueue> {
     fun queue() = data.toQueue()
 }

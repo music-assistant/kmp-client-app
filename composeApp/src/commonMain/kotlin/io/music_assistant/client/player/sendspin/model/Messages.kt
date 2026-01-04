@@ -2,10 +2,25 @@
 
 package io.music_assistant.client.player.sendspin.model
 
-import kotlinx.serialization.*
-import kotlinx.serialization.descriptors.*
-import kotlinx.serialization.encoding.*
-import kotlinx.serialization.json.*
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.InternalSerializationApi
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.descriptors.PolymorphicKind
+import kotlinx.serialization.descriptors.buildSerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.double
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.intOrNull
 
 // Base interface for all messages
 @Serializable
@@ -52,6 +67,7 @@ data class DeviceInfo(
 enum class PlayerCommand {
     @SerialName("volume")
     VOLUME,
+
     @SerialName("mute")
     MUTE
 }
@@ -86,6 +102,7 @@ data class ServerHelloMessage(
 enum class ConnectionReason {
     @SerialName("discovery")
     DISCOVERY,
+
     @SerialName("playback")
     PLAYBACK
 }
@@ -129,6 +146,7 @@ data class ServerTimePayload(
 enum class PlayerStateValue {
     @SerialName("synchronized")
     SYNCHRONIZED,
+
     @SerialName("error")
     ERROR
 }

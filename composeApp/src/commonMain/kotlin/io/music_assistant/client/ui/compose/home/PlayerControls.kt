@@ -1,4 +1,4 @@
-package io.music_assistant.client.ui.compose.main
+package io.music_assistant.client.ui.compose.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -26,6 +26,7 @@ import compose.icons.fontawesomeicons.solid.VolumeUp
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.server.RepeatMode
 import io.music_assistant.client.ui.compose.common.ActionButton
+import io.music_assistant.client.ui.compose.common.action.PlayerAction
 
 @Composable
 fun PlayerControls(

@@ -36,7 +36,10 @@ fun rememberHomeNavBackStack() = rememberNavBackStack(
                 polymorphic(NavKey::class) {
                     subclass(HomeNavScreen.Landing::class, HomeNavScreen.Landing.serializer())
                     subclass(HomeNavScreen.Library::class, HomeNavScreen.Library.serializer())
-                    subclass(HomeNavScreen.ItemDetails::class, HomeNavScreen.ItemDetails.serializer())
+                    subclass(
+                        HomeNavScreen.ItemDetails::class,
+                        HomeNavScreen.ItemDetails.serializer()
+                    )
                     subclass(HomeNavScreen.Search::class, HomeNavScreen.Search.serializer())
                 }
             }

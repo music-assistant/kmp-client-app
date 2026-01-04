@@ -40,9 +40,8 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.music_assistant.client.data.model.client.PlayerData
+import io.music_assistant.client.ui.compose.common.action.PlayerAction
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
-import io.music_assistant.client.ui.compose.main.PlayerAction
-import io.music_assistant.client.ui.compose.main.PlayerControls
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 

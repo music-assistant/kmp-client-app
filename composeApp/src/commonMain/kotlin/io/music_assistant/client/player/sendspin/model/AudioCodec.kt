@@ -5,7 +5,10 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 enum class AudioCodec {
-    @SerialName("opus") OPUS,
-    @SerialName("flac") FLAC,
-    @SerialName("pcm") PCM
+    @SerialName("opus")
+    OPUS,
+    @SerialName("flac")
+    FLAC,
+    @SerialName("pcm")
+    PCM
 }

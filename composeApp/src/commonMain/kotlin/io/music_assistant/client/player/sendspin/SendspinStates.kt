@@ -11,6 +11,7 @@ sealed class SendspinConnectionState {
         val serverName: String,
         val connectionReason: ConnectionReason
     ) : SendspinConnectionState()
+
     data class Error(val error: Throwable) : SendspinConnectionState()
 }
 

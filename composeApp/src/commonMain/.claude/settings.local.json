@@ -9,7 +9,8 @@
       "Bash(./gradlew :composeApp:compileDebugKotlinAndroid:*)",
       "Bash(tree:*)",
       "Bash(wc:*)",
-      "Bash(./gradlew:*)"
+      "Bash(./gradlew:*)",
+      "Bash(grep:*)"
     ]
   }
 }

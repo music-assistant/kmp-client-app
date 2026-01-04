@@ -1,7 +1,6 @@
 package io.music_assistant.client.player.sendspin
 
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 @OptIn(ExperimentalUuidApi::class)
 data class SendspinConfig(

@@ -1,4 +1,4 @@
-package io.music_assistant.client.ui.compose.library2
+package io.music_assistant.client.ui.compose.library
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,7 +39,7 @@ fun AdaptiveMediaGrid(
     onTrackClick: ((AppMediaItem.Track, QueueOption) -> Unit)? = null,
     onLoadMore: () -> Unit = {},
     gridState: LazyGridState = rememberLazyGridState(),
-   playlistAddingParameters: PlaylistAddingParameters,
+    playlistAddingParameters: PlaylistAddingParameters,
 ) {
     // Detect when we're near the end and trigger load more
     val shouldLoadMore by remember {

@@ -16,10 +16,7 @@ import androidx.navigation3.scene.DialogSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
 import io.music_assistant.client.api.ServiceClient
-import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.ui.compose.home.HomeScreen
-import io.music_assistant.client.ui.compose.library.LibraryScreen
-import io.music_assistant.client.ui.compose.main.MainScreen
 import io.music_assistant.client.ui.compose.settings.SettingsScreen
 import io.music_assistant.client.utils.BottomSheetSceneStrategy
 import io.music_assistant.client.utils.DataConnectionState
@@ -31,16 +28,10 @@ import org.koin.compose.koinInject
 
 sealed interface NavScreen : NavKey {
     @Serializable
-    data object Main : NavScreen
-
-    @Serializable
     data object Home : NavScreen
 
     @Serializable
     data object Settings : NavScreen
-
-    @Serializable
-    data class Library(val type: MediaType?) : NavScreen
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,10 +58,8 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
             builderAction = {
                 serializersModule = SerializersModule {
                     polymorphic(NavKey::class) {
-                        subclass(NavScreen.Main::class, NavScreen.Main.serializer())
                         subclass(NavScreen.Home::class, NavScreen.Home.serializer())
                         subclass(NavScreen.Settings::class, NavScreen.Settings.serializer())
-                        subclass(NavScreen.Library::class, NavScreen.Library.serializer())
                     }
                 }
             }
@@ -125,9 +114,6 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
             )
         ),
         entryProvider = entryProvider {
-            entry<NavScreen.Main> {
-                MainScreen { screen -> backStack.add(screen) }
-            }
             entry<NavScreen.Home> {
                 HomeScreen(navigateTo = { screen -> backStack.add(screen) })
             }
@@ -135,11 +121,6 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
                 SettingsScreen(
                     onBack = { if (backStack.last() is NavScreen.Settings) backStack.removeLastOrNull() },
                 )
-            }
-            entry<NavScreen.Library>(
-                metadata = BottomSheetSceneStrategy.Companion.bottomSheet()
-            ) {
-                LibraryScreen(it.type) { if (backStack.last() is NavScreen.Library) backStack.removeLastOrNull() }
             }
         }
     )

@@ -19,12 +19,14 @@ fun String.isValidHost(): Boolean {
            (25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.
            (25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])$""".replace(Regex("\\s"), "")
     )
-    val hostnamePattern = Regex("""^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63})*
-        (?<!\.)$""".replace(Regex("\\s"), ""))
+    val hostnamePattern = Regex(
+        """^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63})*
+        (?<!\.)$""".replace(Regex("\\s"), "")
+    )
     return this.matches(ipv4Pattern) || this.matches(hostnamePattern)
 }
 
-fun String.isIpPort() : Boolean {
+fun String.isIpPort(): Boolean {
     val port = this.toIntOrNull()
     return port != null && port in 1..65535
 }
@@ -43,5 +45,5 @@ fun Modifier.conditional(
     }
 }
 
-inline fun <reified T : Any> Result<Answer>.resultAs(): T?  = getOrNull()?.resultAs()
+inline fun <reified T : Any> Result<Answer>.resultAs(): T? = getOrNull()?.resultAs()
 

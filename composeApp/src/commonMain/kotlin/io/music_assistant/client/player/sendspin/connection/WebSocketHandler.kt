@@ -1,15 +1,33 @@
 package io.music_assistant.client.player.sendspin.connection
 
 import co.touchlab.kermit.Logger
-import io.ktor.client.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.websocket.*
-import io.ktor.websocket.*
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
+import io.ktor.client.plugins.websocket.WebSockets
+import io.ktor.client.plugins.websocket.pingInterval
+import io.ktor.client.plugins.websocket.webSocketSession
+import io.ktor.websocket.CloseReason
+import io.ktor.websocket.Frame
+import io.ktor.websocket.close
+import io.ktor.websocket.readBytes
+import io.ktor.websocket.readReason
+import io.ktor.websocket.readText
 import io.music_assistant.client.player.sendspin.WebSocketState
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 class WebSocketHandler(
@@ -42,7 +60,8 @@ class WebSocketHandler(
 
     suspend fun connect() {
         if (_connectionState.value is WebSocketState.Connected ||
-            _connectionState.value is WebSocketState.Connecting) {
+            _connectionState.value is WebSocketState.Connecting
+        ) {
             logger.w { "Already connected or connecting" }
             return
         }
@@ -75,15 +94,18 @@ class WebSocketHandler(
                             logger.d { "Received text message: ${text.take(100)}" }
                             _textMessages.emit(text)
                         }
+
                         is Frame.Binary -> {
                             val data = frame.readBytes()
                             logger.d { "Received binary message: ${data.size} bytes" }
                             _binaryMessages.emit(data)
                         }
+
                         is Frame.Close -> {
                             logger.i { "WebSocket closed: ${frame.readReason()}" }
                             handleDisconnection()
                         }
+
                         is Frame.Ping, is Frame.Pong -> {
                             // Handled automatically by Ktor
                         }

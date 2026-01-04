@@ -163,7 +163,8 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
             // Check for error in response
             if (response.getOrNull()?.json?.containsKey("error_code") == true) {
                 val errorMessage =
-                    response.getOrNull()?.json["error"]?.jsonPrimitive?.content ?: "Authentication failed"
+                    response.getOrNull()?.json["error"]?.jsonPrimitive?.content
+                        ?: "Authentication failed"
                 settings.updateToken(null)
                 _sessionState.update {
                     currentState.copy(
@@ -274,7 +275,8 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
             }
             if (response.getOrNull()?.json?.containsKey("error_code") == true) {
                 val errorMessage =
-                    response.getOrNull()?.json["error"]?.jsonPrimitive?.content ?: "Authentication failed"
+                    response.getOrNull()?.json["error"]?.jsonPrimitive?.content
+                        ?: "Authentication failed"
                 settings.updateToken(null)
                 _sessionState.update {
                     currentState.copy(
@@ -357,7 +359,8 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
         }
     }
 
-    suspend fun sendCommand(command: String): Result<Answer> = sendRequest(Request(command = command))
+    suspend fun sendCommand(command: String): Result<Answer> =
+        sendRequest(Request(command = command))
 
     suspend fun sendRequest(request: Request): Result<Answer> = suspendCoroutine { continuation ->
         pendingResponses[request.messageId] = { response ->
