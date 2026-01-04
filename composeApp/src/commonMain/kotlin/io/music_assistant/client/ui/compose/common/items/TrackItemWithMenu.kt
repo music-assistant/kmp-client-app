@@ -38,7 +38,7 @@ fun TrackItemWithMenu(
     itemSize: Dp = 96.dp,
     onTrackPlayOption: ((AppMediaItem.Track, QueueOption) -> Unit),
     onItemClick: ((AppMediaItem.Track) -> Unit)? = null,
-    playlistAddingActions: ActionsViewModel.PlaylistAddingActions? = null,
+    playlistActions: ActionsViewModel.PlaylistActions? = null,
     onRemoveFromPlaylist: (() -> Unit)? = null,
     libraryActions: ActionsViewModel.LibraryActions,
     showProvider: Boolean = false,
@@ -112,7 +112,7 @@ fun TrackItemWithMenu(
                 )
             }
 
-            if (playlistAddingActions != null) {
+            if (playlistActions != null) {
                 DropdownMenuItem(
                     text = { Text("Add to Playlist") },
                     onClick = {
@@ -121,7 +121,7 @@ fun TrackItemWithMenu(
                         // Load playlists when dialog opens
                         coroutineScope.launch {
                             isLoadingPlaylists = true
-                            playlists = playlistAddingActions.onLoadPlaylists()
+                            playlists = playlistActions.onLoadPlaylists()
                             isLoadingPlaylists = false
                         }
                     }
@@ -162,7 +162,7 @@ fun TrackItemWithMenu(
                             playlists.forEach { playlist ->
                                 TextButton(
                                     onClick = {
-                                        playlistAddingActions?.onAddToPlaylist
+                                        playlistActions?.onAddToPlaylist
                                             ?.invoke(item, playlist)
                                         showPlaylistDialog = false
                                         playlists = emptyList()

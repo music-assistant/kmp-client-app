@@ -96,7 +96,7 @@ fun LibraryScreen(
         onOnlyFavoritesClicked = viewModel::onOnlyFavoritesClicked,
         onDismissCreatePlaylistDialog = viewModel::onDismissCreatePlaylistDialog,
         onCreatePlaylist = viewModel::createPlaylist,
-        playlistAddingActions = ActionsViewModel.PlaylistAddingActions(
+        playlistActions = ActionsViewModel.PlaylistActions(
             onLoadPlaylists = actionsViewModel::getEditablePlaylists,
             onAddToPlaylist = actionsViewModel::addToPlaylist
         ),
@@ -122,7 +122,7 @@ private fun Library(
     onOnlyFavoritesClicked: (LibraryViewModel.Tab) -> Unit,
     onDismissCreatePlaylistDialog: () -> Unit,
     onCreatePlaylist: (String) -> Unit,
-    playlistAddingActions: ActionsViewModel.PlaylistAddingActions,
+    playlistActions: ActionsViewModel.PlaylistActions,
     libraryActions: ActionsViewModel.LibraryActions,
 ) {
     val selectedTab = state.tabs.find { it.isSelected } ?: state.tabs.first()
@@ -189,7 +189,7 @@ private fun Library(
                     onTrackClick = onTrackClick,
                     onCreatePlaylistClick = onCreatePlaylistClick,
                     onLoadMore = { onLoadMore(selectedTab.tab) },
-                    playlistAddingActions = playlistAddingActions,
+                    playlistActions = playlistActions,
                     libraryActions = libraryActions,
                 )
             }
@@ -259,7 +259,7 @@ private fun TabContent(
     onTrackClick: (AppMediaItem.Track, QueueOption) -> Unit,
     onCreatePlaylistClick: () -> Unit,
     onLoadMore: () -> Unit,
-    playlistAddingActions: ActionsViewModel.PlaylistAddingActions,
+    playlistActions: ActionsViewModel.PlaylistActions,
     libraryActions: ActionsViewModel.LibraryActions,
 ) {
     // Create separate grid states for each tab to preserve scroll position
@@ -312,7 +312,7 @@ private fun TabContent(
                                 onTrackClick = onTrackClick,
                                 onLoadMore = onLoadMore,
                                 gridState = it,
-                                playlistAddingActions = playlistAddingActions,
+                                playlistActions = playlistActions,
                                 libraryActions = libraryActions,
                             )
                         }

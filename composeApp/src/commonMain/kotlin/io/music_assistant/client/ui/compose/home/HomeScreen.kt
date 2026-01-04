@@ -197,7 +197,7 @@ fun HomeScreen(
                             serverUrl = serverUrl,
                             onRecommendationItemClick = viewModel::onRecommendationItemClicked,
                             onTrackPlayOption = viewModel::onTrackPlayOption,
-                            playlistAddingActions = ActionsViewModel.PlaylistAddingActions(
+                            playlistActions = ActionsViewModel.PlaylistActions(
                                 onLoadPlaylists = actionsViewModel::getEditablePlaylists,
                                 onAddToPlaylist = actionsViewModel::addToPlaylist
                             ),
@@ -361,7 +361,7 @@ private fun HomeContent(
     serverUrl: String?,
     onRecommendationItemClick: (AppMediaItem) -> Unit,
     onTrackPlayOption: (AppMediaItem.Track, QueueOption) -> Unit,
-    playlistAddingActions: ActionsViewModel.PlaylistAddingActions,
+    playlistActions: ActionsViewModel.PlaylistActions,
     libraryActions: ActionsViewModel.LibraryActions,
 ) {
     @Suppress("UNCHECKED_CAST")
@@ -419,7 +419,7 @@ private fun HomeContent(
                             typedBackStack.add(HomeNavScreen.Library(type))
                         }
                     },
-                    playlistAddingActions = playlistAddingActions,
+                    playlistActions = playlistActions,
                     libraryActions = libraryActions,
                 )
             }

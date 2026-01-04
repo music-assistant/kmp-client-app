@@ -39,7 +39,7 @@ fun AdaptiveMediaGrid(
     onTrackClick: ((AppMediaItem.Track, QueueOption) -> Unit),
     onLoadMore: () -> Unit = {},
     gridState: LazyGridState = rememberLazyGridState(),
-    playlistAddingActions: ActionsViewModel.PlaylistAddingActions,
+    playlistActions: ActionsViewModel.PlaylistActions,
     libraryActions: ActionsViewModel.LibraryActions,
 ) {
     // Detect when we're near the end and trigger load more
@@ -76,7 +76,7 @@ fun AdaptiveMediaGrid(
                         serverUrl = serverUrl,
                         onTrackPlayOption = onTrackClick,
                         onItemClick = { onItemClick(it) },
-                        playlistAddingActions = playlistAddingActions,
+                        playlistActions = playlistActions,
                         libraryActions = libraryActions,
                     )
                 }

@@ -111,7 +111,7 @@ class ActionsViewModel(
         }
     }
 
-    data class PlaylistAddingActions(
+    data class PlaylistActions(
         val onLoadPlaylists: suspend () -> List<AppMediaItem.Playlist>,
         val onAddToPlaylist: (AppMediaItem, AppMediaItem.Playlist) -> Unit
     )

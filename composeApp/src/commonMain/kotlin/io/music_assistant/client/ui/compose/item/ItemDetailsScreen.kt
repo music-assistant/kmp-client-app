@@ -108,7 +108,7 @@ fun ItemDetailsScreen(
             }
         },
         onTrackClick = viewModel::onTrackClick,
-        playlistAddingActions = ActionsViewModel.PlaylistAddingActions(
+        playlistActions = ActionsViewModel.PlaylistActions(
             onLoadPlaylists = actionsViewModel::getEditablePlaylists,
             onAddToPlaylist = actionsViewModel::addToPlaylist
         ),
@@ -135,7 +135,7 @@ private fun ItemDetailsContent(
     onPlayClick: (QueueOption) -> Unit,
     onSubItemClick: (AppMediaItem) -> Unit,
     onTrackClick: (AppMediaItem.Track, QueueOption) -> Unit,
-    playlistAddingActions: ActionsViewModel.PlaylistAddingActions,
+    playlistActions: ActionsViewModel.PlaylistActions,
     onRemoveFromPlaylist: (String, Int) -> Unit,
     libraryActions: ActionsViewModel.LibraryActions,
 ) {
@@ -204,7 +204,7 @@ private fun ItemDetailsContent(
                                 item = item,
                                 serverUrl = serverUrl,
                                 onPlayClick = onPlayClick,
-                                playlistAddingActions = playlistAddingActions.takeIf { item is AppMediaItem.Track || item is AppMediaItem.Album },
+                                playlistActions = playlistActions.takeIf { item is AppMediaItem.Track || item is AppMediaItem.Album },
                                 libraryActions = libraryActions,
                             )
                         }
@@ -257,7 +257,7 @@ private fun ItemDetailsContent(
                                                 serverUrl = serverUrl,
                                                 onTrackPlayOption = onTrackClick,
                                                 // Don't show "add to playlist" for playlist items
-                                                playlistAddingActions = playlistAddingActions
+                                                playlistActions = playlistActions
                                                     .takeIf { item !is AppMediaItem.Playlist },
                                                 // Show "remove from playlist" only for playlist items
                                                 onRemoveFromPlaylist = if (item is AppMediaItem.Playlist && item.isEditable == true) {
@@ -313,7 +313,7 @@ private fun HeaderSection(
     item: AppMediaItem,
     serverUrl: String?,
     onPlayClick: (QueueOption) -> Unit,
-    playlistAddingActions: ActionsViewModel.PlaylistAddingActions?,
+    playlistActions: ActionsViewModel.PlaylistActions?,
     libraryActions: ActionsViewModel.LibraryActions
 ) {
     var showPlaylistDialog by rememberSaveable { mutableStateOf(false) }
@@ -389,7 +389,7 @@ private fun HeaderSection(
                                     else "Favorite"
                                 ) { libraryActions.onFavoriteClick(item) })
                         }
-                        playlistAddingActions?.let {
+                        playlistActions?.let {
                             add(OverflowMenuOption("Add to Playlist") {
                                 showPlaylistDialog = true
                                 // Load playlists when dialog opens
@@ -430,7 +430,7 @@ private fun HeaderSection(
                         playlists.forEach { playlist ->
                             TextButton(
                                 onClick = {
-                                    playlistAddingActions?.onAddToPlaylist(item, playlist)
+                                    playlistActions?.onAddToPlaylist(item, playlist)
                                     showPlaylistDialog = false
                                     playlists = emptyList()
                                 },

@@ -87,7 +87,7 @@ fun SearchScreen(
             }
         },
         onTrackClick = viewModel::onTrackClick,
-        playlistAddingActions = ActionsViewModel.PlaylistAddingActions(
+        playlistActions = ActionsViewModel.PlaylistActions(
             onLoadPlaylists = actionsViewModel::getEditablePlaylists,
             onAddToPlaylist = actionsViewModel::addToPlaylist
         ),
@@ -109,7 +109,7 @@ private fun SearchContent(
     onLibraryOnlyToggled: (Boolean) -> Unit,
     onItemClick: (AppMediaItem) -> Unit,
     onTrackClick: (AppMediaItem.Track, QueueOption) -> Unit,
-    playlistAddingActions: ActionsViewModel.PlaylistAddingActions,
+    playlistActions: ActionsViewModel.PlaylistActions,
     libraryActions: ActionsViewModel.LibraryActions,
 ) {
     Box(Modifier.fillMaxSize()) {
@@ -198,7 +198,7 @@ private fun SearchContent(
                                         item = track,
                                         serverUrl = serverUrl,
                                         onTrackPlayOption = onTrackClick,
-                                        playlistAddingActions = playlistAddingActions,
+                                        playlistActions = playlistActions,
                                         libraryActions = libraryActions,
                                         showProvider = true,
                                     )
