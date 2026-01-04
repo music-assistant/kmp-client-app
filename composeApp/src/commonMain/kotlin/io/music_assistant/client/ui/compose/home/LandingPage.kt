@@ -60,7 +60,7 @@ fun LandingPage(
     dataState: DataState<List<AppMediaItem.RecommendationFolder>>,
     serverUrl: String?,
     onItemClick: (AppMediaItem) -> Unit,
-    onTrackPlayOption: ((AppMediaItem.Track, QueueOption) -> Unit)? = null,
+    onTrackPlayOption: ((AppMediaItem.Track, QueueOption) -> Unit),
     onLibraryItemClick: (MediaType?) -> Unit,
     playlistAddingParameters: PlaylistAddingParameters,
 ) {
@@ -234,7 +234,7 @@ fun CategoryRow(
     serverUrl: String?,
     row: AppMediaItem.RecommendationFolder,
     onItemClick: (AppMediaItem) -> Unit,
-    onTrackPlayOption: ((AppMediaItem.Track, QueueOption) -> Unit)?,
+    onTrackPlayOption: ((AppMediaItem.Track, QueueOption) -> Unit),
     onAllClick: () -> Unit,
     mediaItems: List<AppMediaItem>,
     playlistAddingParameters: PlaylistAddingParameters,

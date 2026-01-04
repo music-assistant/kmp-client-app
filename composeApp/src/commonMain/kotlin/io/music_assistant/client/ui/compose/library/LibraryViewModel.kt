@@ -220,10 +220,9 @@ class LibraryViewModel(
 
     private fun loadArtists() {
         viewModelScope.launch {
-            val searchQuery =
-                _state.value.tabs.find { it.tab == Tab.ARTISTS }?.searchQuery?.takeIf { it.length >= 3 }
-            val favoritesOnly =
-                _state.value.tabs.find { it.tab == Tab.ARTISTS }?.onlyFavorites?.takeIf { it }
+            val tabState = _state.value.tabs.find { it.tab == Tab.ARTISTS }
+            val searchQuery = tabState?.searchQuery?.takeIf { it.length >= 0 }
+            val favoritesOnly = tabState?.onlyFavorites?.takeIf { it }
             updateTabState(Tab.ARTISTS, DataState.Loading())
             val result = apiClient.sendRequest(
                 Request.Artist.listLibrary(
@@ -252,10 +251,9 @@ class LibraryViewModel(
 
     private fun loadAlbums() {
         viewModelScope.launch {
-            val searchQuery =
-                _state.value.tabs.find { it.tab == Tab.ALBUMS }?.searchQuery?.takeIf { it.length >= 3 }
-            val favoritesOnly =
-                _state.value.tabs.find { it.tab == Tab.ARTISTS }?.onlyFavorites?.takeIf { it }
+            val tabState = _state.value.tabs.find { it.tab == Tab.ALBUMS }
+            val searchQuery = tabState?.searchQuery?.takeIf { it.length >= 0 }
+            val favoritesOnly = tabState?.onlyFavorites?.takeIf { it }
             updateTabState(Tab.ALBUMS, DataState.Loading())
             val result = apiClient.sendRequest(
                 Request.Album.listLibrary(
@@ -284,10 +282,9 @@ class LibraryViewModel(
 
     private fun loadPlaylists() {
         viewModelScope.launch {
-            val searchQuery =
-                _state.value.tabs.find { it.tab == Tab.PLAYLISTS }?.searchQuery?.takeIf { it.length >= 3 }
-            val favoritesOnly =
-                _state.value.tabs.find { it.tab == Tab.ARTISTS }?.onlyFavorites?.takeIf { it }
+            val tabState = _state.value.tabs.find { it.tab == Tab.PLAYLISTS }
+            val searchQuery = tabState?.searchQuery?.takeIf { it.length >= 0 }
+            val favoritesOnly = tabState?.onlyFavorites?.takeIf { it }
             updateTabState(Tab.PLAYLISTS, DataState.Loading())
             val result = apiClient.sendRequest(
                 Request.Playlist.listLibrary(
@@ -316,10 +313,9 @@ class LibraryViewModel(
 
     private fun loadTracks() {
         viewModelScope.launch {
-            val searchQuery =
-                _state.value.tabs.find { it.tab == Tab.TRACKS }?.searchQuery?.takeIf { it.length >= 0 }
-            val favoritesOnly =
-                _state.value.tabs.find { it.tab == Tab.ARTISTS }?.onlyFavorites?.takeIf { it }
+            val tabState = _state.value.tabs.find { it.tab == Tab.TRACKS }
+            val searchQuery = tabState?.searchQuery?.takeIf { it.length >= 0 }
+            val favoritesOnly = tabState?.onlyFavorites?.takeIf { it }
             updateTabState(Tab.TRACKS, DataState.Loading())
             val result = apiClient.sendRequest(
                 Request.Track.list(

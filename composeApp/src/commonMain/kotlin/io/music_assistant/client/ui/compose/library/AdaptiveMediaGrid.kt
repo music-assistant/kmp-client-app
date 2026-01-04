@@ -36,7 +36,7 @@ fun AdaptiveMediaGrid(
     isLoadingMore: Boolean = false,
     hasMore: Boolean = true,
     onItemClick: (AppMediaItem) -> Unit,
-    onTrackClick: ((AppMediaItem.Track, QueueOption) -> Unit)? = null,
+    onTrackClick: ((AppMediaItem.Track, QueueOption) -> Unit),
     onLoadMore: () -> Unit = {},
     gridState: LazyGridState = rememberLazyGridState(),
     playlistAddingParameters: PlaylistAddingParameters,

@@ -32,147 +32,140 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun TrackItemWithMenu(
+    modifier: Modifier = Modifier,
     item: AppMediaItem.Track,
-    serverUrl: String?,
     itemSize: Dp = 96.dp,
-    onTrackPlayOption: ((AppMediaItem.Track, QueueOption) -> Unit)? = null,
+    onTrackPlayOption: ((AppMediaItem.Track, QueueOption) -> Unit),
     onItemClick: ((AppMediaItem.Track) -> Unit)? = null,
     playlistAddingParameters: PlaylistAddingParameters? = null,
     onRemoveFromPlaylist: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    showProvider: Boolean = false,
+    serverUrl: String?
 ) {
     var expandedTrackId by remember { mutableStateOf<String?>(null) }
     var showPlaylistDialog by rememberSaveable { mutableStateOf(false) }
     var playlists by remember { mutableStateOf<List<AppMediaItem.Playlist>>(emptyList()) }
     var isLoadingPlaylists by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-
-    if (onTrackPlayOption != null) {
-        Box(modifier = modifier) {
-            MediaItemTrack(
-                item = item,
-                serverUrl = serverUrl,
-                onClick = { expandedTrackId = item.itemId },
-                itemSize = itemSize
+    Box(modifier = modifier) {
+        MediaItemTrack(
+            modifier = Modifier.align(Alignment.Center),
+            item = item,
+            serverUrl = serverUrl,
+            onClick = { expandedTrackId = item.itemId },
+            itemSize = itemSize,
+            showProvider = showProvider,
+        )
+        DropdownMenu(
+            expanded = expandedTrackId == item.itemId,
+            onDismissRequest = { expandedTrackId = null }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Play Now") },
+                onClick = {
+                    onTrackPlayOption(item, QueueOption.PLAY)
+                    expandedTrackId = null
+                }
             )
-            DropdownMenu(
-                expanded = expandedTrackId == item.itemId,
-                onDismissRequest = { expandedTrackId = null }
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Play Now") },
-                    onClick = {
-                        onTrackPlayOption(item, QueueOption.PLAY)
-                        expandedTrackId = null
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Play Next") },
-                    onClick = {
-                        onTrackPlayOption(item, QueueOption.NEXT)
-                        expandedTrackId = null
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Add to Queue") },
-                    onClick = {
-                        onTrackPlayOption(item, QueueOption.ADD)
-                        expandedTrackId = null
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Replace Queue") },
-                    onClick = {
-                        onTrackPlayOption(item, QueueOption.REPLACE)
-                        expandedTrackId = null
-                    }
-                )
-                if (playlistAddingParameters != null) {
-                    DropdownMenuItem(
-                        text = { Text("Add to Playlist") },
-                        onClick = {
-                            showPlaylistDialog = true
-                            expandedTrackId = null
-                            // Load playlists when dialog opens
-                            coroutineScope.launch {
-                                isLoadingPlaylists = true
-                                playlists = playlistAddingParameters.onLoadPlaylists()
-                                isLoadingPlaylists = false
-                            }
-                        }
-                    )
+            DropdownMenuItem(
+                text = { Text("Play Next") },
+                onClick = {
+                    onTrackPlayOption(item, QueueOption.NEXT)
+                    expandedTrackId = null
                 }
-                if (onRemoveFromPlaylist != null) {
-                    DropdownMenuItem(
-                        text = { Text("Remove from Playlist") },
-                        onClick = {
-                            onRemoveFromPlaylist()
-                            expandedTrackId = null
-                        }
-                    )
+            )
+            DropdownMenuItem(
+                text = { Text("Add to Queue") },
+                onClick = {
+                    onTrackPlayOption(item, QueueOption.ADD)
+                    expandedTrackId = null
                 }
-            }
-
-            // Add to Playlist Dialog
-            if (showPlaylistDialog) {
-                AlertDialog(
-                    onDismissRequest = {
-                        showPlaylistDialog = false
-                        playlists = emptyList()
-                        isLoadingPlaylists = false
-                    },
-                    title = { Text("Add to Playlist") },
-                    text = {
-                        if (isLoadingPlaylists) {
-                            Box(
-                                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator()
-                            }
-                        } else if (playlists.isEmpty()) {
-                            Text("No editable playlists available")
-                        } else {
-                            Column {
-                                playlists.forEach { playlist ->
-                                    TextButton(
-                                        onClick = {
-                                            playlistAddingParameters?.onAddToPlaylist
-                                                ?.invoke(item, playlist)
-                                            showPlaylistDialog = false
-                                            playlists = emptyList()
-                                        },
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Text(
-                                            text = playlist.name,
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    confirmButton = {},
-                    dismissButton = {
-                        TextButton(onClick = {
-                            showPlaylistDialog = false
-                            playlists = emptyList()
+            )
+            DropdownMenuItem(
+                text = { Text("Replace Queue") },
+                onClick = {
+                    onTrackPlayOption(item, QueueOption.REPLACE)
+                    expandedTrackId = null
+                }
+            )
+            if (playlistAddingParameters != null) {
+                DropdownMenuItem(
+                    text = { Text("Add to Playlist") },
+                    onClick = {
+                        showPlaylistDialog = true
+                        expandedTrackId = null
+                        // Load playlists when dialog opens
+                        coroutineScope.launch {
+                            isLoadingPlaylists = true
+                            playlists = playlistAddingParameters.onLoadPlaylists()
                             isLoadingPlaylists = false
-                        }) {
-                            Text("Cancel")
                         }
+                    }
+                )
+            }
+            if (onRemoveFromPlaylist != null) {
+                DropdownMenuItem(
+                    text = { Text("Remove from Playlist") },
+                    onClick = {
+                        onRemoveFromPlaylist()
+                        expandedTrackId = null
                     }
                 )
             }
         }
-    } else {
-        MediaItemTrack(
-            item = item,
-            serverUrl = serverUrl,
-            onClick = { onItemClick?.invoke(it) },
-            itemSize = itemSize
-        )
+
+        // Add to Playlist Dialog
+        if (showPlaylistDialog) {
+            AlertDialog(
+                onDismissRequest = {
+                    showPlaylistDialog = false
+                    playlists = emptyList()
+                    isLoadingPlaylists = false
+                },
+                title = { Text("Add to Playlist") },
+                text = {
+                    if (isLoadingPlaylists) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    } else if (playlists.isEmpty()) {
+                        Text("No editable playlists available")
+                    } else {
+                        Column {
+                            playlists.forEach { playlist ->
+                                TextButton(
+                                    onClick = {
+                                        playlistAddingParameters?.onAddToPlaylist
+                                            ?.invoke(item, playlist)
+                                        showPlaylistDialog = false
+                                        playlists = emptyList()
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = playlist.name,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = {
+                        showPlaylistDialog = false
+                        playlists = emptyList()
+                        isLoadingPlaylists = false
+                    }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
     }
 }
 

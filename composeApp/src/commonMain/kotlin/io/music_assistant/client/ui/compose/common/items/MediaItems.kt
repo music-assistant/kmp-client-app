@@ -5,6 +5,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
@@ -19,8 +20,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FeaturedPlayList
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,26 +45,6 @@ import io.music_assistant.client.ui.compose.common.painters.WaveformPainter
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
 
 /**
- * Common wrapper for media items with click handling.
- */
-@Composable
-private fun MediaItemWrapper(
-    onClick: () -> Unit,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .wrapContentSize()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        content()
-    }
-}
-
-/**
  * Track media item with waveform overlay.
  *
  * @param item The track item to display
@@ -71,14 +55,25 @@ private fun MediaItemWrapper(
  */
 @Composable
 fun MediaItemTrack(
+    modifier: Modifier = Modifier,
     item: AppMediaItem.Track,
     serverUrl: String?,
     onClick: (AppMediaItem.Track) -> Unit,
     itemSize: Dp = 96.dp,
     showSubtitle: Boolean = true,
+    showProvider: Boolean,
 ) {
-    MediaItemWrapper(onClick = { onClick(item) }) {
-        TrackImage(itemSize, item, serverUrl)
+    MediaItemWrapper(
+        modifier = modifier,
+        onClick = { onClick(item) }
+    ) {
+        Box {
+            TrackImage(itemSize, item, serverUrl)
+            Badges(
+                item = item,
+                showProvider = showProvider
+            )
+        }
         Spacer(Modifier.height(4.dp))
         Text(
             text = item.name,
@@ -162,14 +157,25 @@ fun TrackImage(
  */
 @Composable
 fun MediaItemArtist(
+    modifier: Modifier = Modifier,
     item: AppMediaItem.Artist,
     serverUrl: String?,
     onClick: (AppMediaItem.Artist) -> Unit,
     itemSize: Dp = 96.dp,
     showSubtitle: Boolean = true,
+    showProvider: Boolean = false,
 ) {
-    MediaItemWrapper(onClick = { onClick(item) }) {
-        ArtistImage(itemSize, item, serverUrl)
+    MediaItemWrapper(
+        modifier = modifier,
+        onClick = { onClick(item) }
+    ) {
+        Box {
+            ArtistImage(itemSize, item, serverUrl)
+            Badges(
+                item = item,
+                showProvider = showProvider
+            )
+        }
         Spacer(Modifier.height(4.dp))
         Text(
             modifier = Modifier.width(itemSize),
@@ -234,14 +240,25 @@ fun ArtistImage(
  */
 @Composable
 fun MediaItemAlbum(
+    modifier: Modifier = Modifier,
     item: AppMediaItem.Album,
     serverUrl: String?,
     onClick: (AppMediaItem.Album) -> Unit,
     itemSize: Dp = 96.dp,
     showSubtitle: Boolean = true,
+    showProvider: Boolean = false
 ) {
-    MediaItemWrapper(onClick = { onClick(item) }) {
-        AlbumImage(itemSize, item, serverUrl)
+    MediaItemWrapper(
+        modifier = modifier,
+        onClick = { onClick(item) }
+    ) {
+        Box {
+            AlbumImage(itemSize, item, serverUrl)
+            Badges(
+                item = item,
+                showProvider = showProvider
+            )
+        }
         Spacer(Modifier.height(4.dp))
         Text(
             modifier = Modifier.width(itemSize),
@@ -322,14 +339,25 @@ fun AlbumImage(
  */
 @Composable
 fun MediaItemPlaylist(
+    modifier: Modifier = Modifier,
     item: AppMediaItem.Playlist,
     serverUrl: String?,
     onClick: (AppMediaItem.Playlist) -> Unit,
     itemSize: Dp = 96.dp,
     showSubtitle: Boolean = true,
+    showProvider: Boolean = false,
 ) {
-    MediaItemWrapper(onClick = { onClick(item) }) {
-        PlaylistImage(itemSize, item, serverUrl)
+    MediaItemWrapper(
+        modifier = modifier,
+        onClick = { onClick(item) }
+    ) {
+        Box {
+            PlaylistImage(itemSize, item, serverUrl)
+            Badges(
+                item = item,
+                showProvider = showProvider
+            )
+        }
         Spacer(Modifier.height(4.dp))
         Text(
             modifier = Modifier.width(itemSize),
@@ -380,5 +408,59 @@ fun PlaylistImage(
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
+    }
+}
+
+/**
+ * Common wrapper for media items with click handling.
+ */
+@Composable
+private fun MediaItemWrapper(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .wrapContentSize()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        content()
+    }
+}
+
+@Composable
+fun BoxScope.Badges(
+    item: AppMediaItem,
+    showProvider: Boolean
+) {
+    val modifier = Modifier.align(Alignment.BottomCenter)
+    if (item.favorite == true) {
+        Icon(
+            modifier = modifier,
+            imageVector = Icons.Filled.Favorite,
+            contentDescription = "Favorite",
+            tint = Color(0xFFEF7BC4)
+        )
+    } else if (showProvider) {
+        // TODO replace with provider icon?
+        if (item.isInLibrary) {
+            Icon(
+                modifier = modifier,
+                imageVector = Icons.Default.LibraryMusic,
+                contentDescription = "In Library",
+                tint = MaterialTheme.colorScheme.onSurface
+            )
+        } else {
+            Text(
+                modifier = modifier,
+                text = item.provider[0].toString().uppercase(),
+                color = Color.Cyan,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
     }
 }

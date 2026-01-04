@@ -189,7 +189,8 @@ private fun SearchContent(
                                     MediaItemArtist(
                                         item = artist,
                                         serverUrl = serverUrl,
-                                        onClick = { onItemClick(it) }
+                                        onClick = { onItemClick(it) },
+                                        showProvider = true
                                     )
                                 }
                             }
@@ -203,7 +204,8 @@ private fun SearchContent(
                                     MediaItemAlbum(
                                         item = album,
                                         serverUrl = serverUrl,
-                                        onClick = { onItemClick(it) }
+                                        onClick = { onItemClick(it) },
+                                        showProvider = true
                                     )
                                 }
                             }
@@ -219,6 +221,7 @@ private fun SearchContent(
                                         serverUrl = serverUrl,
                                         onTrackPlayOption = onTrackClick,
                                         playlistAddingParameters = playlistAddingParameters,
+                                        showProvider = true
                                     )
                                 }
                             }
@@ -232,7 +235,8 @@ private fun SearchContent(
                                     MediaItemPlaylist(
                                         item = playlist,
                                         serverUrl = serverUrl,
-                                        onClick = { onItemClick(it) }
+                                        onClick = { onItemClick(it) },
+                                        showProvider = true
                                     )
                                 }
                             }

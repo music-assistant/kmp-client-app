@@ -363,7 +363,7 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
             }
         )
 
-        fun addFavourite(
+        fun addFavorite(
             itemUri: String,
         ) = Request(
             command = "music/favorites/add_item",
@@ -372,7 +372,7 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
             }
         )
 
-        fun removeFavourite(
+        fun removeFavorite(
             itemId: String,
             mediaType: MediaType,
         ) = Request(

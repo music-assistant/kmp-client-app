@@ -315,11 +315,11 @@ class ItemDetailsViewModel(
 
             if (item.favorite == true) {
                 apiClient.sendRequest(
-                    Request.Library.removeFavourite(item.itemId, item.mediaType)
+                    Request.Library.removeFavorite(item.itemId, item.mediaType)
                 )
             } else {
                 item.uri?.let {
-                    apiClient.sendRequest(Request.Library.addFavourite(it))
+                    apiClient.sendRequest(Request.Library.addFavorite(it))
                 }
             }
         }
