@@ -40,7 +40,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import co.touchlab.kermit.Logger
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
@@ -64,6 +63,7 @@ fun LandingPage(
     onLibraryItemClick: (MediaType?) -> Unit,
     playlistActions: ActionsViewModel.PlaylistActions,
     libraryActions: ActionsViewModel.LibraryActions,
+    providerIconFetcher: (@Composable (Modifier, String) -> Unit)
 ) {
     val filteredData = remember(dataState) {
         if (dataState is DataState.Data) {
@@ -112,6 +112,7 @@ fun LandingPage(
                     mediaItems = row.items.orEmpty(),
                     playlistActions = playlistActions,
                     libraryActions = libraryActions,
+                    providerIconFetcher = providerIconFetcher,
                 )
             }
         }
@@ -242,6 +243,7 @@ fun CategoryRow(
     mediaItems: List<AppMediaItem>,
     playlistActions: ActionsViewModel.PlaylistActions,
     libraryActions: ActionsViewModel.LibraryActions,
+    providerIconFetcher: (@Composable (Modifier, String) -> Unit)
 ) {
     val isHomogenous = remember(mediaItems) {
         mediaItems.all { it::class == mediaItems.firstOrNull()?.let { first -> first::class } }
@@ -305,7 +307,7 @@ fun CategoryRow(
                             onItemClick = { onItemClick(it) },
                             playlistActions = playlistActions,
                             libraryActions = libraryActions,
-                            showProvider = true
+                            providerIconFetcher = providerIconFetcher
                         )
                     }
 
@@ -315,7 +317,7 @@ fun CategoryRow(
                         onClick = { onItemClick(it) },
                         itemSize = 96.dp,
                         showSubtitle = !isHomogenous,
-                        showProvider = true
+                        providerIconFetcher = providerIconFetcher
                     )
 
                     is AppMediaItem.Album -> MediaItemAlbum(
@@ -323,7 +325,7 @@ fun CategoryRow(
                         serverUrl = serverUrl,
                         onClick = { onItemClick(it) },
                         itemSize = 96.dp,
-                        showProvider = true
+                        providerIconFetcher = providerIconFetcher
                     )
 
                     is AppMediaItem.Playlist -> MediaItemPlaylist(
@@ -332,7 +334,7 @@ fun CategoryRow(
                         onClick = { onItemClick(it) },
                         itemSize = 96.dp,
                         showSubtitle = !isHomogenous,
-                        showProvider = true
+                        providerIconFetcher = providerIconFetcher
                     )
 
                     else -> {}

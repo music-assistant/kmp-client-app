@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FeaturedPlayList
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Icon
@@ -61,7 +60,7 @@ fun MediaItemTrack(
     onClick: (AppMediaItem.Track) -> Unit,
     itemSize: Dp = 96.dp,
     showSubtitle: Boolean = true,
-    showProvider: Boolean,
+    providerIconFetcher: (@Composable (Modifier, String) -> Unit)?
 ) {
     MediaItemWrapper(
         modifier = modifier,
@@ -71,7 +70,7 @@ fun MediaItemTrack(
             TrackImage(itemSize, item, serverUrl)
             Badges(
                 item = item,
-                showProvider = showProvider
+                providerIconFetcher = providerIconFetcher
             )
         }
         Spacer(Modifier.height(4.dp))
@@ -163,7 +162,7 @@ fun MediaItemArtist(
     onClick: (AppMediaItem.Artist) -> Unit,
     itemSize: Dp = 96.dp,
     showSubtitle: Boolean = true,
-    showProvider: Boolean = false,
+    providerIconFetcher: (@Composable (Modifier, String) -> Unit)?
 ) {
     MediaItemWrapper(
         modifier = modifier,
@@ -173,7 +172,7 @@ fun MediaItemArtist(
             ArtistImage(itemSize, item, serverUrl)
             Badges(
                 item = item,
-                showProvider = showProvider
+                providerIconFetcher = providerIconFetcher
             )
         }
         Spacer(Modifier.height(4.dp))
@@ -246,7 +245,7 @@ fun MediaItemAlbum(
     onClick: (AppMediaItem.Album) -> Unit,
     itemSize: Dp = 96.dp,
     showSubtitle: Boolean = true,
-    showProvider: Boolean = false
+    providerIconFetcher: (@Composable (Modifier, String) -> Unit)?
 ) {
     MediaItemWrapper(
         modifier = modifier,
@@ -256,7 +255,7 @@ fun MediaItemAlbum(
             AlbumImage(itemSize, item, serverUrl)
             Badges(
                 item = item,
-                showProvider = showProvider
+                providerIconFetcher = providerIconFetcher
             )
         }
         Spacer(Modifier.height(4.dp))
@@ -345,7 +344,7 @@ fun MediaItemPlaylist(
     onClick: (AppMediaItem.Playlist) -> Unit,
     itemSize: Dp = 96.dp,
     showSubtitle: Boolean = true,
-    showProvider: Boolean = false,
+    providerIconFetcher: (@Composable (Modifier, String) -> Unit)? = null
 ) {
     MediaItemWrapper(
         modifier = modifier,
@@ -355,7 +354,7 @@ fun MediaItemPlaylist(
             PlaylistImage(itemSize, item, serverUrl)
             Badges(
                 item = item,
-                showProvider = showProvider
+                providerIconFetcher = providerIconFetcher
             )
         }
         Spacer(Modifier.height(4.dp))
@@ -435,9 +434,10 @@ private fun MediaItemWrapper(
 @Composable
 fun BoxScope.Badges(
     item: AppMediaItem,
-    showProvider: Boolean
+    providerIconFetcher: (@Composable (Modifier, String) -> Unit)?
 ) {
-    val modifier = Modifier.align(Alignment.BottomCenter)
+    val modifier =
+        Modifier.align(Alignment.BottomEnd).size(16.dp)
     if (item.favorite == true) {
         Icon(
             modifier = modifier,
@@ -445,22 +445,7 @@ fun BoxScope.Badges(
             contentDescription = "Favorite",
             tint = Color(0xFFEF7BC4)
         )
-    } else if (showProvider) {
-        // TODO replace with provider icon?
-        if (item.isInLibrary) {
-            Icon(
-                modifier = modifier,
-                imageVector = Icons.Default.LibraryMusic,
-                contentDescription = "In Library",
-                tint = MaterialTheme.colorScheme.onSurface
-            )
-        } else {
-            Text(
-                modifier = modifier,
-                text = item.provider[0].toString().uppercase(),
-                color = Color.Cyan,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
+    } else {
+        providerIconFetcher?.invoke(modifier.background(Color.Gray, CircleShape), item.provider)
     }
 }

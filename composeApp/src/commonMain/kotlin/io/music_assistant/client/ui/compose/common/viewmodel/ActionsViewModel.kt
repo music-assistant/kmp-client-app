@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
+import io.music_assistant.client.data.MainDataSource
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItemList
 import io.music_assistant.client.data.model.server.ServerMediaItem
@@ -17,7 +18,8 @@ import kotlinx.coroutines.launch
  * Can be used by any view that needs to add/remove items from library or favorites.
  */
 class ActionsViewModel(
-    private val apiClient: ServiceClient
+    private val apiClient: ServiceClient,
+    private val dataSource: MainDataSource,
 ) : ViewModel() {
 
     private val _toasts = MutableSharedFlow<String>()
@@ -110,6 +112,8 @@ class ActionsViewModel(
             }
         }
     }
+
+    fun getProviderIcon(provider: String) = dataSource.providerIcon(provider)
 
     data class PlaylistActions(
         val onLoadPlaylists: suspend () -> List<AppMediaItem.Playlist>,

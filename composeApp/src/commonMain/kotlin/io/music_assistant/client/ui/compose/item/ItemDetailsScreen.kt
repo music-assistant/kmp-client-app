@@ -22,8 +22,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -44,7 +42,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.music_assistant.client.data.model.client.AppMediaItem
@@ -57,9 +55,11 @@ import io.music_assistant.client.ui.compose.common.ToastHost
 import io.music_assistant.client.ui.compose.common.ToastState
 import io.music_assistant.client.ui.compose.common.items.AlbumImage
 import io.music_assistant.client.ui.compose.common.items.ArtistImage
+import io.music_assistant.client.ui.compose.common.items.Badges
 import io.music_assistant.client.ui.compose.common.items.MediaItemAlbum
 import io.music_assistant.client.ui.compose.common.items.PlaylistImage
 import io.music_assistant.client.ui.compose.common.items.TrackItemWithMenu
+import io.music_assistant.client.ui.compose.common.providers.ProviderIcon
 import io.music_assistant.client.ui.compose.common.rememberToastState
 import io.music_assistant.client.ui.compose.common.viewmodel.ActionsViewModel
 import kotlinx.coroutines.launch
@@ -123,6 +123,10 @@ fun ItemDetailsScreen(
             onLibraryClick = actionsViewModel::onLibraryClick,
             onFavoriteClick = actionsViewModel::onFavoriteClick
         ),
+        providerIconFetcher = { modifier, provider ->
+            actionsViewModel.getProviderIcon(provider)
+                ?.let { ProviderIcon(modifier, it) }
+        }
     )
 }
 
@@ -138,135 +142,67 @@ private fun ItemDetailsContent(
     playlistActions: ActionsViewModel.PlaylistActions,
     onRemoveFromPlaylist: (String, Int) -> Unit,
     libraryActions: ActionsViewModel.LibraryActions,
+    providerIconFetcher: (@Composable (Modifier, String) -> Unit),
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
-        Column {
-            Row(
-                modifier = Modifier.padding(end = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                }
-                Spacer(modifier = Modifier.weight(1f))
-                (state.itemState as? DataState.Data)?.data?.let { item ->
-                    if (item.isInLibrary) {
-                        if (item.favorite == true) {
-                            Icon(
-                                imageVector = Icons.Filled.Favorite,
-                                contentDescription = "Favorite",
-                                tint = Color(0xFFEF7BC4)
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Default.LibraryMusic,
-                            contentDescription = "In Library",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
+        when (val itemState = state.itemState) {
+            is DataState.Loading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
                 }
             }
-            when (val itemState = state.itemState) {
-                is DataState.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
 
-                is DataState.Error -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Error loading item",
-                            color = MaterialTheme.colorScheme.error
+            is DataState.Error -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Error loading item",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+
+            is DataState.Data -> {
+                val item = itemState.data
+                LazyVerticalGrid(
+                    modifier = Modifier.fillMaxSize(),
+                    columns = GridCells.Adaptive(minSize = 96.dp),
+                    contentPadding = PaddingValues(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Header section - spans full width
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        HeaderSection(
+                            item = item,
+                            serverUrl = serverUrl,
+                            onPlayClick = onPlayClick,
+                            playlistActions = playlistActions.takeIf { item is AppMediaItem.Track || item is AppMediaItem.Album },
+                            libraryActions = libraryActions,
+                            providerIconFetcher = providerIconFetcher,
                         )
                     }
-                }
 
-                is DataState.Data -> {
-                    val item = itemState.data
-                    LazyVerticalGrid(
-                        modifier = Modifier.fillMaxSize(),
-                        columns = GridCells.Adaptive(minSize = 96.dp),
-                        contentPadding = PaddingValues(8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        // Header section - spans full width
-                        item(span = { GridItemSpan(maxLineSpan) }) {
-                            HeaderSection(
-                                item = item,
-                                serverUrl = serverUrl,
-                                onPlayClick = onPlayClick,
-                                playlistActions = playlistActions.takeIf { item is AppMediaItem.Track || item is AppMediaItem.Album },
-                                libraryActions = libraryActions,
-                            )
-                        }
-
-                        // For Artist: Albums section
-                        if (item is AppMediaItem.Artist) {
-                            when (val albumsState = state.albumsState) {
-                                is DataState.Data -> {
-                                    if (albumsState.data.isNotEmpty()) {
-                                        item(span = { GridItemSpan(maxLineSpan) }) {
-                                            SectionHeader("Albums")
-                                        }
-                                        items(albumsState.data) { album ->
-                                            MediaItemAlbum(
-                                                item = album,
-                                                serverUrl = serverUrl,
-                                                onClick = { onSubItemClick(album) },
-                                                showProvider = true
-                                            )
-                                        }
-                                    }
-                                }
-
-                                is DataState.Loading -> {
-                                    item(span = { GridItemSpan(maxLineSpan) }) {
-                                        Box(
-                                            modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            CircularProgressIndicator()
-                                        }
-                                    }
-                                }
-
-                                else -> Unit
-                            }
-                        }
-
-                        // Tracks section (all types)
-                        when (val tracksState = state.tracksState) {
+                    // For Artist: Albums section
+                    if (item is AppMediaItem.Artist) {
+                        when (val albumsState = state.albumsState) {
                             is DataState.Data -> {
-                                if (tracksState.data.isNotEmpty()) {
+                                if (albumsState.data.isNotEmpty()) {
                                     item(span = { GridItemSpan(maxLineSpan) }) {
-                                        SectionHeader("Tracks")
+                                        SectionHeader("Albums")
                                     }
-                                    tracksState.data.forEachIndexed { index, track ->
-                                        item {
-                                            TrackItemWithMenu(
-                                                item = track,
-                                                serverUrl = serverUrl,
-                                                onTrackPlayOption = onTrackClick,
-                                                // Don't show "add to playlist" for playlist items
-                                                playlistActions = playlistActions
-                                                    .takeIf { item !is AppMediaItem.Playlist },
-                                                // Show "remove from playlist" only for playlist items
-                                                onRemoveFromPlaylist = if (item is AppMediaItem.Playlist && item.isEditable == true) {
-                                                    { onRemoveFromPlaylist(item.itemId, index) }
-                                                } else null,
-                                                libraryActions = libraryActions,
-                                                showProvider = true,
-                                            )
-                                        }
+                                    items(albumsState.data) { album ->
+                                        MediaItemAlbum(
+                                            item = album,
+                                            serverUrl = serverUrl,
+                                            onClick = { onSubItemClick(album) },
+                                            providerIconFetcher = providerIconFetcher,
+                                        )
                                     }
                                 }
                             }
@@ -285,15 +221,57 @@ private fun ItemDetailsContent(
                             else -> Unit
                         }
                     }
-                }
 
-                is DataState.NoData -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("No data available")
+                    // Tracks section (all types)
+                    when (val tracksState = state.tracksState) {
+                        is DataState.Data -> {
+                            if (tracksState.data.isNotEmpty()) {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
+                                    SectionHeader("Tracks")
+                                }
+                                tracksState.data.forEachIndexed { index, track ->
+                                    item {
+                                        TrackItemWithMenu(
+                                            item = track,
+                                            serverUrl = serverUrl,
+                                            onTrackPlayOption = onTrackClick,
+                                            // Don't show "add to playlist" for playlist items
+                                            playlistActions = playlistActions
+                                                .takeIf { item !is AppMediaItem.Playlist },
+                                            // Show "remove from playlist" only for playlist items
+                                            onRemoveFromPlaylist = if (item is AppMediaItem.Playlist && item.isEditable == true) {
+                                                { onRemoveFromPlaylist(item.itemId, index) }
+                                            } else null,
+                                            libraryActions = libraryActions,
+                                            providerIconFetcher = providerIconFetcher,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        is DataState.Loading -> {
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator()
+                                }
+                            }
+                        }
+
+                        else -> Unit
                     }
+                }
+            }
+
+            is DataState.NoData -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No data available")
                 }
             }
         }
@@ -305,6 +283,10 @@ private fun ItemDetailsContent(
                 .fillMaxSize()
                 .padding(bottom = 48.dp)
         )
+        // Place it here so it'd be clickable
+        IconButton(onClick = onBack) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+        }
     }
 }
 
@@ -314,36 +296,49 @@ private fun HeaderSection(
     serverUrl: String?,
     onPlayClick: (QueueOption) -> Unit,
     playlistActions: ActionsViewModel.PlaylistActions?,
-    libraryActions: ActionsViewModel.LibraryActions
-) {
+    libraryActions: ActionsViewModel.LibraryActions,
+    providerIconFetcher: @Composable ((Modifier, String) -> Unit)?,
+
+    ) {
     var showPlaylistDialog by rememberSaveable { mutableStateOf(false) }
     var playlists by remember { mutableStateOf<List<AppMediaItem.Playlist>>(emptyList()) }
     var isLoadingPlaylists by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     Row(
         modifier = Modifier
-            .padding(horizontal = 16.dp)
+            .padding(start = 40.dp, end = 16.dp)
             .fillMaxWidth()
             .height(128.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        when (item) {
-            is AppMediaItem.Artist -> ArtistImage(128.dp, item, serverUrl)
-            is AppMediaItem.Album -> AlbumImage(128.dp, item, serverUrl)
-            is AppMediaItem.Playlist -> PlaylistImage(128.dp, item, serverUrl)
-            else -> Unit
+        Box {
+            when (item) {
+                is AppMediaItem.Artist -> ArtistImage(128.dp, item, serverUrl)
+                is AppMediaItem.Album -> AlbumImage(128.dp, item, serverUrl)
+                is AppMediaItem.Playlist -> PlaylistImage(128.dp, item, serverUrl)
+                else -> Unit
+            }
+            Badges(
+                item = item,
+                providerIconFetcher = providerIconFetcher
+            )
         }
+
         Column(
             modifier = Modifier.fillMaxHeight(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = item.name,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.headlineSmall
             )
             item.subtitle?.let { subtitle ->
                 Text(
                     text = subtitle,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -75,7 +75,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     ) { scaffoldPadding ->
         Column(
             modifier = Modifier
-                .background(color = MaterialTheme.colorScheme.background) 
+                .background(color = MaterialTheme.colorScheme.background)
                 .fillMaxSize()
                 .padding(scaffoldPadding)
                 .consumeWindowInsets(scaffoldPadding)

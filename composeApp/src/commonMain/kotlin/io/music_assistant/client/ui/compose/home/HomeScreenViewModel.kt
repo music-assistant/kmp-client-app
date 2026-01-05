@@ -53,7 +53,6 @@ class HomeScreenViewModel(
     val links = _links.asSharedFlow()
 
 
-
     private val _recommendationsState = MutableStateFlow(
         RecommendationsState(
             connectionState = SessionState.Disconnected.Initial,
@@ -141,6 +140,7 @@ class HomeScreenViewModel(
                     is MediaItemDeletedEvent -> {
                         event.data?.let { updateRecommendationsIfNeeded(it) }
                     }
+
                     else -> Unit
                 }
             }
@@ -172,7 +172,8 @@ class HomeScreenViewModel(
     }
 
     private fun updateRecommendationsIfNeeded(serverItem: ServerMediaItem) {
-        val recommendationsData = (_recommendationsState.value.recommendations as? DataState.Data)?.data
+        val recommendationsData =
+            (_recommendationsState.value.recommendations as? DataState.Data)?.data
         if (recommendationsData != null) {
             val updated = recommendationsData.map { row ->
                 row.items?.let { itemsList ->

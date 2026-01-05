@@ -45,6 +45,7 @@ import io.music_assistant.client.ui.compose.common.items.MediaItemAlbum
 import io.music_assistant.client.ui.compose.common.items.MediaItemArtist
 import io.music_assistant.client.ui.compose.common.items.MediaItemPlaylist
 import io.music_assistant.client.ui.compose.common.items.TrackItemWithMenu
+import io.music_assistant.client.ui.compose.common.providers.ProviderIcon
 import io.music_assistant.client.ui.compose.common.rememberToastState
 import io.music_assistant.client.ui.compose.common.viewmodel.ActionsViewModel
 import org.koin.compose.viewmodel.koinViewModel
@@ -94,7 +95,11 @@ fun SearchScreen(
         libraryActions = ActionsViewModel.LibraryActions(
             onLibraryClick = actionsViewModel::onLibraryClick,
             onFavoriteClick = actionsViewModel::onFavoriteClick
-        )
+        ),
+        providerIconFetcher = { modifier, provider ->
+            actionsViewModel.getProviderIcon(provider)
+                ?.let { ProviderIcon(modifier, it) }
+        }
     )
 }
 
@@ -111,6 +116,7 @@ private fun SearchContent(
     onTrackClick: (AppMediaItem.Track, QueueOption) -> Unit,
     playlistActions: ActionsViewModel.PlaylistActions,
     libraryActions: ActionsViewModel.LibraryActions,
+    providerIconFetcher: (@Composable (Modifier, String) -> Unit),
 ) {
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
@@ -200,7 +206,7 @@ private fun SearchContent(
                                         onTrackPlayOption = onTrackClick,
                                         playlistActions = playlistActions,
                                         libraryActions = libraryActions,
-                                        showProvider = true,
+                                        providerIconFetcher = providerIconFetcher,
                                     )
                                 }
                             }
@@ -215,7 +221,7 @@ private fun SearchContent(
                                         item = artist,
                                         serverUrl = serverUrl,
                                         onClick = { onItemClick(it) },
-                                        showProvider = true
+                                        providerIconFetcher = providerIconFetcher,
                                     )
                                 }
                             }
@@ -230,7 +236,7 @@ private fun SearchContent(
                                         item = album,
                                         serverUrl = serverUrl,
                                         onClick = { onItemClick(it) },
-                                        showProvider = true
+                                        providerIconFetcher = providerIconFetcher,
                                     )
                                 }
                             }
@@ -245,7 +251,7 @@ private fun SearchContent(
                                         item = playlist,
                                         serverUrl = serverUrl,
                                         onClick = { onItemClick(it) },
-                                        showProvider = true
+                                        providerIconFetcher = providerIconFetcher,
                                     )
                                 }
                             }

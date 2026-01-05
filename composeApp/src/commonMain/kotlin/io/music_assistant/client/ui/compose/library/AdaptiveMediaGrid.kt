@@ -78,6 +78,7 @@ fun AdaptiveMediaGrid(
                         onItemClick = { onItemClick(it) },
                         playlistActions = playlistActions,
                         libraryActions = libraryActions,
+                        providerIconFetcher = null
                     )
                 }
 
@@ -85,18 +86,21 @@ fun AdaptiveMediaGrid(
                     item = item,
                     serverUrl = serverUrl,
                     onClick = { onItemClick(it) },
+                    providerIconFetcher = null
                 )
 
                 is AppMediaItem.Album -> MediaItemAlbum(
                     item = item,
                     serverUrl = serverUrl,
                     onClick = { onItemClick(it) },
+                    providerIconFetcher = null
                 )
 
                 is AppMediaItem.Playlist -> MediaItemPlaylist(
                     item = item,
                     serverUrl = serverUrl,
                     onClick = { onItemClick(it) },
+                    providerIconFetcher = null
                 )
 
                 else -> {

@@ -41,7 +41,7 @@ fun TrackItemWithMenu(
     playlistActions: ActionsViewModel.PlaylistActions? = null,
     onRemoveFromPlaylist: (() -> Unit)? = null,
     libraryActions: ActionsViewModel.LibraryActions,
-    showProvider: Boolean = false,
+    providerIconFetcher: (@Composable (Modifier, String) -> Unit)?,
     serverUrl: String?
 ) {
     var expandedTrackId by remember { mutableStateOf<String?>(null) }
@@ -56,7 +56,7 @@ fun TrackItemWithMenu(
             serverUrl = serverUrl,
             onClick = { expandedTrackId = item.itemId },
             itemSize = itemSize,
-            showProvider = showProvider,
+            providerIconFetcher = providerIconFetcher
         )
         DropdownMenu(
             expanded = expandedTrackId == item.itemId,

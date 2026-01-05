@@ -73,6 +73,7 @@ kotlin {
 
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor3)
+            implementation(libs.coil.svg)
 
             implementation(libs.material.icons.core)
             implementation(libs.material.icons.extended)

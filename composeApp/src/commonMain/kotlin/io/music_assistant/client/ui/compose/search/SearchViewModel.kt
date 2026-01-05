@@ -85,6 +85,7 @@ class SearchViewModel(
                     is MediaItemDeletedEvent -> {
                         event.data?.let { updateSearchResultsIfNeeded(it) }
                     }
+
                     else -> Unit
                 }
             }

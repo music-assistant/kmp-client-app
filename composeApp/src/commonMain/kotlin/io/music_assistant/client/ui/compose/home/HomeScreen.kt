@@ -57,6 +57,7 @@ import androidx.navigation3.ui.NavDisplay
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.ui.compose.common.DataState
+import io.music_assistant.client.ui.compose.common.providers.ProviderIcon
 import io.music_assistant.client.ui.compose.common.rememberToastState
 import io.music_assistant.client.ui.compose.common.viewmodel.ActionsViewModel
 import io.music_assistant.client.ui.compose.home.nav.HomeNavScreen
@@ -205,6 +206,10 @@ fun HomeScreen(
                                 onLibraryClick = actionsViewModel::onLibraryClick,
                                 onFavoriteClick = actionsViewModel::onFavoriteClick
                             ),
+                            providerIconFetcher = { modifier, provider ->
+                                actionsViewModel.getProviderIcon(provider)
+                                    ?.let { ProviderIcon(modifier, it) }
+                            }
                         )
 
                         Box(
@@ -363,6 +368,7 @@ private fun HomeContent(
     onTrackPlayOption: (AppMediaItem.Track, QueueOption) -> Unit,
     playlistActions: ActionsViewModel.PlaylistActions,
     libraryActions: ActionsViewModel.LibraryActions,
+    providerIconFetcher: (@Composable (Modifier, String) -> Unit)
 ) {
     @Suppress("UNCHECKED_CAST")
     val typedBackStack = homeBackStack as NavBackStack<HomeNavScreen>
@@ -421,6 +427,7 @@ private fun HomeContent(
                     },
                     playlistActions = playlistActions,
                     libraryActions = libraryActions,
+                    providerIconFetcher = providerIconFetcher
                 )
             }
 

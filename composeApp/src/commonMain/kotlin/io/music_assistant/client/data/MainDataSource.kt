@@ -1,5 +1,8 @@
 package io.music_assistant.client.data
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.ui.graphics.Color
 import co.touchlab.kermit.Logger
 import io.ktor.http.Url
 import io.music_assistant.client.api.Request
@@ -33,6 +36,7 @@ import io.music_assistant.client.settings.SettingsRepository
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.action.PlayerAction
 import io.music_assistant.client.ui.compose.common.action.QueueAction
+import io.music_assistant.client.ui.compose.common.providers.ProviderIconModel
 import io.music_assistant.client.utils.DataConnectionState
 import io.music_assistant.client.utils.SessionState
 import io.music_assistant.client.utils.resultAs
@@ -72,8 +76,7 @@ class MainDataSource(
 
     private val _serverPlayers = MutableStateFlow<List<Player>>(emptyList())
     private val _queueInfos = MutableStateFlow<List<QueueInfo>>(emptyList())
-
-    private val _providersManifests = MutableStateFlow<Map<String, Any>>(emptyMap())
+    private val _providersIcons = MutableStateFlow<Map<String, ProviderIconModel>>(emptyMap())
 
     private val _players =
         combine(_serverPlayers, settings.playersSorting) { players, sortedIds ->
@@ -110,6 +113,9 @@ class MainDataSource(
         get() = selectedPlayerIndex.value?.let { selectedIndex ->
             _playersData.value.getOrNull(selectedIndex)
         }
+
+    fun providerIcon(provider: String): ProviderIconModel? =
+        _providersIcons.value[provider.substringBefore("--")]
 
     private var watchJob: Job? = null
     private var updateJob: Job? = null
@@ -567,9 +573,20 @@ class MainDataSource(
     private fun updateProvidersManifests() {
         launch {
             apiClient.sendRequest(Request.Library.providersManifests())
-                .resultAs<List<ProviderManifest>>()?.filter { it.type == "music" }?.let { manifests ->
-                    manifests.forEach { m -> Logger.e("${m.domain} ${m.icon} ${m.iconSvg}") }
-                    _providersManifests.update { manifests.associateBy { pm -> pm.domain } }
+                .resultAs<List<ProviderManifest>>()?.filter { it.type == "music" }
+                ?.let { manifests ->
+                    val map = buildMap {
+                        put(
+                            "library",
+                            ProviderIconModel.Mdi(Icons.Default.LibraryMusic, Color.White)
+                        )
+                        manifests.forEach { manifest ->
+                            ProviderIconModel.from(manifest.icon, manifest.iconSvgDark)?.let {
+                                put(manifest.domain, it)
+                            }
+                        }
+                    }
+                    _providersIcons.update { map }
                 }
         }
     }

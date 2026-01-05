@@ -23,7 +23,7 @@ val sharedModule = module {
     singleOf(::MediaPlayerController)  // Used by MainDataSource for Sendspin
     singleOf(::MainDataSource)          // Singleton - held by foreground service
     viewModelOf(::ThemeViewModel)
-    factory { ActionsViewModel(get()) }
+    factory { ActionsViewModel(get(), get()) }
     factory { SettingsViewModel(get(), get()) }
     factory { LibraryViewModel(get(), get()) }
     factory { ItemDetailsViewModel(get(), get()) }
