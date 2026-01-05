@@ -45,6 +45,7 @@ kotlin {
             implementation(libs.androidx.media)
 
             implementation(libs.coil)
+            implementation(libs.concentus)
         }
         commonMain.dependencies {
             implementation(compose.runtime)

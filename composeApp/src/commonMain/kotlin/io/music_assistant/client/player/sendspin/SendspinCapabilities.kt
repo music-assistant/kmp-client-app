@@ -21,14 +21,28 @@ object SendspinCapabilities {
             ),
             playerV1Support = PlayerSupport(
                 supportedFormats = listOf(
-                    // Start with PCM - 48kHz, stereo, 16-bit
+                    // PCM - 48kHz, stereo, 16-bit
                     AudioFormatSpec(
                         codec = AudioCodec.PCM,
                         channels = 2,
                         sampleRate = 48000,
                         bitDepth = 16
+                    ),
+                    // Opus - 48kHz, stereo (Android implementation)
+                    AudioFormatSpec(
+                        codec = AudioCodec.OPUS,
+                        channels = 2,
+                        sampleRate = 48000,
+                        bitDepth = 16
+                    ),
+                    // Opus - 48kHz, mono (for efficiency)
+                    AudioFormatSpec(
+                        codec = AudioCodec.OPUS,
+                        channels = 1,
+                        sampleRate = 48000,
+                        bitDepth = 16
                     )
-                    // TODO: Add FLAC and OPUS later
+                    // TODO: Add FLAC later (not implemented yet)
                 ),
                 bufferCapacity = config.bufferCapacityMicros,
                 supportedCommands = listOf()

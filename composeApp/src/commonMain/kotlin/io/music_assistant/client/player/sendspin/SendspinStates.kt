@@ -38,9 +38,17 @@ sealed class WebSocketState {
 }
 
 data class BufferState(
+    // Existing metrics
     val bufferedDuration: Long, // microseconds
     val isUnderrun: Boolean,
-    val droppedChunks: Int
+    val droppedChunks: Int,
+
+    // Adaptive buffering metrics
+    val targetBufferDuration: Long = 0L, // Target buffer size in microseconds
+    val currentPrebufferThreshold: Long = 0L, // Current prebuffer threshold
+    val smoothedRTT: Double = 0.0, // Smoothed RTT in microseconds
+    val jitter: Double = 0.0, // Jitter (RTT std dev) in microseconds
+    val dropRate: Double = 0.0 // Recent chunk drop rate [0.0, 1.0]
 )
 
 sealed class SendspinError {

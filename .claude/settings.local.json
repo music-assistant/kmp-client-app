@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(grep:*)",
-      "Bash(./gradlew compileDebugKotlin:*)"
+      "Bash(./gradlew compileDebugKotlin:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(cat:*)",
+      "Bash(tree:*)",
+      "Bash(./gradlew:*)",
+      "Bash(jar tf:*)",
+      "WebSearch"
     ]
   }
 }

@@ -27,12 +27,21 @@ class AudioStreamManager(
     private val audioBuffer = TimestampOrderedBuffer()
     private var audioDecoder: AudioDecoder? = null
     private var playbackJob: Job? = null
+    private var adaptationJob: Job? = null
+
+    // Adaptive buffering manager
+    private val adaptiveBufferManager = AdaptiveBufferManager(clockSynchronizer)
 
     private val _bufferState = MutableStateFlow(
         BufferState(
             bufferedDuration = 0L,
             isUnderrun = false,
-            droppedChunks = 0
+            droppedChunks = 0,
+            targetBufferDuration = 0L,
+            currentPrebufferThreshold = 0L,
+            smoothedRTT = 0.0,
+            jitter = 0.0,
+            dropRate = 0.0
         )
     )
     val bufferState: StateFlow<BufferState> = _bufferState.asStateFlow()
@@ -48,11 +57,12 @@ class AudioStreamManager(
     private var isStreaming = false
     private var droppedChunksCount = 0
 
-    // Thresholds
+    // Thresholds are now managed by AdaptiveBufferManager
+    // Kept for reference/fallback only
     companion object {
-        const val LATE_THRESHOLD = 100_000L // 100ms in microseconds
-        const val EARLY_THRESHOLD = 1_000_000L // 1s buffer
-        const val PREBUFFER_THRESHOLD = 200_000L // 200ms prebuffer before starting
+        const val LATE_THRESHOLD = 100_000L // 100ms in microseconds (static)
+        const val EARLY_THRESHOLD = 1_000_000L // 1s buffer (adaptive)
+        const val PREBUFFER_THRESHOLD = 200_000L // 200ms prebuffer before starting (adaptive)
     }
 
     suspend fun startStream(config: StreamStartPlayer) {
@@ -181,6 +191,9 @@ class AudioStreamManager(
             // Wait for pre-buffer
             waitForPrebuffer()
 
+            // Start adaptation thread
+            startAdaptationThread()
+
             var chunksPlayed = 0
             var lastLogTime = getCurrentTimeMicros()
 
@@ -192,6 +205,7 @@ class AudioStreamManager(
                         // Buffer underrun
                         if (!_bufferState.value.isUnderrun) {
                             logger.w { "Buffer underrun" }
+                            adaptiveBufferManager.recordUnderrun(getCurrentTimeMicros())
                             _bufferState.value = _bufferState.value.copy(isUnderrun = true)
                         }
                         delay(10) // Wait for more data
@@ -209,16 +223,21 @@ class AudioStreamManager(
                     val chunkPlaybackTime = chunk.localTimestamp
                     val timeDiff = chunkPlaybackTime - currentLocalTime
 
+                    // Use adaptive thresholds
+                    val lateThreshold = adaptiveBufferManager.currentLateThreshold
+                    val earlyThreshold = adaptiveBufferManager.currentEarlyThreshold
+
                     when {
-                        chunkPlaybackTime < currentLocalTime - LATE_THRESHOLD -> {
+                        chunkPlaybackTime < currentLocalTime - lateThreshold -> {
                             // Chunk is too late, drop it
                             audioBuffer.poll()
                             droppedChunksCount++
+                            adaptiveBufferManager.recordChunkDropped()
                             logger.w { "Dropped late chunk: ${(currentLocalTime - chunkPlaybackTime) / 1000}ms late" }
                             updateBufferState()
                         }
 
-                        chunkPlaybackTime > currentLocalTime + EARLY_THRESHOLD -> {
+                        chunkPlaybackTime > currentLocalTime + earlyThreshold -> {
                             // Chunk is too early, wait
                             val delayMs =
                                 ((chunkPlaybackTime - currentLocalTime) / 1000).coerceAtMost(100)
@@ -230,14 +249,17 @@ class AudioStreamManager(
                             // Chunk is ready to play
                             playChunk(chunk)
                             audioBuffer.poll()
+                            adaptiveBufferManager.recordChunkPlayed()
                             _playbackPosition.value = chunk.timestamp
                             updateBufferState()
                             chunksPlayed++
 
-                            // Log progress every 5 seconds
+                            // Log progress every 5 seconds with adaptive buffer info
                             val now = getCurrentTimeMicros()
                             if (now - lastLogTime > 5_000_000) {
-                                logger.i { "Playback progress: $chunksPlayed chunks played, position=${chunk.timestamp}μs, buffer=${audioBuffer.getBufferedDuration() / 1000}ms" }
+                                val bufferMs = audioBuffer.getBufferedDuration() / 1000
+                                val targetMs = adaptiveBufferManager.targetBufferDuration / 1000
+                                logger.i { "Playback: $chunksPlayed chunks, buffer=${bufferMs}ms (target=${targetMs}ms)" }
                                 lastLogTime = now
                             }
                         }
@@ -254,11 +276,38 @@ class AudioStreamManager(
     }
 
     private suspend fun waitForPrebuffer() {
-        logger.i { "Waiting for prebuffer..." }
-        while (isActive && audioBuffer.getBufferedDuration() < PREBUFFER_THRESHOLD) {
+        val threshold = adaptiveBufferManager.currentPrebufferThreshold
+        logger.i { "Waiting for prebuffer (threshold=${threshold/1000}ms)..." }
+        while (isActive && audioBuffer.getBufferedDuration() < threshold) {
             delay(50)
         }
-        logger.i { "Prebuffer complete, starting playback" }
+        val bufferMs = audioBuffer.getBufferedDuration() / 1000
+        val thresholdMs = threshold / 1000
+        logger.i { "Prebuffer complete: ${bufferMs}ms (threshold=${thresholdMs}ms)" }
+    }
+
+    private fun startAdaptationThread() {
+        adaptationJob?.cancel()
+        adaptationJob = launch {
+            logger.i { "Starting adaptation thread" }
+            while (isActive && isStreaming) {
+                try {
+                    // Update network stats from clock synchronizer
+                    val stats = clockSynchronizer.getStats()
+                    adaptiveBufferManager.updateNetworkStats(stats.rtt, stats.quality)
+
+                    // Run adaptation logic every 5 seconds
+                    adaptiveBufferManager.updateThresholds(getCurrentTimeMicros())
+
+                    delay(5000)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    logger.e(e) { "Error in adaptation thread" }
+                }
+            }
+            logger.i { "Adaptation thread stopped" }
+        }
     }
 
     private fun playChunk(chunk: AudioChunk) {
@@ -287,7 +336,13 @@ class AudioStreamManager(
         _bufferState.value = BufferState(
             bufferedDuration = bufferedDuration,
             isUnderrun = bufferedDuration == 0L && isStreaming,
-            droppedChunks = droppedChunksCount
+            droppedChunks = droppedChunksCount,
+            // Adaptive metrics
+            targetBufferDuration = adaptiveBufferManager.targetBufferDuration,
+            currentPrebufferThreshold = adaptiveBufferManager.currentPrebufferThreshold,
+            smoothedRTT = adaptiveBufferManager.currentSmoothedRTT,
+            jitter = adaptiveBufferManager.currentJitter,
+            dropRate = adaptiveBufferManager.currentDropRate
         )
     }
 
@@ -304,9 +359,14 @@ class AudioStreamManager(
         isStreaming = false
         playbackJob?.cancel()
         playbackJob = null
+        adaptationJob?.cancel()
+        adaptationJob = null
 
         audioBuffer.clear()
         audioDecoder?.reset()
+
+        // Reset adaptive buffer manager
+        adaptiveBufferManager.reset()
 
         // Stop raw PCM stream on MediaPlayerController
         mediaPlayerController.stopRawPcmStream()
@@ -316,7 +376,12 @@ class AudioStreamManager(
         _bufferState.value = BufferState(
             bufferedDuration = 0L,
             isUnderrun = false,
-            droppedChunks = 0
+            droppedChunks = 0,
+            targetBufferDuration = 0L,
+            currentPrebufferThreshold = 0L,
+            smoothedRTT = 0.0,
+            jitter = 0.0,
+            dropRate = 0.0
         )
         // Clear any error state
         _streamError.value = null
