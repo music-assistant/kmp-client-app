@@ -43,6 +43,7 @@ kotlin {
             implementation(libs.koin.androidx.compose)
 
             implementation(libs.androidx.media)
+            implementation("androidx.browser:browser:1.8.0")
 
             implementation(libs.coil)
             implementation(libs.concentus)

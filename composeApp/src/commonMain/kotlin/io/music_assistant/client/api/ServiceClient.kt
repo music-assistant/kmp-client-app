@@ -64,9 +64,6 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                 when (it) {
                     is SessionState.Connected -> {
                         settings.updateConnectionInfo(it.connectionInfo)
-                        if ((it.dataConnectionState as? DataConnectionState.AwaitingAuth)?.authProcessState == AuthProcessState.NotStarted) {
-                            settings.token.value?.let { auth -> authorize(auth) }
-                        }
                     }
 
                     is SessionState.Disconnected -> {
@@ -143,7 +140,7 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
 
         try {
             val response =
-                sendRequest(Auth.login(username, password, settings.deviceName.value))
+                sendRequest(Request.Auth.login(username, password, settings.deviceName.value))
             currentState = _sessionState.value
             if (currentState !is SessionState.Connected) {
                 return
@@ -240,7 +237,7 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
             return
         }
         try {
-            sendRequest(Auth.logout())
+            sendRequest(Request.Auth.logout())
         } catch (_: Exception) {
         }
         _sessionState.update {
@@ -252,18 +249,24 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
     }
 
     suspend fun authorize(token: String) {
+        Logger.e("Authorize")
         try {
             var currentState = _sessionState.value
+            Logger.e("State: $currentState")
             if (currentState !is SessionState.Connected) {
+                Logger.e("Incorrect state")
                 return
             }
             _sessionState.update { currentState.copy(authProcessState = AuthProcessState.InProgress) }
-            val response = sendRequest(Auth.authorize(token, settings.deviceName.value))
+            Logger.e("Requesting authorization")
+            val response = sendRequest(Request.Auth.authorize(token, settings.deviceName.value))
             currentState = _sessionState.value
             if (currentState !is SessionState.Connected) {
+                Logger.e("Incorrect state")
                 return
             }
             if (response.isFailure) {
+                Logger.e(response.exceptionOrNull().toString())
                 _sessionState.update {
                     currentState.copy(
                         authProcessState = AuthProcessState.Failed(
@@ -287,7 +290,7 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                 }
                 return
             }
-
+            Logger.e("Authorization successful")
             response.resultAs<AuthorizationResponse>()?.user?.let { user ->
                 settings.updateToken(token)
                 _sessionState.update {
@@ -296,6 +299,7 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                         user = user
                     )
                 }
+                Logger.e("Updated state")
             } ?: run {
                 _sessionState.update {
                     currentState.copy(
@@ -354,7 +358,14 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                 return
             }
             if (state is SessionState.Connected) {
+                Logger.withTag("ServiceClient").w { "Connection lost: ${e.message}. Will auto-reconnect..." }
+                val connectionInfo = state.connectionInfo
                 disconnect(SessionState.Disconnected.Error(Exception("Session error: ${e.message}")))
+
+                // Auto-reconnect after brief delay
+                kotlinx.coroutines.delay(1000)
+                Logger.withTag("ServiceClient").i { "Auto-reconnecting..." }
+                connect(connectionInfo)
             }
         }
     }

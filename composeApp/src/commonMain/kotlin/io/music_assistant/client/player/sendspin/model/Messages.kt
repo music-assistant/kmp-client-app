@@ -51,14 +51,14 @@ data class ClientHelloPayload(
 
 @Serializable
 data class DeviceInfo(
-    val productName: String?,
-    val manufacturer: String?,
-    val softwareVersion: String?
+    @SerialName("model") val model: String?,
+    @SerialName("manufacturer") val manufacturer: String?,
+    @SerialName("ip_address") val ipAddress: String?
 ) {
     companion object {
         // Platform-specific implementation needed
         val current = DeviceInfo(
-            "Android Sendspin Client", "formatBCE", "0.1" // TODO real data
+            model = "KMP Client", manufacturer = "formatBCE", ipAddress = null
         )
     }
 }

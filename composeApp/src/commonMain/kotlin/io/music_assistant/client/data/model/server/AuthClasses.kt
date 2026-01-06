@@ -26,3 +26,16 @@ data class User(
 data class AuthorizationResponse(
     @SerialName("user") val user: User,
 )
+
+@Serializable
+data class AuthProvider(
+    @SerialName("provider_id") val id: String,
+    @SerialName("provider_type") val type: String,
+    @SerialName("requires_redirect") val requiresRedirect: Boolean
+)
+
+@Serializable
+data class OauthUrl(
+    @SerialName("authorization_url") val url: String
+)
+

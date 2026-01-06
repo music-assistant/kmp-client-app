@@ -57,14 +57,6 @@ class AudioStreamManager(
     private var isStreaming = false
     private var droppedChunksCount = 0
 
-    // Thresholds are now managed by AdaptiveBufferManager
-    // Kept for reference/fallback only
-    companion object {
-        const val LATE_THRESHOLD = 100_000L // 100ms in microseconds (static)
-        const val EARLY_THRESHOLD = 1_000_000L // 1s buffer (adaptive)
-        const val PREBUFFER_THRESHOLD = 200_000L // 200ms prebuffer before starting (adaptive)
-    }
-
     suspend fun startStream(config: StreamStartPlayer) {
         logger.i { "Starting stream: ${config.codec}, ${config.sampleRate}Hz, ${config.channels}ch, ${config.bitDepth}bit" }
 
@@ -132,7 +124,7 @@ class AudioStreamManager(
             }
 
             "opus" -> {
-                logger.w { "OPUS decoder not yet implemented, server should send PCM" }
+                logger.w { "Using Opus decoder" }
                 OpusDecoder()
             }
 

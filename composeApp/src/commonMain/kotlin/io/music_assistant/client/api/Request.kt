@@ -422,25 +422,36 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
             }
         )
     }
-}
 
-data object Auth {
-    fun login(username: String, password: String, deviceName: String) = Request(
-        command = "auth/login",
-        args = buildJsonObject {
-            put("username", JsonPrimitive(username))
-            put("password", JsonPrimitive(password))
-            put("device_name", JsonPrimitive(deviceName))
-        }
-    )
+    data object Auth {
 
-    fun logout() = Request(command = "auth/logout")
+        fun providers() = Request("auth/providers")
 
-    fun authorize(token: String, deviceName: String) = Request(
-        command = "auth",
-        args = buildJsonObject {
-            put("token", JsonPrimitive(token))
-            put("device_name", JsonPrimitive(deviceName))
-        }
-    )
+        fun authorizationUrl(providerId: String, returnUrl: String? = null) = Request(
+            command = "auth/authorization_url",
+            args = buildJsonObject {
+                put("provider_id", JsonPrimitive(providerId))
+                returnUrl?.let { put("return_url", JsonPrimitive(it)) }
+            }
+        )
+
+        fun login(username: String, password: String, deviceName: String) = Request(
+            command = "auth/login",
+            args = buildJsonObject {
+                put("username", JsonPrimitive(username))
+                put("password", JsonPrimitive(password))
+                put("device_name", JsonPrimitive(deviceName))
+            }
+        )
+
+        fun logout() = Request(command = "auth/logout")
+
+        fun authorize(token: String, deviceName: String) = Request(
+            command = "auth",
+            args = buildJsonObject {
+                put("token", JsonPrimitive(token))
+                put("device_name", JsonPrimitive(deviceName))
+            }
+        )
+    }
 }

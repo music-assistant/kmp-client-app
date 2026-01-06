@@ -1,0 +1,208 @@
+package io.music_assistant.client.auth
+
+import co.touchlab.kermit.Logger
+import io.music_assistant.client.api.Request
+import io.music_assistant.client.api.ServiceClient
+import io.music_assistant.client.data.model.server.AuthProvider
+import io.music_assistant.client.data.model.server.OauthUrl
+import io.music_assistant.client.data.model.server.User
+import io.music_assistant.client.settings.SettingsRepository
+import io.music_assistant.client.utils.AuthProcessState
+import io.music_assistant.client.utils.DataConnectionState
+import io.music_assistant.client.utils.SessionState
+import io.music_assistant.client.utils.resultAs
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+sealed class AuthState {
+    data object Idle : AuthState()
+    data object Loading : AuthState()
+    data class ProvidersLoaded(val providers: List<AuthProvider>) : AuthState()
+    data class Authenticated(val user: User) : AuthState()
+    data class Error(val message: String) : AuthState()
+}
+
+class AuthenticationManager(
+    private val serviceClient: ServiceClient,
+    private val settings: SettingsRepository,
+) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
+    val authState: StateFlow<AuthState> = _authState.asStateFlow()
+
+    // OAuthHandler will be set by platform (e.g., MainActivity on Android)
+    var oauthHandler: OAuthHandler? = null
+
+    init {
+        // Monitor session state to update auth UI state
+        scope.launch {
+            serviceClient.sessionState.collect { state ->
+                if (state is SessionState.Connected) {
+                    when (val dataConnectionState = state.dataConnectionState) {
+                        is DataConnectionState.AwaitingAuth -> {
+                            when (dataConnectionState.authProcessState) {
+                                AuthProcessState.NotStarted -> {
+                                    // Try auto-login with saved token
+                                    settings.token.value?.let { token ->
+                                        authorizeWithSavedToken(token)
+                                    }
+                                }
+                                AuthProcessState.InProgress -> {
+                                    _authState.value = AuthState.Loading
+                                }
+                                is AuthProcessState.Failed -> {
+                                    _authState.value = AuthState.Error(dataConnectionState.authProcessState.reason)
+                                }
+                                AuthProcessState.LoggedOut -> {
+                                    _authState.value = AuthState.Idle
+                                }
+                            }
+                        }
+                        DataConnectionState.Authenticated -> {
+                            state.user?.let { user ->
+                                _authState.value = AuthState.Authenticated(user)
+                            }
+                        }
+                        DataConnectionState.AwaitingServerInfo -> {
+                            // Waiting for server info
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    suspend fun getProviders(): Result<List<AuthProvider>> {
+        return try {
+            _authState.value = AuthState.Loading
+            val response = serviceClient.sendRequest(Request.Auth.providers())
+
+            if (response.isFailure) {
+                val error = "Failed to fetch auth providers"
+                _authState.value = AuthState.Error(error)
+                return Result.failure(Exception(error))
+            }
+
+            response.resultAs<List<AuthProvider>>()?.let { providers ->
+                _authState.value = AuthState.ProvidersLoaded(providers)
+                Result.success(providers)
+            } ?: run {
+                val error = "Failed to parse providers"
+                _authState.value = AuthState.Error(error)
+                Result.failure(Exception(error))
+            }
+        } catch (e: Exception) {
+            val error = e.message ?: "Exception fetching providers"
+            _authState.value = AuthState.Error(error)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun loginWithCredentials(
+        providerId: String,
+        username: String,
+        password: String
+    ): Result<Unit> {
+        return try {
+            _authState.value = AuthState.Loading
+            serviceClient.login(username, password)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            val error = e.message ?: "Login failed"
+            _authState.value = AuthState.Error(error)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getOAuthUrl(providerId: String, returnUrl: String): Result<String> {
+        return try {
+            println("AuthenticationManager: Requesting OAuth URL with returnUrl=$returnUrl")
+
+            val response = serviceClient.sendRequest(
+                Request.Auth.authorizationUrl(providerId, returnUrl)
+            )
+
+            if (response.isFailure) {
+                return Result.failure(Exception("Failed to get OAuth URL"))
+            }
+
+            response.resultAs<OauthUrl>()?.let { oauthUrl ->
+                println("AuthenticationManager: Received OAuth URL: ${oauthUrl.url}")
+                Result.success(oauthUrl.url)
+            } ?: Result.failure(Exception("Failed to parse OAuth URL"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun startOAuthFlow(providerId: String, oauthUrl: String): Result<Unit> {
+        val handler = oauthHandler
+        if (handler == null) {
+            val error = "OAuth not supported on this platform"
+            _authState.value = AuthState.Error(error)
+            return Result.failure(Exception(error))
+        }
+
+        return try {
+            _authState.value = AuthState.Loading
+            // Launch OAuth URL in Chrome Custom Tab
+            // Token will be delivered via deep link callback to MainActivity
+            handler.openOAuthUrl(oauthUrl)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            val error = e.message ?: "OAuth flow failed"
+            _authState.value = AuthState.Error(error)
+            Result.failure(e)
+        }
+    }
+
+    fun handleOAuthCallback(token: String) {
+        Logger.d("OAuth callback received")
+        scope.launch {
+            _authState.value = AuthState.Loading
+
+            // Wait a bit for connection to be re-established if app was backgrounded
+            kotlinx.coroutines.delay(500)
+
+            val currentState = serviceClient.sessionState.value
+            if (currentState is SessionState.Connected) {
+                try {
+                    Logger.d("Authorizing with OAuth token")
+                    serviceClient.authorize(token)
+                    // Auth state will be updated via sessionState flow
+                } catch (e: Exception) {
+                    val error = e.message ?: "Authorization failed"
+                    Logger.e("Authorization failed: $error")
+                    _authState.value = AuthState.Error(error)
+                }
+            } else {
+                Logger.e("Not connected - cannot authorize. Connection state: $currentState")
+                _authState.value = AuthState.Error("Connection lost. Please try again.")
+            }
+        }
+    }
+
+    private suspend fun authorizeWithSavedToken(token: String) {
+        try {
+            serviceClient.authorize(token)
+        } catch (e: Exception) {
+            // Silent failure - user will see auth UI
+        }
+    }
+
+    suspend fun logout(): Result<Unit> {
+        return try {
+            serviceClient.logout()
+            _authState.value = AuthState.Idle
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+}

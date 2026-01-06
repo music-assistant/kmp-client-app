@@ -14,13 +14,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -34,14 +29,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.ArrowLeft
+import io.music_assistant.client.ui.compose.auth.AuthenticationPanel
 import io.music_assistant.client.ui.compose.common.ActionButton
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import io.music_assistant.client.ui.theme.ThemeSetting
@@ -121,10 +115,6 @@ fun SettingsScreen(onBack: () -> Unit) {
                 var ipAddress by remember { mutableStateOf("") }
                 var port by remember { mutableStateOf("8095") }
                 var isTls by remember { mutableStateOf(false) }
-                var username by remember { mutableStateOf("") }
-                var password by remember { mutableStateOf("") }
-                var isPasswordVisible by remember { mutableStateOf(false) }
-                var pendingLogin by remember { mutableStateOf(false) }
                 val serverInputsFieldVisible = sessionState is SessionState.Disconnected
 
                 LaunchedEffect(savedConnectionInfo) {
@@ -159,36 +149,6 @@ fun SettingsScreen(onBack: () -> Unit) {
                     }
                 }
 
-                // Auto-login after connection if credentials were provided
-                LaunchedEffect(sessionState, pendingLogin) {
-                    val currentState = sessionState
-                    if (pendingLogin && currentState is SessionState.Connected) {
-                        val connState = currentState.dataConnectionState
-                        if (connState is DataConnectionState.AwaitingAuth) {
-                            val authState = connState.authProcessState
-                            if (authState == AuthProcessState.NotStarted &&
-                                username.isNotEmpty() && password.isNotEmpty()
-                            ) {
-                                viewModel.login(username, password)
-                            }
-                            // Clear pending flag if login failed or completed
-                            if (authState is AuthProcessState.Failed) {
-                                pendingLogin = false
-                            }
-                        }
-                    }
-                }
-
-                // Get auth error if any
-                val authError = (sessionState as? SessionState.Connected)?.let { state ->
-                    (state.dataConnectionState as? DataConnectionState.AwaitingAuth)?.let { connState ->
-                        when (connState.authProcessState) {
-                            is AuthProcessState.Failed -> connState.authProcessState.reason
-                            AuthProcessState.LoggedOut -> "Logged out"
-                            else -> null
-                        }
-                    }
-                }
                 Text(
                     modifier = Modifier.padding(bottom = 24.dp),
                     text = when (val state = sessionState) {
@@ -196,8 +156,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                             savedConnectionInfo?.let { conn ->
                                 "Connected to ${conn.host}:${conn.port}" +
                                         (state.serverInfo?.let { server -> "\nServer version ${server.serverVersion}, schema ${server.schemaVersion}" }
-                                            ?: "") +
-                                        (state.user?.description?.let { user -> "\nLogged in as $user" })
+                                            ?: "")
                             } ?: "Unknown connection"
                         }
 
@@ -257,61 +216,6 @@ fun SettingsScreen(onBack: () -> Unit) {
                         )
                     }
 
-                    // Authentication fields
-                    TextField(
-                        modifier = Modifier.padding(bottom = 16.dp),
-                        value = username,
-                        onValueChange = { username = it },
-                        label = { Text("Username") },
-                        singleLine = true,
-                        colors = TextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-                        )
-                    )
-
-                    TextField(
-                        modifier = Modifier.padding(bottom = 16.dp),
-                        value = password,
-                        visualTransformation =
-                            if (isPasswordVisible)
-                                VisualTransformation.None
-                            else
-                                PasswordVisualTransformation(),
-                        onValueChange = { password = it },
-                        label = { Text("Password") },
-                        trailingIcon = {
-                            val icon =
-                                if (isPasswordVisible)
-                                    Icons.Filled.VisibilityOff
-                                else
-                                    Icons.Filled.Visibility
-                            val description =
-                                if (isPasswordVisible)
-                                    "Hide password"
-                                else
-                                    "Show password"
-                            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                                Icon(imageVector = icon, contentDescription = description)
-                            }
-                        },
-                        singleLine = true,
-                        colors = TextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-                        )
-                    )
-
-                    // Show authentication error if any
-                    authError?.let {
-                        Text(
-                            modifier = Modifier.padding(bottom = 16.dp),
-                            text = it,
-                            color = MaterialTheme.colorScheme.error,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-
                     Spacer(modifier = Modifier.padding(bottom = 8.dp))
 
                     // Sendspin settings (only when disconnected)
@@ -320,26 +224,45 @@ fun SettingsScreen(onBack: () -> Unit) {
                         enabled = true
                     )
                 }
-                Button(
-                    enabled = ipAddress.isValidHost() && port.isIpPort() && sessionState != SessionState.Connecting,
-                    onClick = {
-                        if (sessionState is SessionState.Connected) {
-                            viewModel.disconnect()
-                        } else {
-                            viewModel.attemptConnection(ipAddress, port, isTls)
-                            // Set flag to auto-login after connection if credentials provided
-                            if (username.isNotEmpty() && password.isNotEmpty()) {
-                                pendingLogin = true
+
+                // Authentication panel - show when connected but not authenticated
+                if (sessionState is SessionState.Connected) {
+                    AuthenticationPanel(
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        modifier = Modifier.weight(1f),
+                        enabled = ipAddress.isValidHost() && port.isIpPort() && sessionState != SessionState.Connecting,
+                        onClick = {
+                            if (sessionState is SessionState.Connected) {
+                                viewModel.disconnect()
+                            } else {
+                                viewModel.attemptConnection(ipAddress, port, isTls)
                             }
                         }
+                    ) {
+                        Text(
+                            text = if (sessionState is SessionState.Connected)
+                                "Disconnect"
+                            else
+                                "Connect"
+                        )
                     }
-                ) {
-                    Text(
-                        text = if (sessionState is SessionState.Connected)
-                            "Disconnect"
-                        else
-                            "Connect"
-                    )
+
+                    if (sessionState is SessionState.Connected) {
+                        Button(
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                viewModel.clearToken()
+                            }
+                        ) {
+                            Text("Clear Token")
+                        }
+                    }
                 }
             }
         }

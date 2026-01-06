@@ -20,13 +20,18 @@ class SettingsViewModel(
 
     fun disconnect() = apiClient.disconnectByUser()
 
-    fun login(login: String, password: String) {
-        viewModelScope.launch { apiClient.login(login, password) }
-    }
+    fun clearToken() {
+        viewModelScope.launch {
+            // Logout on server first, then clear token locally
+            apiClient.logout()
+            settings.updateToken(null)
 
-    fun logout() {
-        // TODO logout on Settings page?
-        viewModelScope.launch { apiClient.logout() }
+            // Disconnect and reconnect to trigger fresh auth flow
+            apiClient.disconnectByUser()
+            savedConnectionInfo.value?.let { connInfo ->
+                apiClient.connect(connInfo)
+            }
+        }
     }
 
     // Sendspin settings

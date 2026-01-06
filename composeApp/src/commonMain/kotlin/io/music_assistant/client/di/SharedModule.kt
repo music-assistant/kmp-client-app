@@ -1,10 +1,12 @@
 package io.music_assistant.client.di
 
 import io.music_assistant.client.api.ServiceClient
+import io.music_assistant.client.auth.AuthenticationManager
 import io.music_assistant.client.data.MainDataSource
 import io.music_assistant.client.player.MediaPlayerController
 import io.music_assistant.client.settings.SettingsRepository
 import io.music_assistant.client.settings.provideSettings
+import io.music_assistant.client.ui.compose.auth.AuthenticationViewModel
 import io.music_assistant.client.ui.compose.common.viewmodel.ActionsViewModel
 import io.music_assistant.client.ui.compose.home.HomeScreenViewModel
 import io.music_assistant.client.ui.compose.item.ItemDetailsViewModel
@@ -20,11 +22,13 @@ val sharedModule = module {
     single { provideSettings() }
     singleOf(::SettingsRepository)
     singleOf(::ServiceClient)
+    single(createdAtStart = true) { AuthenticationManager(get(), get()) }  // Eager - needs to start monitoring immediately
     singleOf(::MediaPlayerController)  // Used by MainDataSource for Sendspin
     singleOf(::MainDataSource)          // Singleton - held by foreground service
     viewModelOf(::ThemeViewModel)
     factory { ActionsViewModel(get(), get()) }
     factory { SettingsViewModel(get(), get()) }
+    factory { AuthenticationViewModel(get(), get(), get()) }
     factory { LibraryViewModel(get(), get()) }
     factory { ItemDetailsViewModel(get(), get()) }
     factory { HomeScreenViewModel(get(), get(), get()) }

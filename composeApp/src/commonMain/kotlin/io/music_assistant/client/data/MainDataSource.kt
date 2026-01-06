@@ -67,8 +67,6 @@ class MainDataSource(
 
     private val log = Logger.withTag("MainDataSource")
 
-    // Sendspin client (singleton - shared across UI, service, Android Auto, etc.)
-    // Background-safe: MainDataSource is singleton held by foreground service
     private var sendspinClient: SendspinClient? = null
 
     override val coroutineContext: CoroutineContext
@@ -153,9 +151,9 @@ class MainDataSource(
                     is SessionState.Connected -> {
                         watchJob = watchApiEvents()
                         if (it.dataConnectionState == DataConnectionState.Authenticated) {
+                            updateProvidersManifests()
                             initSendspinIfEnabled()
                             updatePlayersAndQueues()
-                            updateProvidersManifests()
                         } else {
                             stopSendspin()
                             _serverPlayers.update { emptyList() }
