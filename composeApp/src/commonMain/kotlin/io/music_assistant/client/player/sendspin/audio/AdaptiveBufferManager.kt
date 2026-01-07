@@ -333,33 +333,37 @@ class AdaptiveBufferManager(
 /**
  * Circular buffer with fixed capacity.
  * When full, oldest elements are overwritten.
+ * Thread-safe implementation to prevent ConcurrentModificationException.
  */
 class CircularBuffer<T>(private val capacity: Int) {
     private val buffer = ArrayList<T>(capacity)
     private var writeIndex = 0
+    private val lock = Any()
 
     fun add(item: T) {
-        if (buffer.size < capacity) {
-            buffer.add(item)
-        } else {
-            buffer[writeIndex] = item
+        synchronized(lock) {
+            if (buffer.size < capacity) {
+                buffer.add(item)
+            } else {
+                buffer[writeIndex] = item
+            }
+            writeIndex = (writeIndex + 1) % capacity
         }
-        writeIndex = (writeIndex + 1) % capacity
     }
 
-    fun size(): Int = buffer.size
+    fun size(): Int = synchronized(lock) { buffer.size }
 
-    fun takeLast(n: Int): List<T> {
+    fun takeLast(n: Int): List<T> = synchronized(lock) {
         val count = n.coerceAtMost(buffer.size)
         val result = mutableListOf<T>()
         for (i in 0 until count) {
             val index = (writeIndex - 1 - i + buffer.size * 2) % buffer.size
             result.add(0, buffer[index])
         }
-        return result
+        result
     }
 
-    fun takeFirst(n: Int): List<T> {
+    fun takeFirst(n: Int): List<T> = synchronized(lock) {
         val count = n.coerceAtMost(buffer.size)
         val startIndex = if (buffer.size < capacity) 0 else writeIndex
         val result = mutableListOf<T>()
@@ -367,14 +371,18 @@ class CircularBuffer<T>(private val capacity: Int) {
             val index = (startIndex + i) % buffer.size
             result.add(buffer[index])
         }
-        return result
+        result
     }
 
-    fun count(predicate: (T) -> Boolean): Int = buffer.count(predicate)
+    fun count(predicate: (T) -> Boolean): Int = synchronized(lock) {
+        buffer.count(predicate)
+    }
 
     fun clear() {
-        buffer.clear()
-        writeIndex = 0
+        synchronized(lock) {
+            buffer.clear()
+            writeIndex = 0
+        }
     }
 }
 

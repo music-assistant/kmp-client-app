@@ -70,6 +70,10 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
     // Monitor session state and navigate appropriately
     LaunchedEffect(sessionState) {
         when (sessionState) {
+            is SessionState.Reconnecting -> {
+                // Preserve current screen during reconnection - don't navigate
+            }
+
             is SessionState.Disconnected -> {
                 // If disconnected and not already on Settings, navigate to Settings
                 if (backStack.last() !is NavScreen.Settings) {

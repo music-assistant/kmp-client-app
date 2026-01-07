@@ -24,6 +24,20 @@ sealed class SessionState {
 
     data object Connecting : SessionState()
 
+    data class Reconnecting(
+        val attempt: Int,
+        val connectionInfo: ConnectionInfo,
+        val serverInfo: ServerInfo? = null,
+        val user: User? = null,
+        val authProcessState: AuthProcessState = AuthProcessState.NotStarted,
+    ) : SessionState() {
+        val dataConnectionState: DataConnectionState = when {
+            serverInfo == null -> DataConnectionState.AwaitingServerInfo
+            user == null -> DataConnectionState.AwaitingAuth(authProcessState)
+            else -> DataConnectionState.Authenticated
+        }
+    }
+
     sealed class Disconnected : SessionState() {
         data object Initial : Disconnected()
         data object ByUser : Disconnected()

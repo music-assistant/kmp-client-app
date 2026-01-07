@@ -152,6 +152,10 @@ fun SettingsScreen(onBack: () -> Unit) {
                 Text(
                     modifier = Modifier.padding(bottom = 24.dp),
                     text = when (val state = sessionState) {
+                        is SessionState.Reconnecting -> {
+                            "Reconnecting to ${state.connectionInfo.host}:${state.connectionInfo.port} (attempt ${state.attempt})..."
+                        }
+
                         is SessionState.Connected -> {
                             savedConnectionInfo?.let { conn ->
                                 "Connected to ${conn.host}:${conn.port}" +

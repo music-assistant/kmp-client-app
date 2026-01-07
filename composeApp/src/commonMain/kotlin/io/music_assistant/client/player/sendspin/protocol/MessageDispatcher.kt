@@ -57,7 +57,7 @@ class MessageDispatcher(
     }
 
     fun stop() {
-        logger.i { "Stopping MessageDispatcher" }
+        Logger.withTag("MessageDispatcher").e { "🛑 STOP called - setting protocolState to Disconnected" }
         messageListenerJob?.cancel()
         clockSyncJob?.cancel()
         _protocolState.value = ProtocolState.Disconnected
