@@ -3,6 +3,7 @@
 package io.music_assistant.client.ui.compose.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,6 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -33,12 +36,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.ui.compose.common.action.PlayerAction
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
@@ -49,7 +54,7 @@ import kotlinx.coroutines.isActive
 fun CompactPlayerItem(
     item: PlayerData,
     serverUrl: String?,
-    playerAction: (PlayerData, PlayerAction) -> Unit
+    playerAction: (PlayerData, PlayerAction) -> Unit,
 ) {
     val track = item.queueInfo?.currentItem?.track
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
@@ -146,6 +151,7 @@ fun FullPlayerItem(
     item: PlayerData,
     serverUrl: String?,
     playerAction: (PlayerData, PlayerAction) -> Unit,
+    onFavoriteClick: (AppMediaItem) -> Unit,
 ) {
     val track = item.queueInfo?.currentItem?.track
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
@@ -195,13 +201,26 @@ fun FullPlayerItem(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = track?.name ?: "--idle--",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                track?.takeIf { it.isInLibrary }?.let {
+                    Icon(
+                        modifier = Modifier.size(24.dp).clickable { onFavoriteClick(it) },
+                        imageVector = if (it.favorite == true) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = "Favorite",
+                        tint = Color(0xFFEF7BC4)
+                    )
+                }
+                Text(
+                    text = track?.name ?: "--idle--",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
             track?.subtitle?.let {
                 Text(
                     text = it,

@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.ui.compose.common.HorizontalPagerIndicator
 import io.music_assistant.client.ui.compose.common.action.PlayerAction
@@ -60,6 +61,7 @@ internal fun PlayersPager(
     playersState: HomeScreenViewModel.PlayersState.Data,
     serverUrl: String?,
     playerAction: (PlayerData, PlayerAction) -> Unit,
+    onFavoriteClick: ((AppMediaItem) -> Unit),
     showQueue: Boolean,
     isQueueExpanded: Boolean,
     onQueueExpandedSwitch: () -> Unit,
@@ -130,14 +132,14 @@ internal fun PlayersPager(
                             CompactPlayerItem(
                                 item = player,
                                 serverUrl = serverUrl,
-                                playerAction = playerAction
+                                playerAction = playerAction,
                             )
                         }
                     } else {
                         CompactPlayerItem(
                             item = player,
                             serverUrl = serverUrl,
-                            playerAction = playerAction
+                            playerAction = playerAction,
                         )
                     }
                 }
@@ -161,6 +163,7 @@ internal fun PlayersPager(
                             item = player,
                             serverUrl = serverUrl,
                             playerAction = playerAction,
+                            onFavoriteClick = onFavoriteClick,
                         )
                     }
                 }
