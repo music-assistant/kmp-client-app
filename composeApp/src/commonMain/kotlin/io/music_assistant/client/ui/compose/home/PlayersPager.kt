@@ -61,7 +61,7 @@ internal fun PlayersPager(
     playersState: HomeScreenViewModel.PlayersState.Data,
     serverUrl: String?,
     playerAction: (PlayerData, PlayerAction) -> Unit,
-    onFavoriteClick: ((AppMediaItem) -> Unit),
+    onFavoriteClick: (AppMediaItem) -> Unit,
     showQueue: Boolean,
     isQueueExpanded: Boolean,
     onQueueExpandedSwitch: () -> Unit,
