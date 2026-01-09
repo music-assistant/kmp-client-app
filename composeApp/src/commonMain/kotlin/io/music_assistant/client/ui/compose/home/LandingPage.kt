@@ -188,7 +188,7 @@ fun LibraryItemCard(
     onClick: () -> Unit
 ) {
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
-    val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
+    val primary = MaterialTheme.colorScheme.primary
 
     Column(
         modifier = modifier
@@ -207,7 +207,7 @@ fun LibraryItemCard(
         ) {
             val placeholder = rememberPlaceholderPainter(
                 backgroundColor = primaryContainer,
-                iconColor = onPrimaryContainer,
+                iconColor = primary,
                 icon = icon
             )
             Image(

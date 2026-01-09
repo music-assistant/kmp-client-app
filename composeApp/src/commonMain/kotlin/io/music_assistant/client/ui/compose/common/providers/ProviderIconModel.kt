@@ -83,7 +83,6 @@ sealed class ProviderIconModel {
                     val base64Data = iconSvg.substring(b64i + 7) // Skip "base64,"
                     // Remove any closing quotes or XML tags
                     val cleanedData = base64Data.substringBefore("\"").substringBefore("<")
-                    Logger.e("Base64: $cleanedData")
                     try {
                         val bytes = cleanedData.decodeBase64Bytes()
                         Png(bytes)

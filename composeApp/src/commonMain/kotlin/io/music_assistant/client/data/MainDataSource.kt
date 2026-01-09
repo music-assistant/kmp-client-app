@@ -545,7 +545,18 @@ class MainDataSource(
                         queue = (playerData.queue as? DataState.Data)?.let { queueData ->
                             DataState.Data(
                                 queueData.data.copy(
-                                    items = DataState.Data(updatedItems)
+                                    info = if (queueData.data.info.currentItem?.track
+                                            ?.hasAnyMappingFrom(newTrack) == true
+                                    ) {
+                                        queueData.data.info.copy(
+                                            currentItem = queueData.data.info.currentItem.copy(
+                                                track = newTrack
+                                                    .takeIf { it.hasAnyMappingFrom(queueData.data.info.currentItem.track) }
+                                                    ?: queueData.data.info.currentItem.track
+                                            )
+                                        )
+                                    } else queueData.data.info,
+                                    items = DataState.Data(updatedItems),
                                 )
                             )
                         } ?: playerData.queue,

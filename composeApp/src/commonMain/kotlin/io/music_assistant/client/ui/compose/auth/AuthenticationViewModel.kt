@@ -2,7 +2,6 @@ package io.music_assistant.client.ui.compose.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import co.touchlab.kermit.Logger
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.auth.AuthenticationManager
 import io.music_assistant.client.data.model.server.AuthProvider
@@ -39,7 +38,15 @@ class AuthenticationViewModel(
             if (currentState is SessionState.Connected) {
                 val dataConnectionState = currentState.dataConnectionState
                 if (dataConnectionState is DataConnectionState.AwaitingAuth) {
-                    loadProviders()
+                    // Only load providers if we're not in a failed state
+                    when (dataConnectionState.authProcessState) {
+                        is io.music_assistant.client.utils.AuthProcessState.Failed -> {
+                            // Don't reload providers when auth failed
+                        }
+                        else -> {
+                            loadProviders()
+                        }
+                    }
                 }
             }
         }
@@ -50,7 +57,16 @@ class AuthenticationViewModel(
                 if (state is SessionState.Connected) {
                     val dataConnectionState = state.dataConnectionState
                     if (dataConnectionState is DataConnectionState.AwaitingAuth) {
-                        loadProviders()
+                        // Only load providers if we're not in a failed state
+                        // (to avoid overriding error messages)
+                        when (dataConnectionState.authProcessState) {
+                            is io.music_assistant.client.utils.AuthProcessState.Failed -> {
+                                // Don't reload providers when auth failed - keep the error visible
+                            }
+                            else -> {
+                                loadProviders()
+                            }
+                        }
                     }
                 }
             }
@@ -58,6 +74,11 @@ class AuthenticationViewModel(
     }
 
     fun loadProviders() {
+        // Don't reload if we already have providers (to avoid overriding error states)
+        if (_providers.value.isNotEmpty()) {
+            return
+        }
+
         viewModelScope.launch {
             authManager.getProviders().onSuccess { providerList ->
                 _providers.value = providerList
@@ -84,26 +105,19 @@ class AuthenticationViewModel(
                         password.value
                     )
                 }
+
                 else -> {
                     // OAuth or other redirect-based auth
                     // Use custom URL scheme for reliable deep linking
                     val returnUrl = "musicassistant://auth/callback"
                     authManager.getOAuthUrl(provider.id, returnUrl)
-                        .onSuccess { url ->
-                            authManager.startOAuthFlow(provider.id, url)
-                        }
+                        .onSuccess { url -> authManager.startOAuthFlow(url) }
                 }
             }
         }
     }
 
     fun logout() {
-        viewModelScope.launch {
-            authManager.logout()
-        }
-    }
-
-    fun clearToken() {
         settings.updateToken(null)
         viewModelScope.launch {
             authManager.logout()

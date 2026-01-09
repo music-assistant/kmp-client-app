@@ -44,19 +44,18 @@ class ActionsViewModel(
     }
 
     /**
-     * Toggles favorite status of the item.
-     * Adds to favorites if not favorited, removes if already favorited.
+     * Sets exact or toggles favorite status of the item.
      */
-    fun onFavoriteClick(item: AppMediaItem) {
+    fun onFavoriteClick(item: AppMediaItem, newState: Boolean? = null) {
         viewModelScope.launch {
-            if (item.favorite == true) {
-                apiClient.sendRequest(
-                    Request.Library.removeFavorite(item.itemId, item.mediaType)
-                )
-            } else {
+            if (newState ?: (item.favorite != true)) {
                 item.uri?.let {
                     apiClient.sendRequest(Request.Library.addFavorite(it))
                 }
+            } else {
+                apiClient.sendRequest(
+                    Request.Library.removeFavorite(item.itemId, item.mediaType)
+                )
             }
         }
     }

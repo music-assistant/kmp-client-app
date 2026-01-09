@@ -13,12 +13,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,37 +32,47 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import co.touchlab.kermit.Logger
 import io.music_assistant.client.auth.AuthState
-import io.music_assistant.client.data.model.server.AuthProvider
-import io.music_assistant.client.utils.DataConnectionState
-import io.music_assistant.client.utils.SessionState
+import io.music_assistant.client.data.model.server.User
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun AuthenticationPanel(
     viewModel: AuthenticationViewModel = koinViewModel(),
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    user: User?
 ) {
     val providers by viewModel.providers.collectAsStateWithLifecycle()
     val selectedProvider by viewModel.selectedProvider.collectAsStateWithLifecycle()
     val authState by viewModel.authState.collectAsStateWithLifecycle()
-    val sessionState by viewModel.sessionState.collectAsStateWithLifecycle()
+    var loginError by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(authState) {
+        Logger.e("State $authState")
+        if (authState is AuthState.Error) {
+            loginError = (authState as? AuthState.Error)?.message
+        } else if (authState is AuthState.Authenticated) {
+            loginError = null
+        }
+    }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        // Check if authenticated
-        val user = (sessionState as? SessionState.Connected)?.user
-
-        if (user != null) {
-            // Show logged in state
+        user?.let {
             Text(
-                modifier = Modifier.padding(bottom = 8.dp),
                 text = "Logged in as ${user.description}",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(bottom = 12.dp)
             )
-            Button(onClick = { viewModel.clearToken() }) {
-                Text("Clear Token")
+
+            OutlinedButton(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { viewModel.logout() }
+            ) {
+                Text("Logout")
             }
-        } else {
+        } ?: run {
             // Show provider selection and auth UI
             if (providers.isNotEmpty()) {
                 // Provider tabs
@@ -82,7 +94,13 @@ fun AuthenticationPanel(
                 selectedProvider?.let { provider ->
                     when (provider.type) {
                         "builtin" -> BuiltinAuthForm(viewModel)
-                        else -> OAuthButton(provider, viewModel, authState)
+                        else -> Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { viewModel.login() },
+                            enabled = authState !is AuthState.Loading
+                        ) {
+                            Text("Authorize with ${provider.id.replaceFirstChar { it.uppercase() }}")
+                        }
                     }
                 }
             } else {
@@ -100,17 +118,6 @@ fun AuthenticationPanel(
                 }
             }
 
-            // Show auth errors
-            if (authState is AuthState.Error) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    modifier = Modifier.fillMaxWidth(),
-                    text = (authState as AuthState.Error).message,
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center
-                )
-            }
-
             // Show loading state
             if (authState is AuthState.Loading) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -120,6 +127,17 @@ fun AuthenticationPanel(
                     textAlign = TextAlign.Center
                 )
             }
+        }
+
+        loginError?.let {
+            Logger.e("Error $it")
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                modifier = Modifier.fillMaxWidth(),
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
@@ -180,20 +198,5 @@ private fun BuiltinAuthForm(viewModel: AuthenticationViewModel) {
         ) {
             Text("Login")
         }
-    }
-}
-
-@Composable
-private fun OAuthButton(
-    provider: AuthProvider,
-    viewModel: AuthenticationViewModel,
-    authState: AuthState
-) {
-    Button(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = { viewModel.login() },
-        enabled = authState !is AuthState.Loading
-    ) {
-        Text("Authorize with ${provider.id.replaceFirstChar { it.uppercase() }}")
     }
 }

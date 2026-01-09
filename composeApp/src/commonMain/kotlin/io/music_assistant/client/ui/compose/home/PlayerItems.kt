@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.ui.compose.common.action.PlayerAction
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
@@ -49,7 +50,7 @@ import kotlinx.coroutines.isActive
 fun CompactPlayerItem(
     item: PlayerData,
     serverUrl: String?,
-    playerAction: (PlayerData, PlayerAction) -> Unit
+    playerAction: (PlayerData, PlayerAction) -> Unit,
 ) {
     val track = item.queueInfo?.currentItem?.track
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
@@ -146,6 +147,7 @@ fun FullPlayerItem(
     item: PlayerData,
     serverUrl: String?,
     playerAction: (PlayerData, PlayerAction) -> Unit,
+    onFavoriteClick: (AppMediaItem) -> Unit, // FIXME inconsistent stuff happening
 ) {
     val track = item.queueInfo?.currentItem?.track
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
@@ -195,6 +197,7 @@ fun FullPlayerItem(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
             Text(
                 text = track?.name ?: "--idle--",
                 style = MaterialTheme.typography.headlineSmall,
