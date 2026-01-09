@@ -54,22 +54,28 @@ class AuthenticationManager(
                                         authorizeWithSavedToken(token)
                                     }
                                 }
+
                                 AuthProcessState.InProgress -> {
                                     _authState.value = AuthState.Loading
                                 }
+
                                 is AuthProcessState.Failed -> {
-                                    _authState.value = AuthState.Error(dataConnectionState.authProcessState.reason)
+                                    _authState.value =
+                                        AuthState.Error(dataConnectionState.authProcessState.reason)
                                 }
+
                                 AuthProcessState.LoggedOut -> {
                                     _authState.value = AuthState.Idle
                                 }
                             }
                         }
+
                         DataConnectionState.Authenticated -> {
                             state.user?.let { user ->
                                 _authState.value = AuthState.Authenticated(user)
                             }
                         }
+
                         DataConnectionState.AwaitingServerInfo -> {
                             // Waiting for server info
                         }
@@ -175,7 +181,8 @@ class AuthenticationManager(
                 val currentState = serviceClient.sessionState.value
 
                 if (currentState is SessionState.Connected &&
-                    currentState.serverInfo != null) {
+                    currentState.serverInfo != null
+                ) {
                     // Connection is fully established
                     try {
                         Logger.d("Authorizing with OAuth token")
@@ -184,7 +191,7 @@ class AuthenticationManager(
                         return@launch
                     } catch (e: Exception) {
                         val error = e.message ?: "Authorization failed"
-                        Logger.e("Authorization failed: $error")
+                        Logger.e(e) { "Authorization failed" }
                         _authState.value = AuthState.Error(error)
                         return@launch
                     }

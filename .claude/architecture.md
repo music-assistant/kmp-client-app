@@ -115,11 +115,13 @@ When implementing new features or integrations:
 The built-in player functionality uses the Sendspin multi-room audio protocol:
 - **Management**: `MainDataSource` singleton manages Sendspin lifecycle (not individual services)
 - **Integration point**: `HomeScreenViewModel` interacts with Sendspin via MainDataSource
-- **Configuration**: Sendspin settings in `SettingsRepository` and `SettingsScreen`
+- **Configuration**: Sendspin settings in `SettingsRepository` and `SettingsScreen` (see `.claude/settings-screen.md` for detailed UI documentation)
 - **Connection**: Direct WebSocket to Music Assistant server (same IP as main connection)
 - **Platform-specific**: `MediaPlayerController` has expect/actual for raw PCM streaming
   - Android: Uses `AudioTrack` for low-latency playback
   - iOS/Desktop: Stubs for future implementation
+
+See `.claude/settings-screen.md` for complete Settings screen documentation including authentication flows, local player configuration, and state management.
 
 ### Android Services Integration
 

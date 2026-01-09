@@ -224,7 +224,7 @@ class LibraryViewModel(
                         hasMore = artists.size >= PAGE_SIZE
                     )
                 } ?: run {
-                Logger.e("Error loading artists: ${result.exceptionOrNull()}")
+                Logger.e("Error loading artists:", result.exceptionOrNull())
                 updateTabState(Tab.ARTISTS, DataState.Error())
             }
         }
@@ -255,7 +255,7 @@ class LibraryViewModel(
                         hasMore = albums.size >= PAGE_SIZE
                     )
                 } ?: run {
-                Logger.e("Error loading albums: ${result.exceptionOrNull()}")
+                Logger.e("Error loading albums:", result.exceptionOrNull())
                 updateTabState(Tab.ALBUMS, DataState.Error())
             }
         }
@@ -286,7 +286,7 @@ class LibraryViewModel(
                         hasMore = playlists.size >= PAGE_SIZE
                     )
                 } ?: run {
-                Logger.e("Error loading playlists: ${result.exceptionOrNull()}")
+                Logger.e("Error loading playlists:", result.exceptionOrNull())
                 updateTabState(Tab.PLAYLISTS, DataState.Error())
             }
         }
@@ -317,7 +317,7 @@ class LibraryViewModel(
                         hasMore = tracks.size >= PAGE_SIZE
                     )
                 } ?: run {
-                Logger.e("Error loading tracks: ${result.exceptionOrNull()}")
+                Logger.e("Error loading tracks:", result.exceptionOrNull())
                 updateTabState(Tab.TRACKS, DataState.Error())
             }
         }
@@ -387,7 +387,7 @@ class LibraryViewModel(
                         hasMore = newItems.size >= PAGE_SIZE
                     )
                 } ?: run {
-                Logger.e("Error loading more for $tab: ${result.exceptionOrNull()}")
+                Logger.e("Error loading more for $tab:", result.exceptionOrNull())
                 // Stop loading more on error
                 _state.update { s ->
                     s.copy(tabs = s.tabs.map { ts ->

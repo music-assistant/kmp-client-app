@@ -16,7 +16,6 @@ import io.music_assistant.client.data.model.server.LoginResponse
 import io.music_assistant.client.data.model.server.events.Event
 import io.music_assistant.client.settings.SettingsRepository
 import io.music_assistant.client.utils.AuthProcessState
-import io.music_assistant.client.utils.DataConnectionState
 import io.music_assistant.client.utils.SessionState
 import io.music_assistant.client.utils.myJson
 import io.music_assistant.client.utils.resultAs
@@ -25,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -249,20 +249,15 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
     }
 
     suspend fun authorize(token: String) {
-        Logger.e("Authorize")
         try {
             var currentState = _sessionState.value
-            Logger.e("State: $currentState")
             if (currentState !is SessionState.Connected) {
-                Logger.e("Incorrect state")
                 return
             }
             _sessionState.update { currentState.copy(authProcessState = AuthProcessState.InProgress) }
-            Logger.e("Requesting authorization")
             val response = sendRequest(Request.Auth.authorize(token, settings.deviceName.value))
             currentState = _sessionState.value
             if (currentState !is SessionState.Connected) {
-                Logger.e("Incorrect state")
                 return
             }
             if (response.isFailure) {
@@ -290,7 +285,6 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                 }
                 return
             }
-            Logger.e("Authorization successful")
             response.resultAs<AuthorizationResponse>()?.user?.let { user ->
                 settings.updateToken(token)
                 _sessionState.update {
@@ -299,7 +293,6 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                         user = user
                     )
                 }
-                Logger.e("Updated state")
             } ?: run {
                 _sessionState.update {
                     currentState.copy(
@@ -358,12 +351,11 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                 return
             }
             if (state is SessionState.Connected) {
-                Logger.withTag("ServiceClient").w { "Connection lost: ${e.message}. Will auto-reconnect..." }
                 val connectionInfo = state.connectionInfo
                 disconnect(SessionState.Disconnected.Error(Exception("Session error: ${e.message}")))
 
                 // Auto-reconnect after brief delay
-                kotlinx.coroutines.delay(1000)
+                delay(1000)
                 Logger.withTag("ServiceClient").i { "Auto-reconnecting..." }
                 connect(connectionInfo)
             }

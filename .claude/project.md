@@ -38,3 +38,7 @@ open iosApp/iosApp.xcodeproj
 @import .claude/project-structure.md
 @import .claude/dependencies.md
 @import .claude/guidelines.md
+
+## UI Documentation
+
+- **Settings Screen**: See `.claude/settings-screen.md` for complete documentation on server connection, authentication flows, and local player configuration
