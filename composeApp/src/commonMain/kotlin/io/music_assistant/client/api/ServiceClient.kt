@@ -3,9 +3,7 @@ package io.music_assistant.client.api
 import co.touchlab.kermit.Logger
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
-import io.ktor.client.engine.cio.endpoint
 import io.ktor.client.plugins.websocket.WebSockets
-import io.ktor.client.plugins.websocket.pingInterval
 import io.ktor.client.plugins.websocket.receiveDeserialized
 import io.ktor.client.plugins.websocket.sendSerialized
 import io.ktor.client.plugins.websocket.ws
@@ -26,7 +24,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,27 +37,14 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
-import kotlin.time.Duration.Companion.seconds
 
 class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
 
-    override val coroutineContext: CoroutineContext
-        get() = SupervisorJob() + Dispatchers.IO
+    private val supervisorJob = SupervisorJob()
+    override val coroutineContext: CoroutineContext = supervisorJob + Dispatchers.IO
 
     private val client = HttpClient(CIO) {
-        install(WebSockets) {
-            contentConverter = KotlinxWebsocketSerializationConverter(myJson)
-            pingInterval = 5.seconds  // More aggressive keepalive (was 30s)
-            maxFrameSize = Long.MAX_VALUE
-        }
-        engine {
-            // TCP socket options for resilient connection during network transitions
-            endpoint {
-                keepAliveTime = 5000  // 5 seconds - maintain connection like VPN
-                connectTimeout = 10000
-                socketTimeout = 10000
-            }
-        }
+        install(WebSockets) { contentConverter = KotlinxWebsocketSerializationConverter(myJson) }
     }
     private var listeningJob: Job? = null
 
@@ -109,16 +93,15 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
     }
 
     fun connect(connection: ConnectionInfo) {
-        val currentState = _sessionState.value
-        when (currentState) {
+        when (val currentState = _sessionState.value) {
             SessionState.Connecting,
             is SessionState.Connected -> return
 
             is SessionState.Reconnecting -> {
                 // Don't change state during reconnection - stay in Reconnecting!
                 // This prevents MainDataSource from calling stopSendspin()
-                Logger.withTag("ServiceClient").e { "🔄 RECONNECT ATTEMPT - staying in Reconnecting state (no stopSendspin!)" }
-                CoroutineScope(Dispatchers.IO).launch {
+                Logger.withTag("ServiceClient").i { "🔄 RECONNECT ATTEMPT - staying in Reconnecting state (no stopSendspin!)" }
+                launch {
                     try {
                         if (connection.isTls) {
                             client.wss(
@@ -128,14 +111,13 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                                 "/ws",
                             ) {
                                 // Preserve server/user/auth from Reconnecting state
-                                val reconnectingState = currentState as SessionState.Reconnecting
                                 _sessionState.update {
                                     SessionState.Connected(
                                         session = this,
                                         connectionInfo = connection,
-                                        serverInfo = reconnectingState.serverInfo,
-                                        user = reconnectingState.user,
-                                        authProcessState = reconnectingState.authProcessState
+                                        serverInfo = currentState.serverInfo,
+                                        user = currentState.user,
+                                        authProcessState = currentState.authProcessState
                                     )
                                 }
                                 listenForMessages()
@@ -148,14 +130,13 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                                 "/ws",
                             ) {
                                 // Preserve server/user/auth from Reconnecting state
-                                val reconnectingState = currentState as SessionState.Reconnecting
                                 _sessionState.update {
                                     SessionState.Connected(
                                         session = this,
                                         connectionInfo = connection,
-                                        serverInfo = reconnectingState.serverInfo,
-                                        user = reconnectingState.user,
-                                        authProcessState = reconnectingState.authProcessState
+                                        serverInfo = currentState.serverInfo,
+                                        user = currentState.user,
+                                        authProcessState = currentState.authProcessState
                                     )
                                 }
                                 listenForMessages()
@@ -172,7 +153,7 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
             is SessionState.Disconnected -> {
                 // Fresh connection - transition to Connecting
                 _sessionState.update { SessionState.Connecting }
-                CoroutineScope(Dispatchers.IO).launch {
+                launch {
                     try {
                         if (connection.isTls) {
                             client.wss(
@@ -445,7 +426,7 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                     )
                 }
 
-                // Auto-reconnect with exponential backoff
+                // Auto-reconnect with custom backoff schedule
                 var reconnectAttempt = 0
                 val maxAttempts = 10
                 while (reconnectAttempt < maxAttempts) {
@@ -498,7 +479,7 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
             }
             continuation.resume(Result.success(response))
         }
-        CoroutineScope(Dispatchers.IO).launch {
+        launch {
             val state = _sessionState.value as? SessionState.Connected
                 ?: run {
                     pendingResponses.remove(request.messageId)
@@ -521,11 +502,16 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
 
 
     private fun disconnect(newState: SessionState.Disconnected) {
-        CoroutineScope(Dispatchers.IO).launch {
+        launch {
             (_sessionState.value as? SessionState.Connected)?.let {
                 it.session.close()
                 _sessionState.update { newState }
             }
         }
+    }
+
+    fun close() {
+        supervisorJob.cancel()
+        client.close()
     }
 }

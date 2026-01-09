@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -83,7 +84,7 @@ class SendspinClient(
 
         } catch (e: Exception) {
             logger.e(e) { "Failed to start Sendspin client" }
-            _connectionState.value = SendspinConnectionState.Error(e)
+            _connectionState.update { SendspinConnectionState.Error(e) }
         }
     }
 
@@ -139,7 +140,7 @@ class SendspinClient(
 
         } catch (e: Exception) {
             logger.e(e) { "Failed to connect to server" }
-            _connectionState.value = SendspinConnectionState.Error(e)
+            _connectionState.update { SendspinConnectionState.Error(e) }
         }
     }
 
@@ -176,9 +177,11 @@ class SendspinClient(
                             // DON'T call stopStream()!
                             // AudioStreamManager will keep playing from buffer
                             // Update connection state to show we're reconnecting
-                            _connectionState.value = SendspinConnectionState.Error(
-                                Exception("Reconnecting (attempt ${wsState.attempt})...")
-                            )
+                            _connectionState.update {
+                                SendspinConnectionState.Error(
+                                    Exception("Reconnecting (attempt ${wsState.attempt})...")
+                                )
+                            }
                         } else {
                             Logger.withTag("SendspinClient").e { "🔄 WS RECONNECTING: attempt=${wsState.attempt}, NOT streaming, nothing to preserve" }
                         }
@@ -190,17 +193,17 @@ class SendspinClient(
                         if (wsState.error.message?.contains("Failed to reconnect") == true) {
                             logger.e { "Connection failed permanently after max attempts" }
                             audioStreamManager.stopStream()
-                            _playbackState.value = SendspinPlaybackState.Idle
+                            _playbackState.update { SendspinPlaybackState.Idle }
                             wasStreamingBeforeDisconnect = false
                         }
-                        _connectionState.value = SendspinConnectionState.Error(wsState.error)
+                        _connectionState.update { SendspinConnectionState.Error(wsState.error) }
                     }
 
                     WebSocketState.Disconnected -> {
                         // Only handle if this is NOT during reconnection
                         if (!wasStreamingBeforeDisconnect) {
                             logger.i { "WebSocket disconnected (explicit)" }
-                            _connectionState.value = SendspinConnectionState.Idle
+                            _connectionState.update { SendspinConnectionState.Idle }
                         }
                     }
 
@@ -227,21 +230,23 @@ class SendspinClient(
                     is ProtocolState.Ready -> {
                         val serverInfo = messageDispatcher?.serverInfo?.value
                         if (serverInfo != null) {
-                            _connectionState.value = SendspinConnectionState.Connected(
-                                serverId = serverInfo.serverId,
-                                serverName = serverInfo.name,
-                                connectionReason = serverInfo.connectionReason
-                            )
+                            _connectionState.update {
+                                SendspinConnectionState.Connected(
+                                    serverId = serverInfo.serverId,
+                                    serverName = serverInfo.name,
+                                    connectionReason = serverInfo.connectionReason
+                                )
+                            }
                         }
                     }
 
                     is ProtocolState.Streaming -> {
-                        _playbackState.value = SendspinPlaybackState.Buffering
+                        _playbackState.update { SendspinPlaybackState.Buffering }
                     }
 
                     ProtocolState.Disconnected -> {
                         Logger.withTag("SendspinClient").e { "📡 PROTOCOL DISCONNECTED - setting connectionState to Idle" }
-                        _connectionState.value = SendspinConnectionState.Idle
+                        _connectionState.update { SendspinConnectionState.Idle }
                     }
 
                     else -> {}
@@ -256,7 +261,7 @@ class SendspinClient(
                 Logger.withTag("SendspinClient").e { "🎵 STREAM START received" }
                 event.payload.player?.let { playerConfig ->
                     audioStreamManager.startStream(playerConfig)
-                    _playbackState.value = SendspinPlaybackState.Buffering
+                    _playbackState.update { SendspinPlaybackState.Buffering }
                     // Start periodic state reporting
                     startStateReporting()
                 }
@@ -267,7 +272,7 @@ class SendspinClient(
             messageDispatcher?.streamEndEvent?.collect {
                 Logger.withTag("SendspinClient").e { "⛔ STREAM END received from server - stopping playback" }
                 audioStreamManager.stopStream()
-                _playbackState.value = SendspinPlaybackState.Idle
+                _playbackState.update { SendspinPlaybackState.Idle }
                 // Stop periodic state reporting
                 stopStateReporting()
             }
@@ -285,14 +290,14 @@ class SendspinClient(
             audioStreamManager.streamError.filterNotNull().collect { error ->
                 logger.w(error) { "AudioStreamManager error - stopping playback" }
                 // Update playback state to Idle so UI reflects stopped state
-                _playbackState.value = SendspinPlaybackState.Idle
+                _playbackState.update { SendspinPlaybackState.Idle }
                 // Stop periodic state reporting
                 stopStateReporting()
                 // Notify that playback stopped due to error (so MainDataSource can pause the MA server)
-                _playbackStoppedDueToError.value = error
+                _playbackStoppedDueToError.update { error }
                 // Clear the error after handling
                 delay(100)
-                _playbackStoppedDueToError.value = null
+                _playbackStoppedDueToError.update { null }
             }
         }
     }
@@ -305,7 +310,7 @@ class SendspinClient(
                 // Update playback state based on sync quality
                 if (clockSynchronizer.currentQuality == SyncQuality.GOOD) {
                     if (_playbackState.value != SendspinPlaybackState.Synchronized) {
-                        _playbackState.value = SendspinPlaybackState.Synchronized
+                        _playbackState.update { SendspinPlaybackState.Synchronized }
                         reportState(PlayerStateValue.SYNCHRONIZED)
                     }
                 }
@@ -417,8 +422,8 @@ class SendspinClient(
 
         disconnectFromServer()
 
-        _connectionState.value = SendspinConnectionState.Idle
-        _playbackState.value = SendspinPlaybackState.Idle
+        _connectionState.update { SendspinConnectionState.Idle }
+        _playbackState.update { SendspinPlaybackState.Idle }
     }
 
     private suspend fun disconnectFromServer() {
@@ -436,9 +441,8 @@ class SendspinClient(
 
     fun close() {
         logger.i { "Closing Sendspin client" }
-        runBlocking {
-            stop()
-        }
+        // Note: stop() should be called before close() to properly clean up connections
+        // close() only performs synchronous cleanup
         audioStreamManager.close()
         supervisorJob.cancel()
     }

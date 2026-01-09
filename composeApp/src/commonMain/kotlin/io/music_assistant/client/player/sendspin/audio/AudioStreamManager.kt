@@ -11,6 +11,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlin.coroutines.CoroutineContext
 
 class AudioStreamManager(
@@ -96,7 +97,7 @@ class AudioStreamManager(
                     // When MediaPlayer encounters an error (e.g., audio output disconnected),
                     // emit the error and stop the stream to prevent zombie playback
                     launch {
-                        _streamError.value = error
+                        _streamError.update { error }
                         stopStream()
                     }
                 }
@@ -198,7 +199,7 @@ class AudioStreamManager(
                         if (!_bufferState.value.isUnderrun) {
                             logger.w { "Buffer underrun" }
                             adaptiveBufferManager.recordUnderrun(getCurrentTimeMicros())
-                            _bufferState.value = _bufferState.value.copy(isUnderrun = true)
+                            _bufferState.update { it.copy(isUnderrun = true) }
                         }
                         delay(10) // Wait for more data
                         continue
@@ -242,7 +243,7 @@ class AudioStreamManager(
                             playChunk(chunk)
                             audioBuffer.poll()
                             adaptiveBufferManager.recordChunkPlayed()
-                            _playbackPosition.value = chunk.timestamp
+                            _playbackPosition.update { chunk.timestamp }
                             updateBufferState()
                             chunksPlayed++
 
@@ -325,23 +326,25 @@ class AudioStreamManager(
 
     private suspend fun updateBufferState() {
         val bufferedDuration = audioBuffer.getBufferedDuration()
-        _bufferState.value = BufferState(
-            bufferedDuration = bufferedDuration,
-            isUnderrun = bufferedDuration == 0L && isStreaming,
-            droppedChunks = droppedChunksCount,
-            // Adaptive metrics
-            targetBufferDuration = adaptiveBufferManager.targetBufferDuration,
-            currentPrebufferThreshold = adaptiveBufferManager.currentPrebufferThreshold,
-            smoothedRTT = adaptiveBufferManager.currentSmoothedRTT,
-            jitter = adaptiveBufferManager.currentJitter,
-            dropRate = adaptiveBufferManager.currentDropRate
-        )
+        _bufferState.update {
+            BufferState(
+                bufferedDuration = bufferedDuration,
+                isUnderrun = bufferedDuration == 0L && isStreaming,
+                droppedChunks = droppedChunksCount,
+                // Adaptive metrics
+                targetBufferDuration = adaptiveBufferManager.targetBufferDuration,
+                currentPrebufferThreshold = adaptiveBufferManager.currentPrebufferThreshold,
+                smoothedRTT = adaptiveBufferManager.currentSmoothedRTT,
+                jitter = adaptiveBufferManager.currentJitter,
+                dropRate = adaptiveBufferManager.currentDropRate
+            )
+        }
     }
 
     suspend fun clearStream() {
         logger.i { "Clearing stream" }
         audioBuffer.clear()
-        _playbackPosition.value = 0L
+        _playbackPosition.update { 0L }
         droppedChunksCount = 0
         updateBufferState()
     }
@@ -363,20 +366,22 @@ class AudioStreamManager(
         // Stop raw PCM stream on MediaPlayerController
         mediaPlayerController.stopRawPcmStream()
 
-        _playbackPosition.value = 0L
+        _playbackPosition.update { 0L }
         droppedChunksCount = 0
-        _bufferState.value = BufferState(
-            bufferedDuration = 0L,
-            isUnderrun = false,
-            droppedChunks = 0,
-            targetBufferDuration = 0L,
-            currentPrebufferThreshold = 0L,
-            smoothedRTT = 0.0,
-            jitter = 0.0,
-            dropRate = 0.0
-        )
+        _bufferState.update {
+            BufferState(
+                bufferedDuration = 0L,
+                isUnderrun = false,
+                droppedChunks = 0,
+                targetBufferDuration = 0L,
+                currentPrebufferThreshold = 0L,
+                smoothedRTT = 0.0,
+                jitter = 0.0,
+                dropRate = 0.0
+            )
+        }
         // Clear any error state
-        _streamError.value = null
+        _streamError.update { null }
     }
 
     // Use monotonic time for playback timing instead of wall clock time

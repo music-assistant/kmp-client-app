@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.pager.PagerState
@@ -101,18 +100,15 @@ fun HorizontalPagerIndicator(
         verticalAlignment = Alignment.CenterVertically
     ) {
         onItemMoved?.let {
-            if (pagerState.currentPage > 0) {
-                Icon(
-                    modifier = Modifier
-                        .size(20.dp)
-                        .clickable { moveWithAnimation(-1) },
-                    imageVector = FontAwesomeIcons.Solid.ArrowCircleLeft,
-                    tint = MaterialTheme.colorScheme.primary,
-                    contentDescription = null,
-                )
-            } else {
-                Spacer(modifier = Modifier.width(20.dp))
-            }
+            Icon(
+                modifier = Modifier
+                    .size(20.dp)
+                    .clickable(pagerState.currentPage > 0) { moveWithAnimation(-1) },
+                imageVector = FontAwesomeIcons.Solid.ArrowCircleLeft,
+                tint = MaterialTheme.colorScheme.primary
+                    .copy(alpha = if (pagerState.currentPage > 0) 1f else 0.4f),
+                contentDescription = null,
+            )
         }
         Row(
             modifier = Modifier.padding(horizontal = 8.dp),
@@ -168,18 +164,15 @@ fun HorizontalPagerIndicator(
             }
         }
         onItemMoved?.let {
-            if (pagerState.currentPage < pageCount - 1) {
-                Icon(
-                    modifier = Modifier
-                        .size(20.dp)
-                        .clickable { moveWithAnimation(1) },
-                    imageVector = FontAwesomeIcons.Solid.ArrowCircleRight,
-                    tint = MaterialTheme.colorScheme.primary,
-                    contentDescription = null,
-                )
-            } else {
-                Spacer(modifier = Modifier.width(20.dp))
-            }
+            Icon(
+                modifier = Modifier
+                    .size(20.dp)
+                    .clickable(pagerState.currentPage < pageCount - 1) { moveWithAnimation(1) },
+                imageVector = FontAwesomeIcons.Solid.ArrowCircleRight,
+                tint = MaterialTheme.colorScheme.primary
+                    .copy(alpha = if (pagerState.currentPage < pageCount - 1) 1f else 0.4f),
+                contentDescription = null,
+            )
         }
     }
 }

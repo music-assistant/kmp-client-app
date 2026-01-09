@@ -69,8 +69,8 @@ class MainDataSource(
 
     private var sendspinClient: SendspinClient? = null
 
-    override val coroutineContext: CoroutineContext
-        get() = SupervisorJob() + Dispatchers.IO
+    private val supervisorJob = SupervisorJob()
+    override val coroutineContext: CoroutineContext = supervisorJob + Dispatchers.IO
 
     private val _serverPlayers = MutableStateFlow<List<Player>>(emptyList())
     private val _queueInfos = MutableStateFlow<List<QueueInfo>>(emptyList())
@@ -631,6 +631,10 @@ class MainDataSource(
             }
 
         }
+    }
+
+    fun close() {
+        supervisorJob.cancel()
     }
 
 }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.client.PlayerData
@@ -45,6 +47,7 @@ import io.music_assistant.client.ui.compose.common.action.PlayerAction
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlin.math.roundToInt
 
 @Composable
 fun CompactPlayerItem(
@@ -247,36 +250,55 @@ fun FullPlayerItem(
             }
         }
 
-        // Progress bar
-        Slider(
-            value = localElapsed,
-            valueRange = duration?.let { 0f..it } ?: 0f..1f,
-            enabled = localElapsed.takeIf { duration != null } != null,
-            onValueChange = {
-                localElapsed = it
-                playerAction(item, PlayerAction.SeekTo(it.toLong()))
-            },
-            modifier = Modifier.fillMaxWidth(),
-            thumb = {
-                localElapsed.takeIf { duration != null }?.let {
-                    SliderDefaults.Thumb(
-                        interactionSource = remember { MutableInteractionSource() },
-                        thumbSize = DpSize(16.dp, 16.dp),
-                        colors = SliderDefaults.colors()
-                            .copy(thumbColor = MaterialTheme.colorScheme.secondary),
+        Column {// Progress bar
+            Slider(
+                value = localElapsed,
+                valueRange = duration?.let { 0f..it } ?: 0f..1f,
+                enabled = localElapsed.takeIf { duration != null } != null,
+                onValueChange = {
+                    localElapsed = it
+                    playerAction(item, PlayerAction.SeekTo(it.toLong()))
+                },
+                modifier = Modifier.fillMaxWidth(),
+                thumb = {
+                    localElapsed.takeIf { duration != null }?.let {
+                        SliderDefaults.Thumb(
+                            interactionSource = remember { MutableInteractionSource() },
+                            thumbSize = DpSize(16.dp, 16.dp),
+                            colors = SliderDefaults.colors()
+                                .copy(thumbColor = MaterialTheme.colorScheme.secondary),
+                        )
+                    }
+                },
+                track = { sliderState ->
+                    SliderDefaults.Track(
+                        sliderState = sliderState,
+                        thumbTrackGapSize = 0.dp,
+                        trackInsideCornerSize = 0.dp,
+                        drawStopIndicator = null,
+                        enabled = track != null,
+                        modifier = Modifier.height(8.dp)
                     )
                 }
-            },
-            track = { sliderState ->
-                SliderDefaults.Track(
-                    sliderState = sliderState,
-                    thumbTrackGapSize = 0.dp,
-                    trackInsideCornerSize = 0.dp,
-                    drawStopIndicator = null,
-                    modifier = Modifier.height(8.dp)
+            )
+
+            // Duration labels
+            Row(
+                modifier = Modifier.fillMaxWidth().offset(y = (-8).dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = formatDuration(localElapsed.takeIf { track != null }),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = formatDuration(duration),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        )
+        }
 
         PlayerControls(
             playerData = item,
@@ -285,5 +307,23 @@ fun FullPlayerItem(
             showVolumeButtons = false,
             mainButtonSize = 64.dp
         )
+    }
+}
+
+/**
+ * Formats duration in seconds to MM:SS or HH:MM:SS format
+ */
+private fun formatDuration(seconds: Float?): String {
+    if (seconds == null || seconds <= 0f) return "--:--"
+
+    val totalSeconds = seconds.roundToInt()
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val secs = totalSeconds % 60
+
+    return if (hours > 0) {
+        String.format("%d:%02d:%02d", hours, minutes, secs)
+    } else {
+        String.format("%d:%02d", minutes, secs)
     }
 }

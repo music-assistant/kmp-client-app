@@ -188,44 +188,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     minLines = 3,
                     maxLines = 3,
                 )
-                if (serverInputsFieldVisible) {
-                    TextField(
-                        modifier = Modifier.padding(bottom = 16.dp),
-                        value = ipAddress,
-                        onValueChange = { ipAddress = it },
-                        label = {
-                            Text("IP address")
-                        },
-                        singleLine = true,
-                        colors = TextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-                        )
-                    )
-                    TextField(
-                        modifier = Modifier.padding(bottom = 16.dp),
-                        value = port,
-                        onValueChange = { port = it },
-                        label = {
-                            Text("Port (8095 by default)")
-                        },
-                        singleLine = true,
-                        colors = TextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-                        )
-                    )
-                    Row(
-                        modifier = Modifier.padding(bottom = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(
-                            modifier = Modifier.align(Alignment.CenterVertically),
-                            checked = isTls,
-                            onCheckedChange = { isTls = it })
-                        Text(
-                            modifier = Modifier.align(Alignment.CenterVertically),
-                            text = "Use TLS"
+
                 when (sessionState) {
                     is SessionState.Disconnected -> {
                         // State 1 & 2: Disconnected (with or without token)
@@ -243,6 +206,11 @@ fun SettingsScreen(onBack: () -> Unit) {
                     }
 
                     SessionState.Connecting -> {
+                        ConnectingSection(ipAddress, port)
+                    }
+
+                    is SessionState.Reconnecting -> {
+                        // Show reconnecting state - similar to connecting but with attempt info
                         ConnectingSection(ipAddress, port)
                     }
 

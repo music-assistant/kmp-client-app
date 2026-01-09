@@ -14,6 +14,7 @@ import io.music_assistant.client.ui.compose.library.LibraryViewModel
 import io.music_assistant.client.ui.compose.search.SearchViewModel
 import io.music_assistant.client.ui.compose.settings.SettingsViewModel
 import io.music_assistant.client.ui.theme.ThemeViewModel
+import org.koin.core.context.GlobalContext
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
@@ -33,4 +34,18 @@ val sharedModule = module {
     factory { ItemDetailsViewModel(get(), get()) }
     factory { HomeScreenViewModel(get(), get(), get()) }
     factory { SearchViewModel(get(), get()) }
+}
+
+/**
+ * Cleanup function to properly close all singleton resources.
+ * Call this before stopKoin() to ensure proper resource cleanup.
+ */
+fun cleanupSingletons() {
+    try {
+        GlobalContext.getOrNull()?.get<ServiceClient>()?.close()
+        GlobalContext.getOrNull()?.get<AuthenticationManager>()?.close()
+        GlobalContext.getOrNull()?.get<MainDataSource>()?.close()
+    } catch (e: Exception) {
+        // Ignore exceptions during cleanup
+    }
 }
