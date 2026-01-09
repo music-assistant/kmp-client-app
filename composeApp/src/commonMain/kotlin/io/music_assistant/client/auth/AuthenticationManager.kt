@@ -14,6 +14,7 @@ import io.music_assistant.client.utils.resultAs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -141,7 +142,7 @@ class AuthenticationManager(
         }
     }
 
-    fun startOAuthFlow(providerId: String, oauthUrl: String): Result<Unit> {
+    fun startOAuthFlow(oauthUrl: String): Result<Unit> {
         val handler = oauthHandler
         if (handler == null) {
             val error = "OAuth not supported on this platform"
@@ -167,31 +168,44 @@ class AuthenticationManager(
         scope.launch {
             _authState.value = AuthState.Loading
 
-            // Wait a bit for connection to be re-established if app was backgrounded
-            kotlinx.coroutines.delay(500)
+            // Wait for connection to be established if app was backgrounded
+            // Try for up to 10 seconds
+            var attempts = 0
+            while (attempts < 40) { // 40 * 250ms = 10 seconds
+                val currentState = serviceClient.sessionState.value
 
-            val currentState = serviceClient.sessionState.value
-            if (currentState is SessionState.Connected) {
-                try {
-                    Logger.d("Authorizing with OAuth token")
-                    serviceClient.authorize(token)
-                    // Auth state will be updated via sessionState flow
-                } catch (e: Exception) {
-                    val error = e.message ?: "Authorization failed"
-                    Logger.e("Authorization failed: $error")
-                    _authState.value = AuthState.Error(error)
+                if (currentState is SessionState.Connected &&
+                    currentState.serverInfo != null) {
+                    // Connection is fully established
+                    try {
+                        Logger.d("Authorizing with OAuth token")
+                        serviceClient.authorize(token)
+                        // Auth state will be updated via sessionState flow
+                        return@launch
+                    } catch (e: Exception) {
+                        val error = e.message ?: "Authorization failed"
+                        Logger.e("Authorization failed: $error")
+                        _authState.value = AuthState.Error(error)
+                        return@launch
+                    }
                 }
-            } else {
-                Logger.e("Not connected - cannot authorize. Connection state: $currentState")
-                _authState.value = AuthState.Error("Connection lost. Please try again.")
+
+                Logger.d("Waiting for connection... State: $currentState, attempt ${attempts + 1}")
+                delay(250)
+                attempts++
             }
+
+            // Timeout - connection not established
+            val currentState = serviceClient.sessionState.value
+            Logger.e("Connection timeout - cannot authorize. Connection state: $currentState")
+            _authState.value = AuthState.Error("Connection timeout. Please try again.")
         }
     }
 
     private suspend fun authorizeWithSavedToken(token: String) {
         try {
             serviceClient.authorize(token)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Silent failure - user will see auth UI
         }
     }

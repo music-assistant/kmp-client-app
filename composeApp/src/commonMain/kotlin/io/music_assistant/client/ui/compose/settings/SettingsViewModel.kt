@@ -13,24 +13,21 @@ class SettingsViewModel(
 ) : ViewModel() {
 
     val savedConnectionInfo = settings.connectionInfo
+    val savedToken = settings.token
     val sessionState = apiClient.sessionState
 
     fun attemptConnection(host: String, port: String, isTls: Boolean) =
         apiClient.connect(connection = ConnectionInfo(host, port.toInt(), isTls))
 
-    fun disconnect() = apiClient.disconnectByUser()
+    fun disconnect() {
+        apiClient.disconnectByUser()
+    }
 
-    fun clearToken() {
+    fun logout() {
         viewModelScope.launch {
-            // Logout on server first, then clear token locally
+            // Logout on server and clear token locally
+            // MainDataSource will handle Sendspin lifecycle based on session state
             apiClient.logout()
-            settings.updateToken(null)
-
-            // Disconnect and reconnect to trigger fresh auth flow
-            apiClient.disconnectByUser()
-            savedConnectionInfo.value?.let { connInfo ->
-                apiClient.connect(connInfo)
-            }
         }
     }
 
