@@ -70,6 +70,11 @@ class HomeScreenViewModel(
             apiClient.sessionState.collect { connection ->
                 _recommendationsState.update { state -> state.copy(connectionState = connection) }
                 when (connection) {
+                    is SessionState.Reconnecting -> {
+                        // Preserve UI state during reconnection - don't stop jobs or reload data
+                        // UI stays in current state (e.g., showing players, recommendations)
+                    }
+
                     is SessionState.Connected -> {
                         when (val connState = connection.dataConnectionState) {
                             DataConnectionState.Authenticated -> {

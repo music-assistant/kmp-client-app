@@ -3,6 +3,7 @@ package io.music_assistant.client.player.sendspin.connection
 import co.touchlab.kermit.Logger
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.engine.cio.endpoint
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.pingInterval
@@ -19,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,12 +44,28 @@ class WebSocketHandler(
 
     private val client = HttpClient(CIO) {
         install(WebSockets) {
-            pingInterval = 30.seconds
+            pingInterval = 5.seconds  // More aggressive keepalive (was 30s)
+            maxFrameSize = Long.MAX_VALUE
+        }
+
+        engine {
+            // TCP socket options for resilient connection during network transitions
+            endpoint {
+                keepAliveTime = 5000  // 5 seconds - maintain connection like VPN
+                connectTimeout = 10000
+                socketTimeout = 10000
+            }
         }
     }
 
     private var session: DefaultClientWebSocketSession? = null
     private var listenerJob: Job? = null
+
+    // Auto-reconnect state
+    private var explicitDisconnect = false
+    private var reconnectAttempts = 0
+    private var reconnectJob: Job? = null
+    private val maxReconnectAttempts = 10
 
     private val _textMessages = MutableSharedFlow<String>(extraBufferCapacity = 50)
     val textMessages: Flow<String> = _textMessages.asSharedFlow()
@@ -72,6 +90,13 @@ class WebSocketHandler(
         try {
             val wsSession = client.webSocketSession(serverUrl)
             session = wsSession
+
+            // Reset auto-reconnect state on successful connection
+            reconnectAttempts = 0
+            explicitDisconnect = false
+            reconnectJob?.cancel()
+            reconnectJob = null
+
             _connectionState.value = WebSocketState.Connected
             logger.i { "Connected to $serverUrl" }
 
@@ -112,10 +137,24 @@ class WebSocketHandler(
                     }
                 }
             } catch (e: Exception) {
-                logger.e(e) { "Error in WebSocket listener" }
-                _connectionState.value = WebSocketState.Error(e)
+                if (explicitDisconnect) {
+                    logger.i { "Explicit disconnect, not reconnecting" }
+                    handleDisconnection()
+                    return@launch
+                }
+
+                // Network error - auto-reconnect!
+                Logger.withTag("WebSocketHandler").e { "❌ WS ERROR: ${e.message} - will auto-reconnect" }
+                _connectionState.value = WebSocketState.Reconnecting(reconnectAttempts)
+
+                attemptReconnect()
             } finally {
-                handleDisconnection()
+                if (!explicitDisconnect) {
+                    // Only handle disconnection if not already reconnecting
+                    if (_connectionState.value !is WebSocketState.Reconnecting) {
+                        handleDisconnection()
+                    }
+                }
             }
         }
     }
@@ -151,7 +190,11 @@ class WebSocketHandler(
     }
 
     suspend fun disconnect() {
-        logger.i { "Disconnecting WebSocket" }
+        logger.i { "Disconnecting WebSocket (explicit)" }
+        explicitDisconnect = true
+        reconnectJob?.cancel()
+        reconnectJob = null
+
         listenerJob?.cancel()
         listenerJob = null
 
@@ -169,8 +212,63 @@ class WebSocketHandler(
         session = null
     }
 
+    private fun attemptReconnect() {
+        reconnectJob?.cancel()
+        reconnectJob = launch {
+            while (reconnectAttempts < maxReconnectAttempts && !explicitDisconnect) {
+                val delayMs = calculateBackoff()
+                logger.i { "Reconnect attempt ${reconnectAttempts + 1}/$maxReconnectAttempts in ${delayMs}ms" }
+                _connectionState.value = WebSocketState.Reconnecting(reconnectAttempts)
+
+                delay(delayMs)
+
+                try {
+                    reconnectAttempts++
+                    logger.i { "Attempting reconnection..." }
+
+                    // Try to reconnect
+                    val wsSession = client.webSocketSession(serverUrl)
+                    session = wsSession
+
+                    // Success!
+                    Logger.withTag("WebSocketHandler").e { "✅ RECONNECTED successfully after $reconnectAttempts attempts" }
+                    reconnectAttempts = 0
+                    _connectionState.value = WebSocketState.Connected
+
+                    // Resume listening
+                    startListening(wsSession)
+                    return@launch
+
+                } catch (e: Exception) {
+                    logger.w(e) { "Reconnect attempt $reconnectAttempts failed" }
+                    if (reconnectAttempts >= maxReconnectAttempts) {
+                        logger.e { "Max reconnect attempts ($maxReconnectAttempts) reached, giving up" }
+                        _connectionState.value = WebSocketState.Error(
+                            Exception("Failed to reconnect after $maxReconnectAttempts attempts")
+                        )
+                        handleDisconnection()
+                        return@launch
+                    }
+                }
+            }
+        }
+    }
+
+    private fun calculateBackoff(): Long {
+        // Exponential backoff: 500ms, 1s, 2s, 5s, 10s
+        return when (reconnectAttempts) {
+            0 -> 500L
+            1 -> 1000L
+            2 -> 2000L
+            3 -> 5000L
+            else -> 10000L
+        }
+    }
+
     fun close() {
         logger.i { "Closing WebSocketHandler" }
+        explicitDisconnect = true
+        reconnectJob?.cancel()
         supervisorJob.cancel()
         client.close()
     }

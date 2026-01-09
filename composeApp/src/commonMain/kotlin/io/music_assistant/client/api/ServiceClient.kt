@@ -3,7 +3,9 @@ package io.music_assistant.client.api
 import co.touchlab.kermit.Logger
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.engine.cio.endpoint
 import io.ktor.client.plugins.websocket.WebSockets
+import io.ktor.client.plugins.websocket.pingInterval
 import io.ktor.client.plugins.websocket.receiveDeserialized
 import io.ktor.client.plugins.websocket.sendSerialized
 import io.ktor.client.plugins.websocket.ws
@@ -38,6 +40,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+import kotlin.time.Duration.Companion.seconds
 
 class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
 
@@ -45,7 +48,19 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
         get() = SupervisorJob() + Dispatchers.IO
 
     private val client = HttpClient(CIO) {
-        install(WebSockets) { contentConverter = KotlinxWebsocketSerializationConverter(myJson) }
+        install(WebSockets) {
+            contentConverter = KotlinxWebsocketSerializationConverter(myJson)
+            pingInterval = 5.seconds  // More aggressive keepalive (was 30s)
+            maxFrameSize = Long.MAX_VALUE
+        }
+        engine {
+            // TCP socket options for resilient connection during network transitions
+            endpoint {
+                keepAliveTime = 5000  // 5 seconds - maintain connection like VPN
+                connectTimeout = 10000
+                socketTimeout = 10000
+            }
+        }
     }
     private var listeningJob: Job? = null
 
@@ -63,6 +78,11 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
             _sessionState.collect {
                 when (it) {
                     is SessionState.Connected -> {
+                        settings.updateConnectionInfo(it.connectionInfo)
+                    }
+
+                    is SessionState.Reconnecting -> {
+                        // Keep connection info during reconnection (no UI reload)
                         settings.updateConnectionInfo(it.connectionInfo)
                     }
 
@@ -89,11 +109,68 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
     }
 
     fun connect(connection: ConnectionInfo) {
-        when (_sessionState.value) {
+        val currentState = _sessionState.value
+        when (currentState) {
             SessionState.Connecting,
             is SessionState.Connected -> return
 
+            is SessionState.Reconnecting -> {
+                // Don't change state during reconnection - stay in Reconnecting!
+                // This prevents MainDataSource from calling stopSendspin()
+                Logger.withTag("ServiceClient").e { "🔄 RECONNECT ATTEMPT - staying in Reconnecting state (no stopSendspin!)" }
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        if (connection.isTls) {
+                            client.wss(
+                                HttpMethod.Get,
+                                connection.host,
+                                connection.port,
+                                "/ws",
+                            ) {
+                                // Preserve server/user/auth from Reconnecting state
+                                val reconnectingState = currentState as SessionState.Reconnecting
+                                _sessionState.update {
+                                    SessionState.Connected(
+                                        session = this,
+                                        connectionInfo = connection,
+                                        serverInfo = reconnectingState.serverInfo,
+                                        user = reconnectingState.user,
+                                        authProcessState = reconnectingState.authProcessState
+                                    )
+                                }
+                                listenForMessages()
+                            }
+                        } else {
+                            client.ws(
+                                HttpMethod.Get,
+                                connection.host,
+                                connection.port,
+                                "/ws",
+                            ) {
+                                // Preserve server/user/auth from Reconnecting state
+                                val reconnectingState = currentState as SessionState.Reconnecting
+                                _sessionState.update {
+                                    SessionState.Connected(
+                                        session = this,
+                                        connectionInfo = connection,
+                                        serverInfo = reconnectingState.serverInfo,
+                                        user = reconnectingState.user,
+                                        authProcessState = reconnectingState.authProcessState
+                                    )
+                                }
+                                listenForMessages()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        _sessionState.update {
+                            SessionState.Disconnected.Error(Exception("Connection failed: ${e.message}"))
+                        }
+                    }
+                }
+            }
+
             is SessionState.Disconnected -> {
+                // Fresh connection - transition to Connecting
                 _sessionState.update { SessionState.Connecting }
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
@@ -351,13 +428,64 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                 return
             }
             if (state is SessionState.Connected) {
+                Logger.withTag("ServiceClient").w { "Connection lost: ${e.message}. Will auto-reconnect..." }
                 val connectionInfo = state.connectionInfo
-                disconnect(SessionState.Disconnected.Error(Exception("Session error: ${e.message}")))
+                val serverInfo = state.serverInfo
+                val user = state.user
+                val authProcessState = state.authProcessState
 
-                // Auto-reconnect after brief delay
-                delay(1000)
-                Logger.withTag("ServiceClient").i { "Auto-reconnecting..." }
-                connect(connectionInfo)
+                // Enter Reconnecting state (preserves server/user/auth state - no UI reload!)
+                _sessionState.update {
+                    SessionState.Reconnecting(
+                        attempt = 0,
+                        connectionInfo = connectionInfo,
+                        serverInfo = serverInfo,
+                        user = user,
+                        authProcessState = authProcessState
+                    )
+                }
+
+                // Auto-reconnect with exponential backoff
+                var reconnectAttempt = 0
+                val maxAttempts = 10
+                while (reconnectAttempt < maxAttempts) {
+                    val delay = when (reconnectAttempt) {
+                        0 -> 500L
+                        1 -> 1000L
+                        2 -> 2000L
+                        3 -> 5000L
+                        else -> 10000L
+                    }
+
+                    Logger.withTag("ServiceClient").i { "Reconnect attempt ${reconnectAttempt + 1}/$maxAttempts in ${delay}ms" }
+                    kotlinx.coroutines.delay(delay)
+
+                    _sessionState.update {
+                        SessionState.Reconnecting(
+                            attempt = reconnectAttempt + 1,
+                            connectionInfo = connectionInfo,
+                            serverInfo = serverInfo,
+                            user = user,
+                            authProcessState = authProcessState
+                        )
+                    }
+
+                    reconnectAttempt++
+
+                    try {
+                        Logger.withTag("ServiceClient").i { "Attempting reconnection..." }
+                        connect(connectionInfo)
+                        // If connect() succeeds, it will set state to Connected
+                        return
+                    } catch (reconnectError: Exception) {
+                        Logger.withTag("ServiceClient").w { "Reconnect attempt $reconnectAttempt failed: ${reconnectError.message}" }
+                        if (reconnectAttempt >= maxAttempts) {
+                            Logger.withTag("ServiceClient").e { "Max reconnect attempts reached, giving up" }
+                            disconnect(SessionState.Disconnected.Error(Exception("Failed to reconnect after $maxAttempts attempts")))
+                            return
+                        }
+                    }
+                }
             }
         }
     }

@@ -33,6 +33,7 @@ sealed class ProtocolState {
 sealed class WebSocketState {
     object Disconnected : WebSocketState()
     object Connecting : WebSocketState()
+    data class Reconnecting(val attempt: Int) : WebSocketState()
     object Connected : WebSocketState()
     data class Error(val error: Throwable) : WebSocketState()
 }

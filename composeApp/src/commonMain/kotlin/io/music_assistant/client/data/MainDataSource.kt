@@ -165,6 +165,12 @@ class MainDataSource(
                         }
                     }
 
+                    is SessionState.Reconnecting -> {
+                        // Preserve state during reconnection - don't stop anything!
+                        // Sendspin keeps playing, jobs keep running
+                        // When reconnected, Connected branch will re-initialize if needed
+                    }
+
                     SessionState.Connecting -> {
                         stopSendspin()
                         updateJob?.cancel()

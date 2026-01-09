@@ -122,6 +122,9 @@ class SendspinClient(
             // Send hello
             dispatcher.sendHello()
 
+            // Monitor WebSocket connection state (for reconnection coordination)
+            monitorWebSocketState()
+
             // Monitor protocol state
             monitorProtocolState()
 
@@ -140,10 +143,86 @@ class SendspinClient(
         }
     }
 
+    // Track streaming state for reconnection coordination
+    private var wasStreamingBeforeDisconnect = false
+
+    private fun monitorWebSocketState() {
+        launch {
+            webSocketHandler?.connectionState?.collect { wsState ->
+                logger.d { "WebSocket state: $wsState" }
+                when (wsState) {
+                    WebSocketState.Connected -> {
+                        // Check if we were streaming before disconnect
+                        if (wasStreamingBeforeDisconnect) {
+                            logger.i { "Reconnected while streaming was active - waiting for server to resume" }
+                            // Server should auto-send StreamStart when player reconnects
+                            // If it doesn't within 5 seconds, we'll timeout
+                            launch {
+                                delay(5000)
+                                if (_playbackState.value == SendspinPlaybackState.Idle && wasStreamingBeforeDisconnect) {
+                                    logger.w { "Stream restoration timed out - server didn't resume playback" }
+                                    wasStreamingBeforeDisconnect = false
+                                }
+                            }
+                        }
+                    }
+
+                    is WebSocketState.Reconnecting -> {
+                        // Remember if we're streaming (don't stop playback!)
+                        wasStreamingBeforeDisconnect = isCurrentlyStreaming()
+
+                        if (wasStreamingBeforeDisconnect) {
+                            Logger.withTag("SendspinClient").e { "🔄 WS RECONNECTING: attempt=${wsState.attempt}, playbackState=${_playbackState.value}, preserving buffer" }
+                            // DON'T call stopStream()!
+                            // AudioStreamManager will keep playing from buffer
+                            // Update connection state to show we're reconnecting
+                            _connectionState.value = SendspinConnectionState.Error(
+                                Exception("Reconnecting (attempt ${wsState.attempt})...")
+                            )
+                        } else {
+                            Logger.withTag("SendspinClient").e { "🔄 WS RECONNECTING: attempt=${wsState.attempt}, NOT streaming, nothing to preserve" }
+                        }
+                    }
+
+                    is WebSocketState.Error -> {
+                        logger.e { "WebSocket error: ${wsState.error.message}" }
+                        // Only stop if this is a permanent error (max reconnect attempts exceeded)
+                        if (wsState.error.message?.contains("Failed to reconnect") == true) {
+                            logger.e { "Connection failed permanently after max attempts" }
+                            audioStreamManager.stopStream()
+                            _playbackState.value = SendspinPlaybackState.Idle
+                            wasStreamingBeforeDisconnect = false
+                        }
+                        _connectionState.value = SendspinConnectionState.Error(wsState.error)
+                    }
+
+                    WebSocketState.Disconnected -> {
+                        // Only handle if this is NOT during reconnection
+                        if (!wasStreamingBeforeDisconnect) {
+                            logger.i { "WebSocket disconnected (explicit)" }
+                            _connectionState.value = SendspinConnectionState.Idle
+                        }
+                    }
+
+                    WebSocketState.Connecting -> {
+                        logger.d { "WebSocket connecting..." }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun isCurrentlyStreaming(): Boolean {
+        val state = _playbackState.value
+        return state is SendspinPlaybackState.Buffering ||
+                state is SendspinPlaybackState.Synchronized ||
+                state is SendspinPlaybackState.Playing
+    }
+
     private fun monitorProtocolState() {
         launch {
             messageDispatcher?.protocolState?.collect { state ->
-                logger.d { "Protocol state: $state" }
+                Logger.withTag("SendspinClient").e { "📡 PROTOCOL STATE: $state" }
                 when (state) {
                     is ProtocolState.Ready -> {
                         val serverInfo = messageDispatcher?.serverInfo?.value
@@ -161,6 +240,7 @@ class SendspinClient(
                     }
 
                     ProtocolState.Disconnected -> {
+                        Logger.withTag("SendspinClient").e { "📡 PROTOCOL DISCONNECTED - setting connectionState to Idle" }
                         _connectionState.value = SendspinConnectionState.Idle
                     }
 
@@ -173,7 +253,7 @@ class SendspinClient(
     private fun monitorStreamEvents() {
         launch {
             messageDispatcher?.streamStartEvent?.collect { event ->
-                logger.i { "Stream started" }
+                Logger.withTag("SendspinClient").e { "🎵 STREAM START received" }
                 event.payload.player?.let { playerConfig ->
                     audioStreamManager.startStream(playerConfig)
                     _playbackState.value = SendspinPlaybackState.Buffering
@@ -185,7 +265,7 @@ class SendspinClient(
 
         launch {
             messageDispatcher?.streamEndEvent?.collect {
-                logger.i { "Stream ended" }
+                Logger.withTag("SendspinClient").e { "⛔ STREAM END received from server - stopping playback" }
                 audioStreamManager.stopStream()
                 _playbackState.value = SendspinPlaybackState.Idle
                 // Stop periodic state reporting
@@ -195,7 +275,7 @@ class SendspinClient(
 
         launch {
             messageDispatcher?.streamClearEvent?.collect {
-                logger.i { "Stream cleared" }
+                Logger.withTag("SendspinClient").e { "🗑️ STREAM CLEAR received from server" }
                 audioStreamManager.clearStream()
             }
         }
