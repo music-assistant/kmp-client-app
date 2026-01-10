@@ -43,6 +43,11 @@ class AuthenticationManager(
     // OAuthHandler will be set by platform (e.g., MainActivity on Android)
     var oauthHandler: OAuthHandler? = null
 
+    // Flag to prevent auto-login during intentional logout - using StateFlow for proper synchronization
+    private val _isLoggingOut = MutableStateFlow(false)
+    private val isLoggingOut: Boolean
+        get() = _isLoggingOut.value
+
     init {
         // Monitor session state to update auth UI state
         scope.launch {
@@ -52,9 +57,17 @@ class AuthenticationManager(
                         is DataConnectionState.AwaitingAuth -> {
                             when (dataConnectionState.authProcessState) {
                                 AuthProcessState.NotStarted -> {
-                                    // Try auto-login with saved token
-                                    settings.token.value?.let { token ->
-                                        authorizeWithSavedToken(token)
+                                    // Try auto-login with saved token (unless we're intentionally logging out)
+                                    val loggingOut = isLoggingOut
+                                    val tokenValue = settings.token.value
+                                    Logger.e(">>> AUTO-LOGIN CHECK: isLoggingOut=$loggingOut, token=${tokenValue?.take(10)}...")
+                                    if (!loggingOut) {
+                                        tokenValue?.let { token ->
+                                            Logger.e(">>> AUTO-LOGIN TRIGGERED - Authorizing with saved token")
+                                            authorizeWithSavedToken(token)
+                                        } ?: Logger.e(">>> AUTO-LOGIN SKIPPED - No token found")
+                                    } else {
+                                        Logger.e(">>> AUTO-LOGIN BLOCKED - isLoggingOut flag is TRUE")
                                     }
                                 }
 
@@ -120,6 +133,7 @@ class AuthenticationManager(
         password: String
     ): Result<Unit> {
         return try {
+            _isLoggingOut.value = false  // Reset flag when user explicitly logs in
             _authState.value = AuthState.Loading
             serviceClient.login(username, password)
             Result.success(Unit)
@@ -174,6 +188,7 @@ class AuthenticationManager(
 
     fun handleOAuthCallback(token: String) {
         Logger.d("OAuth callback received")
+        _isLoggingOut.value = false  // Reset flag when user explicitly logs in with OAuth
         scope.launch {
             _authState.value = AuthState.Loading
 
@@ -214,18 +229,34 @@ class AuthenticationManager(
 
     private suspend fun authorizeWithSavedToken(token: String) {
         try {
+            Logger.e(">>> AUTHORIZING with saved token: ${token.take(10)}...")
             serviceClient.authorize(token)
-        } catch (_: Exception) {
+            Logger.e(">>> AUTHORIZATION with saved token SUCCEEDED")
+        } catch (e: Exception) {
+            Logger.e(">>> AUTHORIZATION with saved token FAILED: ${e.message}")
             // Silent failure - user will see auth UI
         }
     }
 
     suspend fun logout(): Result<Unit> {
         return try {
+            Logger.e(">>> LOGOUT CALLED - Setting isLoggingOut flag to TRUE")
+            // Set flag FIRST, before any async operations
+            _isLoggingOut.value = true
+            Logger.e(">>> LOGOUT - Clearing token from settings")
+            // Clear token to prevent re-authentication
+            settings.updateToken(null)
+            Logger.e(">>> LOGOUT - Sending logout command to server")
+            // Now send logout command to server
             serviceClient.logout()
+            Logger.e(">>> LOGOUT - Setting auth state to Idle")
             _authState.value = AuthState.Idle
+            Logger.e(">>> LOGOUT COMPLETE - Flag remains TRUE to prevent auto-login")
+            // Keep the flag set to prevent auto-login until user explicitly logs in again
             Result.success(Unit)
         } catch (e: Exception) {
+            Logger.e(">>> LOGOUT FAILED - Resetting flag to FALSE")
+            _isLoggingOut.value = false
             Result.failure(e)
         }
     }

@@ -118,8 +118,8 @@ class AuthenticationViewModel(
     }
 
     fun logout() {
-        settings.updateToken(null)
         viewModelScope.launch {
+            // AuthenticationManager handles both flag setting and token clearing
             authManager.logout()
         }
     }

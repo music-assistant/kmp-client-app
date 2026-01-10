@@ -36,14 +36,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import compose.icons.FontAwesomeIcons
-import compose.icons.fontawesomeicons.Solid
-import compose.icons.fontawesomeicons.solid.ArrowLeft
 import io.music_assistant.client.api.ConnectionInfo
 import io.music_assistant.client.data.model.server.ServerInfo
 import io.music_assistant.client.data.model.server.User
 import io.music_assistant.client.ui.compose.auth.AuthenticationPanel
-import io.music_assistant.client.ui.compose.common.ActionButton
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import io.music_assistant.client.ui.theme.ThemeSetting
 import io.music_assistant.client.ui.theme.ThemeViewModel
@@ -54,7 +50,7 @@ import io.music_assistant.client.utils.isValidHost
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(goHome: () -> Unit, exitApp: () -> Unit) {
     val themeViewModel = koinViewModel<ThemeViewModel>()
     val theme = themeViewModel.theme.collectAsStateWithLifecycle(ThemeSetting.FollowSystem)
     val viewModel = koinViewModel<SettingsViewModel>()
@@ -67,7 +63,9 @@ fun SettingsScreen(onBack: () -> Unit) {
     // Only allow back navigation when authenticated
     BackHandler(enabled = true) {
         if (isAuthenticated) {
-            onBack()
+            goHome()
+        } else {
+            exitApp()
         }
     }
 
@@ -88,27 +86,13 @@ fun SettingsScreen(onBack: () -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(all = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (isAuthenticated) {
-                    ActionButton(
-                        icon = FontAwesomeIcons.Solid.ArrowLeft,
-                        size = 24.dp
-                    ) {
-                        onBack()
-                    }
-                } else {
-                    Spacer(Modifier.size(24.dp))
-                }
                 Text(
-                    modifier = Modifier
-                        .padding(start = 16.dp)
-                        .align(Alignment.CenterVertically),
                     text = "Settings",
-                    color = MaterialTheme.colorScheme.onBackground,
-                    style = MaterialTheme.typography.titleSmall,
-                    textAlign = TextAlign.Start,
+                    style = MaterialTheme.typography.titleLarge,
                 )
-                Spacer(modifier = Modifier.weight(1f))
                 ThemeChooser(currentTheme = theme.value) { changedTheme ->
                     themeViewModel.switchTheme(changedTheme)
                 }
@@ -158,36 +142,16 @@ fun SettingsScreen(onBack: () -> Unit) {
                     }
                 }
 
-                Text(
-                    modifier = Modifier.padding(bottom = 24.dp),
-                    text = when (val state = sessionState) {
-                        is SessionState.Reconnecting -> {
-                            "Reconnecting to ${state.connectionInfo.host}:${state.connectionInfo.port} (attempt ${state.attempt})..."
-                        }
-
-                        is SessionState.Connected -> {
-                            savedConnectionInfo?.let { conn ->
-                                "Connected to ${conn.host}:${conn.port}" +
-                                        (state.serverInfo?.let { server -> "\nServer version ${server.serverVersion}, schema ${server.schemaVersion}" }
-                                            ?: "")
-                            } ?: "Unknown connection"
-                        }
-
-                        SessionState.Connecting -> "Connecting to $ipAddress:$port."
-                        is SessionState.Disconnected -> {
-                            when (state) {
-                                SessionState.Disconnected.ByUser -> "Disconnected"
-                                is SessionState.Disconnected.Error -> "Disconnected${state.reason?.message?.let { ": $it" } ?: ""}"
-                                SessionState.Disconnected.Initial -> ""
-                                SessionState.Disconnected.NoServerData -> "Please provide server address and port."
-                            }
-                        }
-                    },
-                    color = MaterialTheme.colorScheme.onBackground,
-                    textAlign = TextAlign.Center,
-                    minLines = 3,
-                    maxLines = 3,
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    if (isAuthenticated) {
+                        Button(onClick = goHome) { Text("GO HOME") }
+                    } else {
+                        OutlinedButton(onClick = exitApp) { Text("EXIT APP") }
+                    }
+                }
 
                 when (sessionState) {
                     is SessionState.Disconnected -> {
@@ -233,6 +197,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                                     viewModel = viewModel,
                                 )
                             }
+
                             else -> Unit
                         }
                     }

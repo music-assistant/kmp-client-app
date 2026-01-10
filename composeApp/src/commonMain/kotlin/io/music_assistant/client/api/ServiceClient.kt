@@ -294,15 +294,20 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
         if (currentState !is SessionState.Connected) {
             return
         }
-        try {
-            sendRequest(Request.Auth.logout())
-        } catch (_: Exception) {
-        }
+        // Update state synchronously
         _sessionState.update {
             currentState.copy(
                 authProcessState = AuthProcessState.LoggedOut,
                 user = null
             )
+        }
+        // Fire and forget - send logout to server without waiting for response
+        launch {
+            try {
+                sendRequest(Request.Auth.logout())
+            } catch (_: Exception) {
+                // Ignore errors - we're already logged out locally
+            }
         }
     }
 
