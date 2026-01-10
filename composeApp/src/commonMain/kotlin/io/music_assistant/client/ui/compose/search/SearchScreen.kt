@@ -264,7 +264,7 @@ private fun SearchContent(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Type at least 3 characters to search")
+                        Text("Start searching...")
                     }
                 }
             }
