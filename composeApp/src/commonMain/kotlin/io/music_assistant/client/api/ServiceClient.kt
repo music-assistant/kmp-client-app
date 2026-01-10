@@ -117,7 +117,8 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                                         connectionInfo = connection,
                                         serverInfo = currentState.serverInfo,
                                         user = currentState.user,
-                                        authProcessState = currentState.authProcessState
+                                        authProcessState = currentState.authProcessState,
+                                        wasAutoLogin = currentState.wasAutoLogin
                                     )
                                 }
                                 listenForMessages()
@@ -136,7 +137,8 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                                         connectionInfo = connection,
                                         serverInfo = currentState.serverInfo,
                                         user = currentState.user,
-                                        authProcessState = currentState.authProcessState
+                                        authProcessState = currentState.authProcessState,
+                                        wasAutoLogin = currentState.wasAutoLogin
                                     )
                                 }
                                 listenForMessages()
@@ -311,7 +313,7 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
         }
     }
 
-    suspend fun authorize(token: String) {
+    suspend fun authorize(token: String, isAutoLogin: Boolean = false) {
         try {
             var currentState = _sessionState.value
             if (currentState !is SessionState.Connected) {
@@ -353,7 +355,8 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                 _sessionState.update {
                     currentState.copy(
                         authProcessState = AuthProcessState.NotStarted,
-                        user = user
+                        user = user,
+                        wasAutoLogin = isAutoLogin
                     )
                 }
             } ?: run {
@@ -419,6 +422,7 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                 val serverInfo = state.serverInfo
                 val user = state.user
                 val authProcessState = state.authProcessState
+                val wasAutoLogin = state.wasAutoLogin
 
                 // Enter Reconnecting state (preserves server/user/auth state - no UI reload!)
                 _sessionState.update {
@@ -427,7 +431,8 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                         connectionInfo = connectionInfo,
                         serverInfo = serverInfo,
                         user = user,
-                        authProcessState = authProcessState
+                        authProcessState = authProcessState,
+                        wasAutoLogin = wasAutoLogin
                     )
                 }
 
@@ -452,7 +457,8 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
                             connectionInfo = connectionInfo,
                             serverInfo = serverInfo,
                             user = user,
-                            authProcessState = authProcessState
+                            authProcessState = authProcessState,
+                            wasAutoLogin = wasAutoLogin
                         )
                     }
 

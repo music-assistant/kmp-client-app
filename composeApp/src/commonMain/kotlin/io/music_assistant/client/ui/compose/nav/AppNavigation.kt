@@ -83,15 +83,18 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
             }
 
             is SessionState.Connected -> {
-                val connState = (sessionState as SessionState.Connected).dataConnectionState
+                val connectedState = sessionState as SessionState.Connected
+                val connState = connectedState.dataConnectionState
                 when {
-                    // Don't auto-navigate to Home after authentication - let user configure
-                    // Local Player settings and manually navigate back when ready
-                    connState == DataConnectionState.Authenticated -> {
-                        // Do nothing - user can navigate manually via back button
+                    // Auto-navigate to Home ONLY when authenticated via auto-login with saved token
+                    connState == DataConnectionState.Authenticated && connectedState.wasAutoLogin -> {
+                        if (backStack.last() !is NavScreen.Home) {
+                            backStack.clear()
+                            backStack.add(NavScreen.Home)
+                        }
                     }
                     // If not authenticated/anonymous, navigate to Settings
-                    backStack.last() !is NavScreen.Settings -> {
+                    backStack.last() !is NavScreen.Settings && connState !is DataConnectionState.Authenticated -> {
                         backStack.clear()
                         backStack.add(NavScreen.Settings)
                     }

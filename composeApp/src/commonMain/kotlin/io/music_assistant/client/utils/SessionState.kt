@@ -12,6 +12,7 @@ sealed class SessionState {
         val serverInfo: ServerInfo? = null,
         val user: User? = null,
         val authProcessState: AuthProcessState = AuthProcessState.NotStarted,
+        val wasAutoLogin: Boolean = false,
     ) : SessionState() {
 
         val dataConnectionState: DataConnectionState = when {
@@ -30,6 +31,7 @@ sealed class SessionState {
         val serverInfo: ServerInfo? = null,
         val user: User? = null,
         val authProcessState: AuthProcessState = AuthProcessState.NotStarted,
+        val wasAutoLogin: Boolean = false,
     ) : SessionState() {
         val dataConnectionState: DataConnectionState = when {
             serverInfo == null -> DataConnectionState.AwaitingServerInfo
