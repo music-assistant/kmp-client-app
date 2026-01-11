@@ -23,7 +23,7 @@ data class QueueTrack(
                         isPlayable = true
                     )
                 } else {
-                    Logger.w("QueueTrack: Item $queueItemId has wrong type ${appMediaItem!!::class.simpleName}, dropping")
+                    Logger.w("QueueTrack: Item $queueItemId has wrong type ${appMediaItem?.let { it::class.simpleName }}, dropping")
                     return null
                 }
             }
