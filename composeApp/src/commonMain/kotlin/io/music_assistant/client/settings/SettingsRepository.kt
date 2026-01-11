@@ -43,6 +43,32 @@ class SettingsRepository(
         }
     }
 
+    private val _token = MutableStateFlow(
+        settings.getStringOrNull("token")?.takeIf { it.isNotBlank() }
+    )
+    val token = _token.asStateFlow()
+
+    fun updateToken(token: String?) {
+        if (token != this._token.value) {
+            co.touchlab.kermit.Logger.e(">>> TOKEN UPDATE: ${this._token.value?.take(10)}... -> ${token?.take(10)}...")
+            settings.putString("token", token ?: "")
+            _token.update { token }
+            co.touchlab.kermit.Logger.e(">>> TOKEN UPDATED to: ${_token.value?.take(10)}...")
+        } else {
+            co.touchlab.kermit.Logger.e(">>> TOKEN UPDATE SKIPPED (same value): ${token?.take(10)}...")
+        }
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    val deviceName = MutableStateFlow(
+        settings.getStringOrNull("deviceName")
+            ?: run {
+                val name = "KMP app ${Uuid.random()}"
+                settings.putString("deviceName", name)
+                name
+            }
+    ).asStateFlow()
+
     private val _playersSorting = MutableStateFlow(
         settings.getStringOrNull("players_sort")?.split(",")
     )
@@ -53,9 +79,52 @@ class SettingsRepository(
         _playersSorting.update { newValue }
     }
 
+    // Sendspin settings
+    private val _sendspinEnabled = MutableStateFlow(
+        settings.getBoolean("sendspin_enabled", false)
+    )
+    val sendspinEnabled = _sendspinEnabled.asStateFlow()
+
+    fun setSendspinEnabled(enabled: Boolean) {
+        settings.putBoolean("sendspin_enabled", enabled)
+        _sendspinEnabled.update { enabled }
+    }
+
     @OptIn(ExperimentalUuidApi::class)
-    fun getLocalPlayerId(): String =
-        settings.getStringOrNull("local_player_id") ?: Uuid.random().toString().also {
-            settings.putString("local_player_id", it)
+    private val _sendspinClientId = MutableStateFlow(
+        settings.getStringOrNull("sendspin_client_id") ?: Uuid.random().toString().also {
+            settings.putString("sendspin_client_id", it)
         }
+    )
+    val sendspinClientId = _sendspinClientId.asStateFlow()
+
+    private val _sendspinDeviceName = MutableStateFlow(
+        settings.getStringOrNull("sendspin_device_name") ?: "My Phone"
+    )
+    val sendspinDeviceName = _sendspinDeviceName.asStateFlow()
+
+    fun setSendspinDeviceName(name: String) {
+        settings.putString("sendspin_device_name", name)
+        _sendspinDeviceName.update { name }
+    }
+
+    private val _sendspinPort = MutableStateFlow(
+        settings.getInt("sendspin_port", 8927)
+    )
+    val sendspinPort = _sendspinPort.asStateFlow()
+
+    fun setSendspinPort(port: Int) {
+        settings.putInt("sendspin_port", port)
+        _sendspinPort.update { port }
+    }
+
+    private val _sendspinPath = MutableStateFlow(
+        settings.getString("sendspin_path", "/sendspin")
+    )
+    val sendspinPath = _sendspinPath.asStateFlow()
+
+    fun setSendspinPath(path: String) {
+        settings.putString("sendspin_path", path)
+        _sendspinPath.update { path }
+    }
 }

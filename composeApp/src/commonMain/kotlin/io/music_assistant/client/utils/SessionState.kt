@@ -2,14 +2,43 @@ package io.music_assistant.client.utils
 
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.music_assistant.client.api.ConnectionInfo
+import io.music_assistant.client.data.model.server.ServerInfo
+import io.music_assistant.client.data.model.server.User
 
 sealed class SessionState {
     data class Connected(
         val session: DefaultClientWebSocketSession,
-        val connectionInfo: ConnectionInfo
-    ) : SessionState()
+        val connectionInfo: ConnectionInfo,
+        val serverInfo: ServerInfo? = null,
+        val user: User? = null,
+        val authProcessState: AuthProcessState = AuthProcessState.NotStarted,
+        val wasAutoLogin: Boolean = false,
+    ) : SessionState() {
 
-    data class Connecting(val connectionInfo: ConnectionInfo) : SessionState()
+        val dataConnectionState: DataConnectionState = when {
+            serverInfo == null -> DataConnectionState.AwaitingServerInfo
+            user == null -> DataConnectionState.AwaitingAuth(authProcessState)
+            else -> DataConnectionState.Authenticated
+        }
+
+    }
+
+    data object Connecting : SessionState()
+
+    data class Reconnecting(
+        val attempt: Int,
+        val connectionInfo: ConnectionInfo,
+        val serverInfo: ServerInfo? = null,
+        val user: User? = null,
+        val authProcessState: AuthProcessState = AuthProcessState.NotStarted,
+        val wasAutoLogin: Boolean = false,
+    ) : SessionState() {
+        val dataConnectionState: DataConnectionState = when {
+            serverInfo == null -> DataConnectionState.AwaitingServerInfo
+            user == null -> DataConnectionState.AwaitingAuth(authProcessState)
+            else -> DataConnectionState.Authenticated
+        }
+    }
 
     sealed class Disconnected : SessionState() {
         data object Initial : Disconnected()
@@ -17,5 +46,4 @@ sealed class SessionState {
         data object NoServerData : Disconnected()
         data class Error(val reason: Exception?) : Disconnected()
     }
-
 }

@@ -1,0 +1,35 @@
+# .claudeignore - Exclude everything unnecessary
+build/
+.gradle/
+.idea/
+*.iml
+node_modules/
+.git/
+
+# Generated code
+**/generated/**
+**/build/**
+**/*.generated.kt
+**/BuildConfig.kt
+
+# Large dependencies
+*.jar
+*.aar
+*.so
+*.dylib
+
+# iOS build artifacts
+*.xcworkspace/
+*.xcodeproj/xcuserdata/
+Pods/
+DerivedData/
+
+# Documentation (load only when needed)
+docs/**
+*.md
+!CLAUDE.md
+!README.md
+
+# Test resources
+**/test/resources/**/*.json
+**/test/resources/**/*.xml

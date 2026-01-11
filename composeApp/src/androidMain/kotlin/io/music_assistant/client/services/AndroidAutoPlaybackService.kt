@@ -18,8 +18,10 @@ import io.music_assistant.client.auto.MediaIds
 import io.music_assistant.client.auto.toMediaDescription
 import io.music_assistant.client.auto.toUri
 import io.music_assistant.client.data.MainDataSource
-import io.music_assistant.client.ui.compose.main.PlayerAction
-import io.music_assistant.client.ui.compose.main.QueueAction
+import io.music_assistant.client.ui.compose.common.DataState
+import io.music_assistant.client.ui.compose.common.action.PlayerAction
+import io.music_assistant.client.ui.compose.common.action.QueueAction
+import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -43,13 +45,11 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
 
     private val dataSource: MainDataSource by inject()
     private val library: AutoLibrary by inject()
-    private val currentPlayerData =
-        dataSource.playersData.map { it.firstOrNull { playerData -> playerData.player.isBuiltin } }
-            .stateIn(scope, SharingStarted.Eagerly, null)
+    private val currentPlayerData = dataSource.localPlayer
     private val mediaNotificationData = currentPlayerData.filterNotNull()
         .map {
             MediaNotificationData.from(
-                dataSource.apiClient.serverInfo.value?.baseUrl,
+                (dataSource.apiClient.sessionState.value as? SessionState.Connected)?.serverInfo?.baseUrl,
                 it,
                 false
             )
@@ -60,7 +60,12 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
 
     override fun onCreate() {
         super.onCreate()
-        mediaSessionHelper = MediaSessionHelper("AutoMediaSession", this, createCallback())
+        mediaSessionHelper = MediaSessionHelper(
+            tag = "AutoMediaSession",
+            multiPlayer = false,
+            context = this,
+            callback = createCallback(),
+        )
         sessionToken = mediaSessionHelper.getSessionToken()
         imageLoader = ImageLoader(this)
         defaultIconUri = R.drawable.baseline_library_music_24.toUri(this)
@@ -68,15 +73,25 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
             mediaNotificationData.debounce(200).collect { updatePlaybackState(it) }
         }
         scope.launch {
-            dataSource.builtinPlayerQueue.collect { list ->
-                mediaSessionHelper.updateQueue(list.map {
-                    QueueItem(
-                        it.track.toMediaDescription(
-                            dataSource.apiClient.serverInfo.value?.baseUrl,
-                            defaultIconUri
-                        ), it.track.longId
-                    )
-                })
+            currentPlayerData.filterNotNull().collect { playerData ->
+                // Get queue items from the player's queue data
+                when (val queueData = playerData.queue) {
+                    is DataState.Data -> {
+                        when (val queueItems = queueData.data.items) {
+                            is DataState.Data -> {
+                                val baseUrl = (dataSource.apiClient.sessionState.value as? SessionState.Connected)?.serverInfo?.baseUrl
+                                mediaSessionHelper.updateQueue(queueItems.data.map { queueTrack ->
+                                    QueueItem(
+                                        queueTrack.track.toMediaDescription(baseUrl, defaultIconUri),
+                                        queueTrack.track.longId
+                                    )
+                                })
+                            }
+                            else -> mediaSessionHelper.updateQueue(emptyList())
+                        }
+                    }
+                    else -> mediaSessionHelper.updateQueue(emptyList())
+                }
             }
         }
     }
@@ -95,7 +110,7 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
                         library.play(
                             it,
                             extras,
-                            playerData.queue?.id ?: playerData.player.id
+                            playerData.queueInfo?.id ?: playerData.player.id
                         )
                     }
                 }
@@ -119,15 +134,25 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
 
             override fun onSkipToQueueItem(id: Long) {
                 currentPlayerData.value?.let { playerData ->
-                    dataSource.builtinPlayerQueue.value.find { it.track.longId == id }?.id
-                        ?.let { queueItemId ->
-                            dataSource.queueAction(
-                                QueueAction.PlayQueueItem(
-                                    playerData.queue?.id ?: playerData.player.id, queueItemId
-                                )
-
-                            )
+                    // Get queue items from player's queue data
+                    when (val queueData = playerData.queue) {
+                        is DataState.Data -> {
+                            when (val queueItems = queueData.data.items) {
+                                is DataState.Data -> {
+                                    queueItems.data.find { it.track.longId == id }?.id?.let { queueItemId ->
+                                        dataSource.queueAction(
+                                            QueueAction.PlayQueueItem(
+                                                playerData.queueInfo?.id ?: playerData.player.id,
+                                                queueItemId
+                                            )
+                                        )
+                                    }
+                                }
+                                else -> {} // No queue items available
+                            }
                         }
+                        else -> {} // No queue data available
+                    }
                 }
             }
 
@@ -140,7 +165,7 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
             override fun onCustomAction(action: String, extras: Bundle?) {
                 when (action) {
                     "ACTION_TOGGLE_SHUFFLE" -> currentPlayerData.value?.let { playerData ->
-                        playerData.queue?.let {
+                        playerData.queueInfo?.let {
                             dataSource.playerAction(
                                 playerData,
                                 PlayerAction.ToggleShuffle(current = it.shuffleEnabled)
@@ -149,7 +174,7 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
                     }
 
                     "ACTION_TOGGLE_REPEAT" -> currentPlayerData.value?.let { playerData ->
-                        playerData.queue?.repeatMode?.let { repeatMode ->
+                        playerData.queueInfo?.repeatMode?.let { repeatMode ->
                             dataSource.playerAction(
                                 playerData,
                                 PlayerAction.ToggleRepeatMode(current = repeatMode)
@@ -179,6 +204,7 @@ class AndroidAutoPlaybackService : MediaBrowserServiceCompat() {
     ) = library.search(query, result)
 
     override fun onDestroy() {
+        mediaSessionHelper.release()
         scope.cancel()
         super.onDestroy()
     }

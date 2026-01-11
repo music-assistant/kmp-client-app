@@ -29,6 +29,16 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Custom scheme callback -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="musicassistant"
+                    android:host="auth"
+                    android:path="/callback" />
+            </intent-filter>
         </activity>
         <service
             android:name="io.music_assistant.client.services.AndroidAutoPlaybackService"

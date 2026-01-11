@@ -11,13 +11,8 @@ import androidx.media.MediaBrowserServiceCompat
 import androidx.media.utils.MediaConstants
 import co.touchlab.kermit.Logger
 import io.music_assistant.client.R
+import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
-import io.music_assistant.client.api.getAlbumTracksRequest
-import io.music_assistant.client.api.getArtistAlbumsRequest
-import io.music_assistant.client.api.getArtistsRequest
-import io.music_assistant.client.api.getPlaylistsRequest
-import io.music_assistant.client.api.playMediaRequest
-import io.music_assistant.client.api.searchRequest
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItemList
@@ -25,6 +20,8 @@ import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.server.SearchResult
 import io.music_assistant.client.data.model.server.ServerMediaItem
+import io.music_assistant.client.utils.SessionState
+import io.music_assistant.client.utils.resultAs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -54,7 +51,7 @@ class AutoLibrary(
                 .debounce(500)
                 .collect { (query, result) ->
                     val answer = apiClient.sendRequest(
-                        request = searchRequest(
+                        request = Request.Library.search(
                             query = query,
                             mediaTypes = listOf(
                                 MediaType.ARTIST,
@@ -65,10 +62,10 @@ class AutoLibrary(
                             libraryOnly = false
                         )
                     )
-                    answer?.resultAs<SearchResult>()?.let {
+                    answer.resultAs<SearchResult>()?.let {
                         result.sendResult(
                             it.toAutoMediaItems(
-                                apiClient.serverInfo.value?.baseUrl,
+                                baseUrl,
                                 defaultIconUri
                             )
                         )
@@ -96,12 +93,12 @@ class AutoLibrary(
                 result.detach()
                 scope.launch {
                     result.sendResult(
-                        apiClient.sendRequest(getArtistsRequest())
-                            ?.resultAs<List<ServerMediaItem>>()
+                        apiClient.sendRequest(Request.Artist.listLibrary())
+                            .resultAs<List<ServerMediaItem>>()
                             ?.toAppMediaItemList()
                             ?.map {
                                 it.toAutoMediaItem(
-                                    apiClient.serverInfo.value?.baseUrl,
+                                    baseUrl,
                                     true,
                                     defaultIconUri
                                 )
@@ -113,12 +110,12 @@ class AutoLibrary(
                 result.detach()
                 scope.launch {
                     result.sendResult(
-                        apiClient.sendRequest(getPlaylistsRequest())
-                            ?.resultAs<List<ServerMediaItem>>()
+                        apiClient.sendRequest(Request.Playlist.listLibrary())
+                            .resultAs<List<ServerMediaItem>>()
                             ?.toAppMediaItemList()
                             ?.map {
                                 it.toAutoMediaItem(
-                                    apiClient.serverInfo.value?.baseUrl,
+                                    baseUrl,
                                     true,
                                     defaultIconUri
                                 )
@@ -135,8 +132,8 @@ class AutoLibrary(
                 result.detach()
                 val parentType = MediaType.valueOf(parts[2])
                 val requestAndCategory = when (parentType) {
-                    MediaType.ARTIST -> getArtistAlbumsRequest(parts[0], parts[3])
-                    MediaType.ALBUM -> getAlbumTracksRequest(parts[0], parts[3])
+                    MediaType.ARTIST -> Request.Artist.getAlbums(parts[0], parts[3])
+                    MediaType.ALBUM -> Request.Album.getTracks(parts[0], parts[3])
                     else -> {
                         result.sendResult(null)
                         return
@@ -144,10 +141,10 @@ class AutoLibrary(
                 }
                 scope.launch {
                     val list = apiClient.sendRequest(requestAndCategory)
-                        ?.resultAs<List<ServerMediaItem>>()
+                        .resultAs<List<ServerMediaItem>>()
                         ?.toAppMediaItemList()?.map {
                             it.toAutoMediaItem(
-                                apiClient.serverInfo.value?.baseUrl,
+                                baseUrl,
                                 true,
                                 defaultIconUri
                             )
@@ -157,6 +154,9 @@ class AutoLibrary(
             }
         }
     }
+
+    private val baseUrl: String?
+        get() = (apiClient.sessionState.value as? SessionState.Connected)?.serverInfo?.baseUrl
 
     private fun actionsForItem(itemId: String): List<MediaItem> {
         return buildList {
@@ -208,7 +208,7 @@ class AutoLibrary(
         id.split("__").getOrNull(1)?.let { uri ->
             scope.launch {
                 apiClient.sendRequest(
-                    playMediaRequest(
+                    Request.Library.play(
                         media = listOf(uri),
                         queueOrPlayerId = queueId,
                         option = extras?.getString(
@@ -296,7 +296,7 @@ fun AppMediaItem.toMediaDescription(
         .setMediaId("${itemId}__${uri}__${mediaType}__${provider}")
         .setTitle(name)
         .setSubtitle(subtitle)
-        .setMediaUri(Uri.parse(uri))
+        .setMediaUri(uri?.let { Uri.parse(it) })
         .setIconUri(imageInfo?.url(serverUrl)?.let { Uri.parse(it) } ?: defaultIconUri)
         .setExtras(Bundle().apply {
             putString(

@@ -1,17 +1,15 @@
 package io.music_assistant.client.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.darkColors
-import androidx.compose.material.lightColors
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
-private val lightScheme = lightColors(
+private val lightScheme = lightColorScheme(
     primary = primaryLight,
-    primaryVariant = primaryLightVariant,
     onPrimary = onPrimaryLight,
     secondary = secondaryLight,
-    secondaryVariant = secondaryLightVariant,
     onSecondary = onSecondaryLight,
     error = errorLight,
     onError = onErrorLight,
@@ -21,12 +19,10 @@ private val lightScheme = lightColors(
     onSurface = onSurfaceLight,
 )
 
-private val darkScheme = darkColors(
+private val darkScheme = darkColorScheme(
     primary = primaryDark,
-    primaryVariant = primaryDarkVariant,
     onPrimary = onPrimaryDark,
     secondary = secondaryDark,
-    secondaryVariant = secondaryDarkVariant,
     onSecondary = onSecondaryDark,
     error = errorDark,
     onError = onErrorDark,
@@ -47,7 +43,7 @@ fun AppTheme(
     }
 
     MaterialTheme(
-        colors = colorScheme,
+        colorScheme = colorScheme,
         content = content
     )
 }

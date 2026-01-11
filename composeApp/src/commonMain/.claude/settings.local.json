@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.sendspin-audio.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(find:*)",
+      "Bash(./gradlew compileKotlinMetadata:*)",
+      "Bash(./gradlew :composeApp:compileDebugKotlinAndroid:*)",
+      "Bash(tree:*)",
+      "Bash(wc:*)",
+      "Bash(./gradlew:*)",
+      "Bash(grep:*)"
+    ]
+  }
+}

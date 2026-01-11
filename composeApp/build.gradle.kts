@@ -43,20 +43,23 @@ kotlin {
             implementation(libs.koin.androidx.compose)
 
             implementation(libs.androidx.media)
+            implementation("androidx.browser:browser:1.8.0")
 
             implementation(libs.coil)
-
-            implementation(libs.androidx.media3.exoplayer)
+            implementation(libs.concentus)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
-            implementation(compose.material)
+            // implementation(compose.material)
+            implementation(compose.material3)
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
+            implementation(libs.androidx.navigation3.ui)
+            implementation(libs.androidx.navigation3.material3.adaptive)
 
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.cio)
@@ -72,6 +75,7 @@ kotlin {
 
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor3)
+            implementation(libs.coil.svg)
 
             implementation(libs.material.icons.core)
             implementation(libs.material.icons.extended)
@@ -93,8 +97,6 @@ kotlin {
             implementation(libs.kotlinx.coroutines.swing)
 
             implementation(libs.ktor.client.java)
-
-            implementation(libs.vlcj)
         }
 
         iosMain.dependencies {

@@ -18,7 +18,8 @@ import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import io.music_assistant.client.data.MainDataSource
-import io.music_assistant.client.ui.compose.main.PlayerAction
+import io.music_assistant.client.ui.compose.common.action.PlayerAction
+import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -45,8 +46,10 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
     private lateinit var imageLoader: ImageLoader
 
     private val dataSource: MainDataSource by inject()
+
+    // Note: Sendspin is managed by MainDataSource (singleton, shared across app)
     private val players = dataSource.playersData
-        .map { list -> list.filter { it.queue?.currentItem != null } }
+        .map { list -> list.filter { it.queueInfo?.currentItem != null } }
         .stateIn(scope, SharingStarted.Eagerly, emptyList())
     private val activePlayerIndex = MutableStateFlow(-1)
     private val currentPlayerData =
@@ -62,7 +65,7 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
         players.map { it.size > 1 }
     ) { player, moreThanOnePlayer ->
         MediaNotificationData.from(
-            dataSource.apiClient.serverInfo.value?.baseUrl,
+            (dataSource.apiClient.sessionState.value as? SessionState.Connected)?.serverInfo?.baseUrl,
             player,
             moreThanOnePlayer
         )
@@ -77,7 +80,12 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
 
     override fun onCreate() {
         super.onCreate()
-        mediaSessionHelper = MediaSessionHelper("MainMediaSession", this, createCallback())
+        mediaSessionHelper = MediaSessionHelper(
+            tag = "MainMediaSession",
+            multiPlayer = true,
+            context = this,
+            callback = createCallback(),
+        )
         mediaNotificationManager = MediaNotificationManager(this, mediaSessionHelper)
         startForeground(
             MediaNotificationManager.NOTIFICATION_ID,
@@ -162,7 +170,7 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
                 when (action) {
                     "ACTION_SWITCH_PLAYER" -> switchPlayer()
                     "ACTION_TOGGLE_SHUFFLE" -> currentPlayerData.value?.let { playerData ->
-                        playerData.queue?.let {
+                        playerData.queueInfo?.let {
                             dataSource.playerAction(
                                 playerData,
                                 PlayerAction.ToggleShuffle(current = it.shuffleEnabled)
@@ -171,7 +179,7 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
                     }
 
                     "ACTION_TOGGLE_REPEAT" -> currentPlayerData.value?.let { playerData ->
-                        playerData.queue?.repeatMode?.let { repeatMode ->
+                        playerData.queueInfo?.repeatMode?.let { repeatMode ->
                             dataSource.playerAction(
                                 playerData,
                                 PlayerAction.ToggleRepeatMode(current = repeatMode)
@@ -199,6 +207,7 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
 
     override fun onDestroy() {
         unregisterReceiver(notificationDismissReceiver)
+        mediaSessionHelper.release()
         scope.cancel()
         super.onDestroy()
     }

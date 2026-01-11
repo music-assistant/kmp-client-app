@@ -2,7 +2,6 @@ package io.music_assistant.client.api
 
 import co.touchlab.kermit.Logger
 import io.music_assistant.client.data.model.server.EventType
-import io.music_assistant.client.data.model.server.events.BuiltinPlayerEvent
 import io.music_assistant.client.data.model.server.events.Event
 import io.music_assistant.client.data.model.server.events.GenericEvent
 import io.music_assistant.client.data.model.server.events.MediaItemAddedEvent
@@ -30,7 +29,6 @@ data class Event(
         EventType.QUEUE_UPDATED -> myJson.decodeFromJsonElement<QueueUpdatedEvent>(json)
         EventType.QUEUE_TIME_UPDATED -> myJson.decodeFromJsonElement<QueueTimeUpdatedEvent>(json)
         EventType.QUEUE_ITEMS_UPDATED -> myJson.decodeFromJsonElement<QueueItemsUpdatedEvent>(json)
-        EventType.BUILTIN_PLAYER -> myJson.decodeFromJsonElement<BuiltinPlayerEvent>(json)
         EventType.MEDIA_ITEM_PLAYED, //-> myJson.decodeFromJsonElement<MediaItemPlayedEvent>(json)
         EventType.PLAYER_ADDED,
         EventType.PLAYER_REMOVED,

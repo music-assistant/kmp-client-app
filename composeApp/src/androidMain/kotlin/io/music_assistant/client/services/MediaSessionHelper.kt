@@ -2,6 +2,7 @@ package io.music_assistant.client.services
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.media.AudioManager
 import android.media.session.PlaybackState
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
@@ -9,17 +10,30 @@ import android.support.v4.media.session.PlaybackStateCompat
 import io.music_assistant.client.R
 import io.music_assistant.client.data.model.server.RepeatMode
 
-class MediaSessionHelper(tag: String, context: Context, callback: MediaSessionCompat.Callback) {
+class MediaSessionHelper(
+    tag: String,
+    private val multiPlayer: Boolean,
+    context: Context,
+    callback: MediaSessionCompat.Callback,
+) {
     private val mediaSession: MediaSessionCompat = MediaSessionCompat(context, tag)
 
     init {
         mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_QUEUE_COMMANDS)
         mediaSession.setCallback(callback)
+        mediaSession.setPlaybackToLocal(AudioManager.STREAM_MUSIC)
         mediaSession.isActive = true
     }
 
     fun getSessionToken(): MediaSessionCompat.Token {
         return mediaSession.sessionToken
+    }
+
+    /**
+     * Release resources and unregister observers
+     */
+    fun release() {
+        mediaSession.release()
     }
 
     fun updatePlaybackState(
@@ -86,7 +100,11 @@ class MediaSessionHelper(tag: String, context: Context, callback: MediaSessionCo
             )
             .putString(
                 MediaMetadataCompat.METADATA_KEY_ARTIST,
-                "${data.artist} (on ${data.playerName})"
+                if (multiPlayer) {
+                    "${data.artist ?: "Unknown Artist"} (on ${data.playerName})"
+                } else {
+                    data.artist ?: "Unknown Artist"
+                }
             )
             .putString(
                 MediaMetadataCompat.METADATA_KEY_ALBUM,
