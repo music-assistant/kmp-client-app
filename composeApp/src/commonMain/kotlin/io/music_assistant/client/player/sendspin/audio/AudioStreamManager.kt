@@ -7,6 +7,7 @@ import io.music_assistant.client.player.sendspin.BufferState
 import io.music_assistant.client.player.sendspin.ClockSynchronizer
 import io.music_assistant.client.player.sendspin.SyncQuality
 import io.music_assistant.client.player.sendspin.model.*
+import io.music_assistant.client.utils.audioDispatcher
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -161,10 +162,26 @@ class AudioStreamManager(
         // Convert server timestamp to local time
         val localTimestamp = clockSynchronizer.serverTimeToLocal(binaryMessage.timestamp)
 
-        // Create audio chunk
+        // DECODE IMMEDIATELY (producer pattern - prepare data ahead of time)
+        // This runs on Default dispatcher with buffer headroom - not time-critical
+        val decoder = audioDecoder ?: run {
+            logger.w { "No decoder available" }
+            return
+        }
+
+        val decodedPcm = try {
+            decoder.decode(binaryMessage.data)
+        } catch (e: Exception) {
+            logger.e(e) { "Error decoding audio chunk" }
+            return
+        }
+
+        logger.d { "Decoded chunk: ${binaryMessage.data.size} -> ${decodedPcm.size} PCM bytes" }
+
+        // Create audio chunk with DECODED PCM data
         val chunk = AudioChunk(
             timestamp = binaryMessage.timestamp,
-            data = binaryMessage.data,
+            data = decodedPcm,  // Store decoded PCM, not encoded!
             localTimestamp = localTimestamp
         )
 
@@ -178,8 +195,9 @@ class AudioStreamManager(
 
     private fun startPlaybackThread() {
         playbackJob?.cancel()
-        playbackJob = launch {
-            logger.i { "Starting playback thread" }
+        // Launch playback loop on high-priority audioDispatcher
+        playbackJob = CoroutineScope(audioDispatcher + SupervisorJob()).launch {
+            logger.i { "Starting playback thread on high-priority dispatcher" }
 
             // Wait for pre-buffer
             waitForPrebuffer()
@@ -281,7 +299,8 @@ class AudioStreamManager(
 
     private fun startAdaptationThread() {
         adaptationJob?.cancel()
-        adaptationJob = launch {
+        // Use Default dispatcher to avoid consuming high-priority audio threads
+        adaptationJob = CoroutineScope(Dispatchers.Default + SupervisorJob()).launch {
             logger.i { "Starting adaptation thread" }
             while (isActive && isStreaming) {
                 try {
@@ -305,22 +324,20 @@ class AudioStreamManager(
 
     private fun playChunk(chunk: AudioChunk) {
         try {
-            // Decode audio
-            val decoder = audioDecoder ?: return
-            val decodedData = decoder.decode(chunk.data)
+           val pcmData = chunk.data
 
-            logger.d { "Decoded chunk: ${chunk.data.size} -> ${decodedData.size} PCM bytes" }
+            logger.d { "Writing ${pcmData.size} PCM bytes to AudioTrack" }
 
             // Write to MediaPlayerController
-            val written = mediaPlayerController.writeRawPcm(decodedData)
-            if (written < decodedData.size) {
-                logger.w { "Only wrote $written/${decodedData.size} bytes to AudioTrack" }
+            val written = mediaPlayerController.writeRawPcm(pcmData)
+            if (written < pcmData.size) {
+                logger.w { "Only wrote $written/${pcmData.size} bytes to AudioTrack" }
             } else {
                 logger.d { "Wrote $written bytes to AudioTrack successfully" }
             }
 
         } catch (e: Exception) {
-            logger.e(e) { "Error decoding chunk" }
+            logger.e(e) { "Error writing PCM chunk" }
         }
     }
 

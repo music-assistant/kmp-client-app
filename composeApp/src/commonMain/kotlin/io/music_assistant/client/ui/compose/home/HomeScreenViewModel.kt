@@ -214,7 +214,11 @@ class HomeScreenViewModel(
 
     private fun watchPlayersData(): Job = viewModelScope.launch {
         dataSource.playersData.collect { playerData ->
-            if (playerData.isNotEmpty() || _playersState.value is PlayersState.Data)
+            // Update when in Loading or Data state
+            // This allows transitioning from Loading to Data and updating existing Data
+            // Don't update terminal states (Disconnected, NoAuth, NoServer)
+            val currentState = _playersState.value
+            if (currentState is PlayersState.Loading || currentState is PlayersState.Data) {
                 _playersState.update {
                     PlayersState.Data(
                         playerData,
@@ -222,6 +226,7 @@ class HomeScreenViewModel(
                         dataSource.localPlayer.value?.playerId
                     )
                 }
+            }
         }
     }
 

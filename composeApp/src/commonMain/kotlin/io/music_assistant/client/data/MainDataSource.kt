@@ -24,6 +24,8 @@ import io.music_assistant.client.data.model.server.ServerQueueItem
 import io.music_assistant.client.data.model.server.events.MediaItemAddedEvent
 import io.music_assistant.client.data.model.server.events.MediaItemDeletedEvent
 import io.music_assistant.client.data.model.server.events.MediaItemUpdatedEvent
+import io.music_assistant.client.data.model.server.events.PlayerAddedEvent
+import io.music_assistant.client.data.model.server.events.PlayerRemovedEvent
 import io.music_assistant.client.data.model.server.events.PlayerUpdatedEvent
 import io.music_assistant.client.data.model.server.events.QueueItemsUpdatedEvent
 import io.music_assistant.client.data.model.server.events.QueueTimeUpdatedEvent
@@ -46,6 +48,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -84,7 +87,11 @@ class MainDataSource(
                         ?: Int.MAX_VALUE
                 }
             } ?: players.sortedBy { player -> player.name }
-        }
+        }.stateIn(
+            scope = this,
+            started = SharingStarted.Eagerly,
+            initialValue = emptyList()
+        )
 
     private val _playersData = MutableStateFlow<List<PlayerData>>(emptyList())
     val playersData = _playersData.asStateFlow()
@@ -121,9 +128,10 @@ class MainDataSource(
     init {
         launch {
             combine(
-                _players.debounce(500L),
-                _queueInfos.debounce(500L)
+                _players,
+                _queueInfos
             ) { players, queues -> Pair(players, queues) }
+                .debounce(50L) // Small debounce to batch rapid updates, but don't delay initial load
                 .collect { p ->
                     _playersData.update { oldValues ->
                         p.first.map { player ->
@@ -193,12 +201,14 @@ class MainDataSource(
         }
         launch {
             playersData.collect { dataList ->
+                // Auto-select first player if no player is selected
                 if (dataList.isNotEmpty()
                     && dataList.none { data -> data.playerId == _selectedPlayerId.value }
                 ) {
                     _selectedPlayerId.update { dataList.getOrNull(0)?.playerId }
                 }
-                updatePlayersAndQueues()
+                // Don't call updatePlayersAndQueues() here - it creates a reactive loop!
+                // Updates are triggered by sessionState changes and API events.
             }
         }
         launch {
@@ -281,6 +291,18 @@ class MainDataSource(
                                 log.i { "Sending pause command to MA server for player ${playerData.player.name}" }
                                 playerAction(playerData, PlayerAction.TogglePlayPause)
                             }
+                        }
+                    }
+                }
+
+                launch {
+                    // Monitor connection state and refresh player list when Sendspin connects
+                    // This ensures the local player appears immediately in the UI
+                    it.connectionState.collect { state ->
+                        if (state is SendspinConnectionState.Connected) {
+                            log.i { "Sendspin connected - refreshing player list" }
+                            delay(1000) // Give server a moment to register the player
+                            updatePlayersAndQueues()
                         }
                     }
                 }
@@ -452,11 +474,40 @@ class MainDataSource(
             apiClient.events
                 .collect { event ->
                     when (event) {
+                        is PlayerAddedEvent -> {
+                            val newPlayer = event.player()
+                            if (newPlayer.shouldBeShown) {
+                                log.i { "Player added: ${newPlayer.name} (${newPlayer.id})" }
+                                _serverPlayers.update { players ->
+                                    if (players.none { it.id == newPlayer.id }) {
+                                        players + newPlayer
+                                    } else {
+                                        // Player already exists, just update it
+                                        players.map { if (it.id == newPlayer.id) newPlayer else it }
+                                    }
+                                }
+                            }
+                        }
+
+                        is PlayerRemovedEvent -> {
+                            val playerId = event.objectId ?: event.data.takeIf { it.isNotEmpty() }
+                            if (playerId != null) {
+                                log.i { "Player removed: $playerId" }
+                                _serverPlayers.update { players ->
+                                    players.filter { it.id != playerId }
+                                }
+                            }
+                        }
+
                         is PlayerUpdatedEvent -> {
                             _serverPlayers.value.takeIf { it.isNotEmpty() }?.let { players ->
                                 val data = event.player()
                                 _serverPlayers.update {
-                                    players.map { if (it.id == data.id) data else it }
+                                    if (data.shouldBeShown) {
+                                        players.map { if (it.id == data.id) data else it }
+                                    } else {
+                                        players.filter { it.id != data.id }
+                                    }
                                 }
                             }
                         }
