@@ -523,15 +523,14 @@ class MainDataSource(
 
                         is QueueItemsUpdatedEvent -> {
                             val data = event.queue()
-                            playersData.value.firstOrNull {
-                                it.queueId == event.data.queueId
-                            }
-                                ?.let { refreshPlayerQueueItems(it) }
                             _queueInfos.update { value ->
                                 value.map {
                                     if (it.id == data.id) data else it
                                 }
                             }
+                            playersData.value.firstOrNull {
+                                it.queueId == data.id
+                            }?.let { refreshPlayerQueueItems(it, data) }
                         }
 
                         is QueueTimeUpdatedEvent -> {
@@ -657,14 +656,14 @@ class MainDataSource(
         }
     }
 
-    private fun refreshPlayerQueueItems(data: PlayerData) {
+    private fun refreshPlayerQueueItems(fullData: PlayerData, forcedQueueData: QueueInfo? = null) {
         launch {
-            data.queueInfo?.let { queueInfo ->
+            (forcedQueueData ?: fullData.queueInfo)?.let { queueInfo ->
                 val queueTracks = apiClient.sendRequest(Request.Queue.items(queueInfo.id))
                     .resultAs<List<ServerQueueItem>>()?.mapNotNull { it.toQueueTrack() }
                 _playersData.update { currentList ->
                     currentList.map { playerData ->
-                        if (playerData.player.id == data.player.id) {
+                        if (playerData.player.id == fullData.player.id) {
                             PlayerData(
                                 player = playerData.player,
                                 queue = DataState.Data(
