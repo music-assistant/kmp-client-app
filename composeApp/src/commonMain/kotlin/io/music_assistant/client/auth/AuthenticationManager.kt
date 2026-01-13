@@ -60,14 +60,10 @@ class AuthenticationManager(
                                     // Try auto-login with saved token (unless we're intentionally logging out)
                                     val loggingOut = isLoggingOut
                                     val tokenValue = settings.token.value
-                                    Logger.e(">>> AUTO-LOGIN CHECK: isLoggingOut=$loggingOut, token=${tokenValue?.take(10)}...")
                                     if (!loggingOut) {
                                         tokenValue?.let { token ->
-                                            Logger.e(">>> AUTO-LOGIN TRIGGERED - Authorizing with saved token")
                                             authorizeWithSavedToken(token)
-                                        } ?: Logger.e(">>> AUTO-LOGIN SKIPPED - No token found")
-                                    } else {
-                                        Logger.e(">>> AUTO-LOGIN BLOCKED - isLoggingOut flag is TRUE")
+                                        }
                                     }
                                 }
 

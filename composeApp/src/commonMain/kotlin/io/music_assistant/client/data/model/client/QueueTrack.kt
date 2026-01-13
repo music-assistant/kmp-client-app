@@ -2,6 +2,8 @@ package io.music_assistant.client.data.model.client
 
 import co.touchlab.kermit.Logger
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItem
+import io.music_assistant.client.data.model.server.AudioFormat
+import io.music_assistant.client.data.model.server.DSPSettings
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.ServerMediaItem
 import io.music_assistant.client.data.model.server.ServerQueueItem
@@ -9,8 +11,13 @@ import io.music_assistant.client.data.model.server.ServerQueueItem
 data class QueueTrack(
     val id: String,
     val track: AppMediaItem.Track,
-    val isPlayable: Boolean = true
+    val isPlayable: Boolean ,
+    val format: AudioFormat?,
+    val dsp: Map<String, DSPSettings>?
 ) {
+
+    fun audioFormat(playerId: String) = dsp?.get(playerId)?.outputFormat ?: format
+
     companion object {
         fun ServerQueueItem.toQueueTrack(): QueueTrack? {
             // Try to use the actual media_item if available
@@ -20,7 +27,9 @@ data class QueueTrack(
                     return QueueTrack(
                         id = queueItemId,
                         track = appMediaItem,
-                        isPlayable = true
+                        isPlayable = true,
+                        format = streamDetails?.audioFormat,
+                        dsp = streamDetails?.dsp
                     )
                 } else {
                     Logger.w("QueueTrack: Item $queueItemId has wrong type ${appMediaItem?.let { it::class.simpleName }}, dropping")
@@ -55,7 +64,9 @@ data class QueueTrack(
                     return QueueTrack(
                         id = queueItemId,
                         track = appMediaItem,
-                        isPlayable = false  // Mark as unplayable
+                        isPlayable = false,  // Mark as unplayable
+                        format = null,
+                        dsp = null
                     )
                 }
             }

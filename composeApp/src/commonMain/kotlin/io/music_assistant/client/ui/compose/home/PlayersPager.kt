@@ -7,6 +7,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -81,7 +85,32 @@ internal fun PlayersPager(
             onItemMoved = onItemMoved
         )
         HorizontalPager(
-            modifier = Modifier.wrapContentHeight(),
+            modifier = Modifier.wrapContentHeight()
+                .draggable(
+                    orientation = Orientation.Horizontal,
+                    state = rememberDraggableState { delta ->
+                        coroutineScope.launch {
+                            // Make it snappier by increasing sensitivity
+                            playerPagerState.scrollBy(-delta * 1.5f)
+                        }
+                    },
+                    onDragStopped = {
+                        // Snap to nearest page after drag ends
+                        coroutineScope.launch {
+                            val currentPage = playerPagerState.currentPage
+                            val currentPageOffset = playerPagerState.currentPageOffsetFraction
+
+                            // Determine target page based on offset
+                            val targetPage = when {
+                                currentPageOffset > 0.15f && currentPage < playerDataList.size - 1 -> currentPage + 1
+                                currentPageOffset < -0.15f && currentPage > 0 -> currentPage - 1
+                                else -> currentPage
+                            }
+
+                            playerPagerState.animateScrollToPage(targetPage)
+                        }
+                    }
+                ),
             state = playerPagerState,
             key = { page -> playerDataList.getOrNull(page)?.player?.id ?: page }
         ) { page ->

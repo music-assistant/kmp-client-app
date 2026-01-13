@@ -214,7 +214,7 @@ fun FullPlayerItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                track?.audioFormat?.let {
+                item.queueInfo?.currentItem?.audioFormat(item.playerId)?.let {
                     OverflowMenu(
                         icon = Icons.Default.Info,
                         iconTint = MaterialTheme.colorScheme.primary,

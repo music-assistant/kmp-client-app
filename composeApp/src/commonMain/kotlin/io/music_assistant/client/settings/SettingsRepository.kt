@@ -50,12 +50,8 @@ class SettingsRepository(
 
     fun updateToken(token: String?) {
         if (token != this._token.value) {
-            co.touchlab.kermit.Logger.e(">>> TOKEN UPDATE: ${this._token.value?.take(10)}... -> ${token?.take(10)}...")
             settings.putString("token", token ?: "")
             _token.update { token }
-            co.touchlab.kermit.Logger.e(">>> TOKEN UPDATED to: ${_token.value?.take(10)}...")
-        } else {
-            co.touchlab.kermit.Logger.e(">>> TOKEN UPDATE SKIPPED (same value): ${token?.take(10)}...")
         }
     }
 

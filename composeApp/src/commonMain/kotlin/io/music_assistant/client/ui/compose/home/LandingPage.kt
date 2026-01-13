@@ -5,6 +5,10 @@ package io.music_assistant.client.ui.compose.home
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +23,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FeaturedPlayList
@@ -33,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,6 +57,7 @@ import io.music_assistant.client.ui.compose.common.items.TrackItemWithMenu
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
 import io.music_assistant.client.ui.compose.common.viewmodel.ActionsViewModel
 import io.music_assistant.client.utils.SessionState
+import kotlinx.coroutines.launch
 
 @Composable
 fun LandingPage(
@@ -80,9 +87,20 @@ fun LandingPage(
         }
     }
 
+    val coroutineScope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
 
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize()
+            .draggable(
+                orientation = Orientation.Vertical,
+                state = rememberDraggableState { delta ->
+                    coroutineScope.launch {
+                        listState.scrollBy(-delta)
+                    }
+                },
+            ),
+        state = listState,
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
         // Your library row
@@ -248,6 +266,9 @@ fun CategoryRow(
     val isHomogenous = remember(mediaItems) {
         mediaItems.all { it::class == mediaItems.firstOrNull()?.let { first -> first::class } }
     }
+    val coroutineScope = rememberCoroutineScope()
+    val rowListState = rememberLazyListState()
+
     Column {
         Row(
             modifier = Modifier
@@ -273,6 +294,16 @@ fun CategoryRow(
             }
         }
         LazyRow(
+            modifier = Modifier
+                .draggable(
+                    orientation = Orientation.Horizontal,
+                    state = rememberDraggableState { delta ->
+                        coroutineScope.launch {
+                            rowListState.scrollBy(-delta)
+                        }
+                    },
+                ),
+            state = rowListState,
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
