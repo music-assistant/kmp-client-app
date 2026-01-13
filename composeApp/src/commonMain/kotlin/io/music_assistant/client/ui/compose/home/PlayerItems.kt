@@ -26,7 +26,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -230,38 +229,33 @@ fun FullPlayerItem(
         }
 
         val duration = track?.duration?.takeIf { it > 0 }?.toFloat()
-        val serverElapsed = item.queueInfo?.elapsedTime?.toFloat()
 
-        // Track progress locally for smooth updates while playing
-        var localElapsed by remember(item.queueInfo?.currentItem?.track?.uri) {
-            mutableStateOf(serverElapsed ?: 0f)
-        }
+        // Position is calculated in MainDataSource and updated twice per second
+        val displayPosition = item.queueInfo?.elapsedTime?.toFloat() ?: 0f
 
-        // Sync with server updates
-        LaunchedEffect(serverElapsed) {
-            serverElapsed?.let { localElapsed = it }
-        }
+        // Track user drag state separately
+        var userDragPosition by remember { mutableStateOf<Float?>(null) }
 
-        // Update progress every second while playing
-        LaunchedEffect(item.player.isPlaying, item.queueInfo?.currentItem?.track?.uri) {
-            while (isActive && item.player.isPlaying && duration != null && duration > 0f) {
-                delay(1000L)
-                localElapsed = (localElapsed + 1f).coerceAtMost(duration)
-            }
-        }
+        // Use user drag position if dragging, otherwise use calculated position
+        val sliderPosition = userDragPosition ?: displayPosition
 
         Column {// Progress bar
             Slider(
-                value = localElapsed,
+                value = sliderPosition,
                 valueRange = duration?.let { 0f..it } ?: 0f..1f,
-                enabled = localElapsed.takeIf { duration != null } != null,
+                enabled = displayPosition.takeIf { duration != null } != null,
                 onValueChange = {
-                    localElapsed = it
-                    playerAction(item, PlayerAction.SeekTo(it.toLong()))
+                    userDragPosition = it  // Track drag position locally
+                },
+                onValueChangeFinished = {
+                    userDragPosition?.let { seekPos ->
+                        playerAction(item, PlayerAction.SeekTo(seekPos.toLong()))
+                        userDragPosition = null  // Clear drag state
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 thumb = {
-                    localElapsed.takeIf { duration != null }?.let {
+                    sliderPosition.takeIf { duration != null }?.let {
                         SliderDefaults.Thumb(
                             interactionSource = remember { MutableInteractionSource() },
                             thumbSize = DpSize(16.dp, 16.dp),
@@ -288,7 +282,7 @@ fun FullPlayerItem(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = formatDuration(localElapsed.takeIf { track != null }),
+                    text = formatDuration(sliderPosition.takeIf { track != null }),
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

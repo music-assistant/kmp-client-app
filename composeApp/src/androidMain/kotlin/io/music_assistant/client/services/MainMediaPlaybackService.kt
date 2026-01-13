@@ -18,6 +18,7 @@ import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import io.music_assistant.client.data.MainDataSource
+import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.action.PlayerAction
 import io.music_assistant.client.utils.SessionState
 import kotlinx.coroutines.CoroutineScope
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -49,6 +51,7 @@ class MainMediaPlaybackService : MediaBrowserServiceCompat() {
 
     // Note: Sendspin is managed by MainDataSource (singleton, shared across app)
     private val players = dataSource.playersData
+        .mapNotNull { (it as? DataState.Data)?.data }
         .map { list -> list.filter { it.queueInfo?.currentItem != null } }
         .stateIn(scope, SharingStarted.Eagerly, emptyList())
     private val activePlayerIndex = MutableStateFlow(-1)
