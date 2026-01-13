@@ -220,11 +220,18 @@ class HomeScreenViewModel(
             val currentState = _playersState.value
             if (currentState is PlayersState.Loading || currentState is PlayersState.Data) {
                 _playersState.update {
-                    PlayersState.Data(
-                        playerData,
-                        dataSource.selectedPlayerIndex.value,
-                        dataSource.localPlayer.value?.playerId
-                    )
+                    when (playerData) {
+                        is DataState.Data -> PlayersState.Data(
+                            playerData.data,
+                            dataSource.selectedPlayerIndex.value,
+                            dataSource.localPlayer.value?.playerId
+                        )
+
+                        is DataState.Error -> PlayersState.Error
+                        is DataState.Loading -> PlayersState.Loading
+                        is DataState.NoData -> PlayersState.Data(emptyList())
+                    }
+
                 }
             }
         }
@@ -290,6 +297,7 @@ class HomeScreenViewModel(
         data object Disconnected : PlayersState()
         data object NoServer : PlayersState()
         data object NoAuth : PlayersState()
+        data object Error : PlayersState()
         data class Data(
             val playerData: List<PlayerData>,
             val selectedPlayerIndex: Int? = null,

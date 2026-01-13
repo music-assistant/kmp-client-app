@@ -290,7 +290,7 @@ class ServiceClient(private val settings: SettingsRepository) : CoroutineScope {
         }
     }
 
-    suspend fun logout() {
+    fun logout() {
         settings.updateToken(null)
         val currentState = _sessionState.value
         if (currentState !is SessionState.Connected) {
