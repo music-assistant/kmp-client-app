@@ -69,6 +69,7 @@ fun CollapsibleQueue(
     queue: DataState<Queue>,
     isQueueExpanded: Boolean,
     onQueueExpandedSwitch: () -> Unit,
+    onGoToLibrary: () -> Unit,
     serverUrl: String?,
     queueAction: (QueueAction) -> Unit,
     players: List<PlayerData> = emptyList(),
@@ -187,6 +188,11 @@ fun CollapsibleQueue(
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                            OutlinedButton(
+                                onClick = onGoToLibrary
+                            ) {
+                                Text("BROWSE LIBRARY")
+                            }
                         }
                     } else {
                         val currentItemId = queueData.info.currentItem?.id

@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
@@ -66,15 +67,16 @@ fun OverflowMenu(
     modifier: Modifier = Modifier,
     icon: ImageVector,
     iconTint: Color,
+    iconSize: Dp,
     options: List<OverflowMenuOption>,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box(
-        modifier = modifier.wrapContentSize(Alignment.TopStart)
+        modifier = modifier
     ) {
         IconButton(onClick = { expanded = true }) {
             Icon(
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(iconSize),
                 imageVector = icon,
                 contentDescription = "Menu",
                 tint = iconTint,

@@ -251,6 +251,7 @@ fun HomeScreen(
                                             onQueueExpandedSwitch = {
                                                 isQueueExpanded = !isQueueExpanded
                                             },
+                                            onGoToLibrary = { showPlayersView = false },
                                             onItemMoved = null,
                                             queueAction = { action -> viewModel.queueAction(action) },
                                             settingsAction = viewModel::openPlayerSettings,
@@ -318,6 +319,7 @@ fun HomeScreen(
                                             onQueueExpandedSwitch = {
                                                 isQueueExpanded = !isQueueExpanded
                                             },
+                                            onGoToLibrary = { showPlayersView = false },
                                             onItemMoved = { indexShift ->
                                                 val currentPlayer =
                                                     state.playerData[playerPagerState.currentPage].player

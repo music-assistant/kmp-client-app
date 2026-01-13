@@ -65,6 +65,7 @@ internal fun PlayersPager(
     showQueue: Boolean,
     isQueueExpanded: Boolean,
     onQueueExpandedSwitch: () -> Unit,
+    onGoToLibrary: ()-> Unit,
     onItemMoved: ((Int) -> Unit)?,
     queueAction: (QueueAction) -> Unit,
     settingsAction: (String) -> Unit,
@@ -152,12 +153,12 @@ internal fun PlayersPager(
                             ifFalse = { wrapContentHeight() }
                         )
                 ) {
-
                     AnimatedVisibility(
                         visible = isQueueExpanded.takeIf { showQueue } == false,
                         enter = fadeIn(tween(300)) + expandVertically(tween(300)),
                         exit = fadeOut(tween(200)) + shrinkVertically(tween(300))
                     ) {
+
                         FullPlayerItem(
                             modifier = Modifier.fillMaxSize(),
                             item = player,
@@ -250,6 +251,7 @@ internal fun PlayersPager(
                         queue = queue,
                         isQueueExpanded = isQueueExpanded,
                         onQueueExpandedSwitch = { onQueueExpandedSwitch() },
+                        onGoToLibrary = onGoToLibrary,
                         serverUrl = serverUrl,
                         queueAction = queueAction,
                         players = playerDataList,

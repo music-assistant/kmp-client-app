@@ -3,6 +3,7 @@ package io.music_assistant.client.data.model.client
 import io.ktor.http.URLBuilder
 import io.ktor.http.appendPathSegments
 import io.ktor.http.encodeURLQueryComponent
+import io.music_assistant.client.data.model.server.AudioFormat
 import io.music_assistant.client.data.model.server.MediaItemImage
 import io.music_assistant.client.data.model.server.MediaType
 import io.music_assistant.client.data.model.server.Metadata
@@ -31,14 +32,19 @@ abstract class AppMediaItem(
 
     val isInLibrary = provider == "library"
 
-    private val mappingsHashes = providerMappings?.map { it.hashCode() }?.toSet() ?: emptySet()
+    val audioFormat = providerMappings?.getOrNull(0)?.audioFormat
+
+    private val mappingsHashes =
+        providerMappings?.map { it.toHash().hashCode() }?.toSet() ?: emptySet()
 
     fun hasAnyMappingFrom(other: AppMediaItem): Boolean =
         mappingsHashes.intersect(other.mappingsHashes).isNotEmpty()
 
     fun hasAnyMappingFrom(other: ServerMediaItem): Boolean =
         mappingsHashes
-            .intersect(other.providerMappings?.map { it.hashCode() }?.toSet() ?: emptySet())
+            .intersect(
+                other.providerMappings?.map { it.toHash().hashCode() }?.toSet() ?: emptySet()
+            )
             .isNotEmpty()
 
     override fun equals(other: Any?): Boolean {
@@ -243,8 +249,6 @@ abstract class AppMediaItem(
         //timestampModified,
     ) {
         override val subtitle = artists?.joinToString(separator = ", ") { it.name }
-        val description =
-            "${artists?.joinToString(separator = ", ") { it.name } ?: "Unknown"} - $name"
     }
 
     class Playlist(
@@ -392,6 +396,17 @@ abstract class AppMediaItem(
                     albums.toAppMediaItemList() +
                     tracks.toAppMediaItemList() +
                     playlists.toAppMediaItemList()
+
+        val AudioFormat.description
+            get() = listOfNotNull(
+                contentType,
+                sampleRate?.let { "$it Hz" },
+                bitDepth?.let { "$it bit" },
+            ).joinToString()
+
+        private data class ProviderHash(val itemId: String, val providerInstance: String)
+
+        private fun ProviderMapping.toHash(): ProviderHash = ProviderHash(itemId, providerInstance)
     }
 
 // TODO Radio, audiobooks, podcasts

@@ -2,11 +2,14 @@ package io.music_assistant.client.data.model.client
 
 import io.music_assistant.client.data.model.server.PlayerFeature
 import io.music_assistant.client.data.model.server.PlayerState
+import io.music_assistant.client.data.model.server.PlayerType
 import io.music_assistant.client.data.model.server.ServerPlayer
 
 data class Player(
     val id: String,
     val name: String,
+    val provider: String,
+    val type: PlayerType,
     val shouldBeShown: Boolean,
     val canSetVolume: Boolean,
     val volumeLevel: Float?,
@@ -22,6 +25,8 @@ data class Player(
         fun ServerPlayer.toPlayer() = Player(
             id = playerId,
             name = displayName,
+            provider = provider,
+            type = type,
             shouldBeShown = available && enabled && (hidden != true),
             canSetVolume = supportedFeatures.contains(PlayerFeature.VOLUME_SET),
             volumeLevel = volumeLevel?.toFloat(),
