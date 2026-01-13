@@ -77,18 +77,18 @@ data class ProviderMapping(
 //    @SerialName("provider_domain") val providerDomain: String,
     @SerialName("provider_instance") val providerInstance: String,
 //    @SerialName("available") val available: Boolean,
-//    @SerialName("audio_format") val audioFormat: AudioFormat? = null,
+    @SerialName("audio_format") val audioFormat: AudioFormat? = null,
 //    @SerialName("url") val url: String? = null,
 //    @SerialName("details") val details: String?
 )
 
-//@Serializable
-//data class AudioFormat(
-//    @SerialName("content_type") val contentType: String,
-//    @SerialName("codec_type") val codecType: String,
-//    @SerialName("sample_rate") val sampleRate: Int,
-//    @SerialName("bit_depth") val bitDepth: Int,
-//    @SerialName("channels") val channels: Int,
-//    @SerialName("output_format_str") val outputFormatStr: String,
-//    @SerialName("bit_rate") val bitRate: Int
-//)
+@Serializable
+data class AudioFormat(
+    @SerialName("content_type") val contentType: String? = null,
+    @SerialName("codec_type") val codecType: String? = null,
+    @SerialName("sample_rate") val sampleRate: Int? = null,
+    @SerialName("bit_depth") val bitDepth: Int? = null,
+    @SerialName("channels") val channels: Int? = null,
+    @SerialName("output_format_str") val outputFormatStr: String? = null,
+    @SerialName("bit_rate") val bitRate: Int? = null
+)

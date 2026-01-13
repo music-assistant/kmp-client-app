@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -41,11 +42,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.music_assistant.client.data.model.client.AppMediaItem
+import io.music_assistant.client.data.model.client.AppMediaItem.Companion.description
 import io.music_assistant.client.data.model.client.PlayerData
+import io.music_assistant.client.ui.compose.common.OverflowMenu
+import io.music_assistant.client.ui.compose.common.OverflowMenuOption
 import io.music_assistant.client.ui.compose.common.action.PlayerAction
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
 
 @Composable
@@ -161,6 +163,11 @@ fun FullPlayerItem(
         verticalArrangement = Arrangement.SpaceEvenly
     ) {
 
+        Text(
+            text = item.player.provider.substringBefore("--"),
+            fontSize = 12.sp,
+        )
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -199,14 +206,23 @@ fun FullPlayerItem(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            Text(
-                text = track?.name ?: "--idle--",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = track?.name ?: "--idle--",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                track?.audioFormat?.let {
+                    OverflowMenu(
+                        icon = Icons.Default.Info,
+                        iconTint = MaterialTheme.colorScheme.primary,
+                        iconSize = 16.dp,
+                        options = listOf(OverflowMenuOption(title = it.description, onClick = {}))
+                    )
+                }
+            }
             track?.subtitle?.let {
                 Text(
                     text = it,
@@ -270,7 +286,7 @@ fun FullPlayerItem(
                         thumbTrackGapSize = 0.dp,
                         trackInsideCornerSize = 0.dp,
                         drawStopIndicator = null,
-                        enabled = track != null,
+                        enabled = track != null && !item.player.isAnnouncing,
                         modifier = Modifier.height(8.dp)
                     )
                 }

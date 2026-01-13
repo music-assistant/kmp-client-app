@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 data class ServerPlayer(
     @SerialName("player_id") val playerId: String,
     @SerialName("provider") val provider: String,
-    //@SerialName("type") val type: PlayerType,
+    @SerialName("type") val type: PlayerType,
     //@SerialName("name") val name: String,
     @SerialName("available") val available: Boolean,
     //@SerialName("device_info") val deviceInfo: DeviceInfo,
