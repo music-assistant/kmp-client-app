@@ -174,19 +174,16 @@ internal fun PlayersPager(
                     enter = fadeIn(tween(300)) + expandVertically(tween(300)),
                     exit = fadeOut(tween(200)) + shrinkVertically(tween(300))
                 ) {
-                    if (showQueue) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .wrapContentSize()
-                                .clickable { onQueueExpandedSwitch() }) {
-                            CompactPlayerItem(
-                                item = player,
-                                serverUrl = serverUrl,
-                                playerAction = playerAction,
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .wrapContentSize()
+                            .conditional(
+                                showQueue,
+                                { clickable { onQueueExpandedSwitch() } }
                             )
-                        }
-                    } else {
+                    ) {
                         CompactPlayerItem(
                             item = player,
                             serverUrl = serverUrl,
@@ -314,7 +311,8 @@ internal fun PlayersPager(
                                     playerPagerState.animateScrollToPage(targetIndex)
                                 }
                             }
-                        }
+                        },
+                        isCurrentPage = page == playerPagerState.currentPage
                     )
                 }
             }

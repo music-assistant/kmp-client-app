@@ -34,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,6 +75,7 @@ fun CollapsibleQueue(
     queueAction: (QueueAction) -> Unit,
     players: List<PlayerData> = emptyList(),
     onPlayerSelected: ((String) -> Unit)? = null,
+    isCurrentPage: Boolean = true,
 ) {
     Column(
         modifier = modifier
@@ -215,6 +217,18 @@ fun CollapsibleQueue(
                                 }
                                 dragEndIndex = to.index
                             }
+
+                        // Auto-scroll to current item when queue is shown or page becomes current
+                        LaunchedEffect(isQueueExpanded, isCurrentPage, currentItemIndex) {
+                            if (isQueueExpanded && isCurrentPage && currentItemIndex >= 0) {
+                                // Scroll to show the current item with some context
+                                // Center the current item in the viewport
+                                listState.animateScrollToItem(
+                                    index = currentItemIndex,
+                                    scrollOffset = -100 // Offset to show some items above
+                                )
+                            }
+                        }
 
                         LazyColumn(
                             modifier = Modifier.fillMaxSize()
