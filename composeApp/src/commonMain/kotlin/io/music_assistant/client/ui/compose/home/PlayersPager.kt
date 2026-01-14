@@ -6,6 +6,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -43,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,7 +71,7 @@ internal fun PlayersPager(
     showQueue: Boolean,
     isQueueExpanded: Boolean,
     onQueueExpandedSwitch: () -> Unit,
-    onGoToLibrary: ()-> Unit,
+    onGoToLibrary: () -> Unit,
     onItemMoved: ((Int) -> Unit)?,
     queueAction: (QueueAction) -> Unit,
     settingsAction: (String) -> Unit,
@@ -102,8 +104,8 @@ internal fun PlayersPager(
 
                             // Determine target page based on offset
                             val targetPage = when {
-                                currentPageOffset > 0.15f && currentPage < playerDataList.size - 1 -> currentPage + 1
-                                currentPageOffset < -0.15f && currentPage > 0 -> currentPage - 1
+                                currentPageOffset > 0.4f && currentPage < playerDataList.size - 1 -> currentPage + 1
+                                currentPageOffset < -0.4f && currentPage > 0 -> currentPage - 1
                                 else -> currentPage
                             }
 
@@ -116,14 +118,33 @@ internal fun PlayersPager(
         ) { page ->
 
             val player = playerDataList.getOrNull(page) ?: return@HorizontalPager
+            val isLocalPlayer = player.playerId == playersState.localPlayerId
 
-            Column {
+            Column(
+                Modifier.background(
+                    brush = if (isLocalPlayer) {
+                        Brush.verticalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.surfaceContainerHigh,
+                                MaterialTheme.colorScheme.surfaceContainerLowest
+                            )
+                        )
+                    } else {
+                        Brush.verticalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.surfaceContainerHigh,
+                                MaterialTheme.colorScheme.surfaceContainerHigh
+                            )
+                        )
+                    }
+                )
+            ) {
                 Box(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         modifier = Modifier.align(Alignment.Center),
-                        text = if (player.playerId == playersState.localPlayerId) "Local player" else player.player.name,
+                        text = if (isLocalPlayer) "Local player" else player.player.name,
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Medium,
@@ -191,6 +212,7 @@ internal fun PlayersPager(
                         FullPlayerItem(
                             modifier = Modifier.fillMaxSize(),
                             item = player,
+                            isLocal = isLocalPlayer,
                             serverUrl = serverUrl,
                             playerAction = playerAction,
                             onFavoriteClick = onFavoriteClick,
@@ -203,7 +225,7 @@ internal fun PlayersPager(
                     && player.player.canSetVolume
                     && player.player.volumeLevel != null
                 ) {
-                    if (player.playerId != playersState.localPlayerId) {
+                    if (!isLocalPlayer) {
                         var currentVolume by remember(player.player.volumeLevel) {
                             mutableStateOf(player.player.volumeLevel)
                         }

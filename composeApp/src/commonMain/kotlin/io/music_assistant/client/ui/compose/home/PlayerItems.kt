@@ -150,6 +150,7 @@ fun CompactPlayerItem(
 fun FullPlayerItem(
     modifier: Modifier,
     item: PlayerData,
+    isLocal: Boolean,
     serverUrl: String?,
     playerAction: (PlayerData, PlayerAction) -> Unit,
     onFavoriteClick: (AppMediaItem) -> Unit, // FIXME inconsistent stuff happening
@@ -163,12 +164,11 @@ fun FullPlayerItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-
         Text(
-            text = item.player.provider.substringBefore("--"),
+            text = item.player.provider
+                .takeIf { !isLocal }?.substringBefore("--") ?: "",
             fontSize = 12.sp,
         )
-
         Box(
             modifier = Modifier
                 .weight(1f, fill = false)
