@@ -199,7 +199,6 @@ class AuthenticationManager(
                 ) {
                     // Connection is fully established
                     try {
-                        Logger.d("Authorizing with OAuth token")
                         serviceClient.authorize(token, isAutoLogin = false)
                         // Auth state will be updated via sessionState flow
                         return@launch
@@ -225,9 +224,7 @@ class AuthenticationManager(
 
     private suspend fun authorizeWithSavedToken(token: String) {
         try {
-            Logger.e(">>> AUTHORIZING with saved token: ${token.take(10)}...")
             serviceClient.authorize(token, isAutoLogin = true)
-            Logger.e(">>> AUTHORIZATION with saved token SUCCEEDED")
         } catch (e: Exception) {
             Logger.e(">>> AUTHORIZATION with saved token FAILED: ${e.message}")
             // Silent failure - user will see auth UI
