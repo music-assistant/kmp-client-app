@@ -53,6 +53,7 @@ import io.music_assistant.client.ui.compose.common.OverflowMenuOption
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import io.music_assistant.client.ui.theme.ThemeSetting
 import io.music_assistant.client.ui.theme.ThemeViewModel
+import io.music_assistant.client.utils.Codecs
 import io.music_assistant.client.utils.DataConnectionState
 import io.music_assistant.client.utils.SessionState
 import io.music_assistant.client.utils.isIpPort
@@ -489,7 +490,7 @@ private fun SendspinSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Codec: $sendspinCodecPreference${if (sendspinCodecPreference == "FLAC") " (recommended)" else ""}",
+                text = sendspinCodecPreference.uiTitle(),
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (sendspinEnabled)
                     MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
@@ -512,17 +513,11 @@ private fun SendspinSection(
                             MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
-                options = listOf(
-                    OverflowMenuOption("FLAC (recommended)") {
-                        viewModel.setSendspinCodecPreference("FLAC")
-                    },
-                    OverflowMenuOption("Opus") {
-                        viewModel.setSendspinCodecPreference("Opus")
-                    },
-                    OverflowMenuOption("PCM") {
-                        viewModel.setSendspinCodecPreference("PCM")
-                    }
-                )
+                options = Codecs.list.map { item ->
+                    OverflowMenuOption(
+                        title = item.uiTitle()
+                    ) { viewModel.setSendspinCodecPreference(item) }
+                }
             )
         }
 

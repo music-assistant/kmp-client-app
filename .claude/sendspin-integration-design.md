@@ -726,7 +726,6 @@ object SendspinCapabilities {
                         sampleRate = 48000,
                         bitDepth = 16
                     )
-                    // TODO: Add FLAC later (not implemented yet)
                 ),
                 bufferCapacity = 500_000, // 500ms in microseconds
                 supportedCommands = listOf(
