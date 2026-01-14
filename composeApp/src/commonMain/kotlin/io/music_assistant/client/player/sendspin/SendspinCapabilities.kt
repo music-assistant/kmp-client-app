@@ -9,7 +9,7 @@ import io.music_assistant.client.player.sendspin.model.PlayerSupport
 import io.music_assistant.client.player.sendspin.model.VersionedRole
 
 object SendspinCapabilities {
-    fun buildClientHello(config: SendspinConfig): ClientHelloPayload {
+    fun buildClientHello(config: SendspinConfig, codecPreference: String = "FLAC"): ClientHelloPayload {
         return ClientHelloPayload(
             clientId = config.clientId,
             name = config.deviceName,
@@ -20,30 +20,7 @@ object SendspinCapabilities {
                 VersionedRole.METADATA_V1
             ),
             playerV1Support = PlayerSupport(
-                supportedFormats = listOf(
-                    // PCM - 48kHz, stereo, 16-bit
-                    AudioFormatSpec(
-                        codec = AudioCodec.PCM,
-                        channels = 2,
-                        sampleRate = 48000,
-                        bitDepth = 16
-                    ),
-                    // Opus - 48kHz, stereo (Android implementation)
-                    AudioFormatSpec(
-                        codec = AudioCodec.OPUS,
-                        channels = 2,
-                        sampleRate = 48000,
-                        bitDepth = 16
-                    ),
-                    // Opus - 48kHz, mono (for efficiency)
-                    AudioFormatSpec(
-                        codec = AudioCodec.OPUS,
-                        channels = 1,
-                        sampleRate = 48000,
-                        bitDepth = 16
-                    )
-                    // TODO: Add FLAC later (not implemented yet)
-                ),
+                supportedFormats = buildSupportedFormats(codecPreference),
                 bufferCapacity = config.bufferCapacityMicros,
                 supportedCommands = listOf()
             ),
@@ -53,5 +30,35 @@ object SendspinCapabilities {
             artworkV1Support = null,
             visualizerV1Support = null
         )
+    }
+
+    private fun buildSupportedFormats(codecPreference: String): List<AudioFormatSpec> {
+        // Determine which codec to use
+        val codec = when (codecPreference.uppercase()) {
+            "FLAC" -> AudioCodec.FLAC
+            "OPUS" -> AudioCodec.OPUS
+            "PCM" -> AudioCodec.PCM
+            else -> AudioCodec.FLAC // Default to FLAC
+        }
+
+        // Build format variations for the selected codec
+        // Stereo (2 channels) × 3 bit depths (16, 24, 32) × 2 sample rates (44100, 48000) = 6 formats
+        val sampleRates = listOf(44100, 48000)
+        val bitDepths = listOf(16, 24, 32)
+
+        return buildList {
+            for (sampleRate in sampleRates) {
+                for (bitDepth in bitDepths) {
+                    add(
+                        AudioFormatSpec(
+                            codec = codec,
+                            channels = 2,
+                            sampleRate = sampleRate,
+                            bitDepth = bitDepth
+                        )
+                    )
+                }
+            }
+        }
     }
 }

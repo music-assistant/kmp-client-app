@@ -5,8 +5,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class AudioFormatSpec(
-    val codec: AudioCodec,
-    val channels: Int,
+    @SerialName("codec") val codec: AudioCodec,
+    @SerialName("channels") val channels: Int,
     @SerialName("sample_rate") val sampleRate: Int,
     @SerialName("bit_depth") val bitDepth: Int
 ) {

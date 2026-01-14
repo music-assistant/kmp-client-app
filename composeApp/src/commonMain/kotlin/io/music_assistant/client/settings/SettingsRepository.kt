@@ -123,4 +123,14 @@ class SettingsRepository(
         settings.putString("sendspin_path", path)
         _sendspinPath.update { path }
     }
+
+    private val _sendspinCodecPreference = MutableStateFlow(
+        settings.getString("sendspin_codec_preference", "FLAC")
+    )
+    val sendspinCodecPreference = _sendspinCodecPreference.asStateFlow()
+
+    fun setSendspinCodecPreference(codec: String) {
+        settings.putString("sendspin_codec_preference", codec)
+        _sendspinCodecPreference.update { codec }
+    }
 }

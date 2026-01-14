@@ -1,6 +1,7 @@
 package io.music_assistant.client.ui.compose.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -19,6 +20,8 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -45,6 +48,8 @@ import io.music_assistant.client.api.ConnectionInfo
 import io.music_assistant.client.data.model.server.ServerInfo
 import io.music_assistant.client.data.model.server.User
 import io.music_assistant.client.ui.compose.auth.AuthenticationPanel
+import io.music_assistant.client.ui.compose.common.OverflowMenu
+import io.music_assistant.client.ui.compose.common.OverflowMenuOption
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import io.music_assistant.client.ui.theme.ThemeSetting
 import io.music_assistant.client.ui.theme.ThemeViewModel
@@ -419,6 +424,7 @@ private fun SendspinSection(
     val sendspinDeviceName by viewModel.sendspinDeviceName.collectAsStateWithLifecycle()
     val sendspinPort by viewModel.sendspinPort.collectAsStateWithLifecycle()
     val sendspinPath by viewModel.sendspinPath.collectAsStateWithLifecycle()
+    val sendspinCodecPreference by viewModel.sendspinCodecPreference.collectAsStateWithLifecycle()
 
     SectionCard(modifier = modifier) {
         SectionTitle("Local player ${if (sendspinEnabled) "enabled" else "(Sendspin protocol)"}")
@@ -473,6 +479,52 @@ private fun SendspinSection(
                 disabledTextColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             )
         )
+
+        // Codec selection
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Codec: $sendspinCodecPreference${if (sendspinCodecPreference == "FLAC") " (recommended)" else ""}",
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (sendspinEnabled)
+                    MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                else
+                    MaterialTheme.colorScheme.onBackground
+            )
+
+            OverflowMenu(
+                modifier = Modifier,
+                buttonContent = { onClick ->
+                    androidx.compose.material3.Icon(
+                        modifier = Modifier
+                            .clickable(enabled = !sendspinEnabled) { onClick() }
+                            .size(24.dp),
+                        imageVector = Icons.Default.ExpandMore,
+                        contentDescription = "Select codec",
+                        tint = if (sendspinEnabled)
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                options = listOf(
+                    OverflowMenuOption("FLAC (recommended)") {
+                        viewModel.setSendspinCodecPreference("FLAC")
+                    },
+                    OverflowMenuOption("Opus") {
+                        viewModel.setSendspinCodecPreference("Opus")
+                    },
+                    OverflowMenuOption("PCM") {
+                        viewModel.setSendspinCodecPreference("PCM")
+                    }
+                )
+            )
+        }
 
         // Toggle button on the bottom
         if (sendspinEnabled) {

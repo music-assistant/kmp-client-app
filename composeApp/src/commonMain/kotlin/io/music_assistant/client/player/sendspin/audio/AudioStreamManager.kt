@@ -121,12 +121,12 @@ class AudioStreamManager(
             }
 
             "flac" -> {
-                logger.w { "FLAC decoder not yet implemented, server should send PCM" }
+                logger.i { "Using FLAC decoder" }
                 FlacDecoder()
             }
 
             "opus" -> {
-                logger.w { "Using Opus decoder" }
+                logger.i { "Using Opus decoder" }
                 OpusDecoder()
             }
 

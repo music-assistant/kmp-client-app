@@ -8,6 +8,7 @@ data class SendspinConfig(
     val deviceName: String,
     val enabled: Boolean = true,
     val bufferCapacityMicros: Int = 500_000, // 500ms
+    val codecPreference: String = "FLAC", // FLAC, Opus, or PCM
 
     // Server connection settings
     val serverHost: String = "", // Will use MA server IP from general settings

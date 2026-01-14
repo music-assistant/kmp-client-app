@@ -342,6 +342,7 @@ class MainDataSource(
             deviceName = settings.sendspinDeviceName.value,
             enabled = true,
             bufferCapacityMicros = 500_000, // 500ms
+            codecPreference = settings.sendspinCodecPreference.value,
             serverHost = serverHost,
             serverPort = settings.sendspinPort.value,
             serverPath = settings.sendspinPath.value

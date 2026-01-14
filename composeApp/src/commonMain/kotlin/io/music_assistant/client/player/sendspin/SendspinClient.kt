@@ -104,7 +104,7 @@ class SendspinClient(
             webSocketHandler = wsHandler
 
             // Create message dispatcher
-            val capabilities = SendspinCapabilities.buildClientHello(config)
+            val capabilities = SendspinCapabilities.buildClientHello(config, config.codecPreference)
             val dispatcher = MessageDispatcher(
                 webSocketHandler = wsHandler,
                 clockSynchronizer = clockSynchronizer,
