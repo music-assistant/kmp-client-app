@@ -1,6 +1,6 @@
 package io.music_assistant.client.player.sendspin
 
-import io.music_assistant.client.player.sendspin.model.AudioCodec
+import io.music_assistant.client.player.sendspin.audio.Codec
 import io.music_assistant.client.player.sendspin.model.AudioFormatSpec
 import io.music_assistant.client.player.sendspin.model.ClientHelloPayload
 import io.music_assistant.client.player.sendspin.model.DeviceInfo
@@ -9,7 +9,7 @@ import io.music_assistant.client.player.sendspin.model.PlayerSupport
 import io.music_assistant.client.player.sendspin.model.VersionedRole
 
 object SendspinCapabilities {
-    fun buildClientHello(config: SendspinConfig, codecPreference: String = "FLAC"): ClientHelloPayload {
+    fun buildClientHello(config: SendspinConfig, codecPreference: Codec): ClientHelloPayload {
         return ClientHelloPayload(
             clientId = config.clientId,
             name = config.deviceName,
@@ -32,15 +32,7 @@ object SendspinCapabilities {
         )
     }
 
-    private fun buildSupportedFormats(codecPreference: String): List<AudioFormatSpec> {
-        // Determine which codec to use
-        val codec = when (codecPreference.uppercase()) {
-            "FLAC" -> AudioCodec.FLAC
-            "OPUS" -> AudioCodec.OPUS
-            "PCM" -> AudioCodec.PCM
-            else -> AudioCodec.FLAC // Default to FLAC
-        }
-
+    private fun buildSupportedFormats(codecPreference: Codec): List<AudioFormatSpec> {
         // Build format variations for the selected codec
         // Stereo (2 channels) × 3 bit depths (16, 24, 32) × 2 sample rates (44100, 48000) = 6 formats
         val sampleRates = listOf(44100, 48000)
@@ -51,7 +43,7 @@ object SendspinCapabilities {
                 for (bitDepth in bitDepths) {
                     add(
                         AudioFormatSpec(
-                            codec = codec,
+                            codec = codecPreference.sendspinAudioCodec,
                             channels = 2,
                             sampleRate = sampleRate,
                             bitDepth = bitDepth

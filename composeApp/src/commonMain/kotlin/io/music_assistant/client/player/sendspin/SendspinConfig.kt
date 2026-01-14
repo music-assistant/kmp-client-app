@@ -1,5 +1,6 @@
 package io.music_assistant.client.player.sendspin
 
+import io.music_assistant.client.player.sendspin.audio.Codec
 import kotlin.uuid.ExperimentalUuidApi
 
 @OptIn(ExperimentalUuidApi::class)
@@ -8,7 +9,7 @@ data class SendspinConfig(
     val deviceName: String,
     val enabled: Boolean = true,
     val bufferCapacityMicros: Int = 500_000, // 500ms
-    val codecPreference: String = "FLAC", // FLAC, Opus, or PCM
+    val codecPreference: Codec,
 
     // Server connection settings
     val serverHost: String = "", // Will use MA server IP from general settings

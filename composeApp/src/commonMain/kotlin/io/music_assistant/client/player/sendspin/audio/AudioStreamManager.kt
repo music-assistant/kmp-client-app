@@ -111,30 +111,9 @@ class AudioStreamManager(
     }
 
     private fun createDecoder(config: StreamStartPlayer): AudioDecoder {
-        val codec = config.codec.lowercase()
+        val codec = codecByName(config.codec.uppercase())
         logger.i { "Creating decoder for codec: $codec" }
-
-        return when (codec) {
-            "pcm" -> {
-                logger.i { "Using PCM decoder (passthrough)" }
-                PcmDecoder()
-            }
-
-            "flac" -> {
-                logger.i { "Using FLAC decoder" }
-                FlacDecoder()
-            }
-
-            "opus" -> {
-                logger.i { "Using Opus decoder" }
-                OpusDecoder()
-            }
-
-            else -> {
-                logger.w { "Unknown codec $codec, using PCM decoder" }
-                PcmDecoder()
-            }
-        }
+        return codec?.decoderInitializer?.invoke() ?: PcmDecoder()
     }
 
     suspend fun processBinaryMessage(data: ByteArray) {
@@ -288,7 +267,7 @@ class AudioStreamManager(
 
     private suspend fun waitForPrebuffer() {
         val threshold = adaptiveBufferManager.currentPrebufferThreshold
-        logger.i { "Waiting for prebuffer (threshold=${threshold/1000}ms)..." }
+        logger.i { "Waiting for prebuffer (threshold=${threshold / 1000}ms)..." }
         while (isActive && audioBuffer.getBufferedDuration() < threshold) {
             delay(50)
         }
@@ -324,7 +303,7 @@ class AudioStreamManager(
 
     private fun playChunk(chunk: AudioChunk) {
         try {
-           val pcmData = chunk.data
+            val pcmData = chunk.data
 
             logger.d { "Writing ${pcmData.size} PCM bytes to AudioTrack" }
 
