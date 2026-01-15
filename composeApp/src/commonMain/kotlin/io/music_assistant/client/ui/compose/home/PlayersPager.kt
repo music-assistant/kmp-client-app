@@ -251,9 +251,11 @@ internal fun PlayersPager(
                                 valueRange = 0f..100f,
                                 onValueChange = {
                                     currentVolume = it
+                                },
+                                onValueChangeFinished = {
                                     playerAction(
                                         player,
-                                        PlayerAction.VolumeSet(it.toDouble())
+                                        PlayerAction.VolumeSet(currentVolume.toDouble())
                                     )
                                 },
                                 thumb = {
