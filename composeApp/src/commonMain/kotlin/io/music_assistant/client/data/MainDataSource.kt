@@ -196,26 +196,36 @@ class MainDataSource(
                             is DataState.Error -> DataState.Error()
                             is DataState.Loading -> DataState.Loading()
                             is DataState.NoData -> DataState.NoData()
-                            is DataState.Data -> DataState.Data(
-                                playersState.data.map { player ->
-                                    val newData = PlayerData(
-                                        player,
-                                        p.second.find { it.id == player.queueId }
-                                            ?.let { queueInfo ->
-                                                DataState.Data(
-                                                    Queue(
-                                                        info = queueInfo,
-                                                        items = DataState.NoData()
+                            is DataState.Data -> {
+                                val groupedPlayersToHide = playersState.data
+                                    .map { (it.groupChildren ?: emptyList()) - it.id }
+                                    .flatten().toSet()
+                                val filteredPlayers = playersState.data
+                                    .filter { it.id !in groupedPlayersToHide }
+                                DataState.Data(
+                                    filteredPlayers.map { player ->
+                                        val newData = PlayerData(
+                                            player = player,
+                                            queue = p.second.find { it.id == player.queueId }
+                                                ?.let { queueInfo ->
+                                                    DataState.Data(
+                                                        Queue(
+                                                            info = queueInfo,
+                                                            items = DataState.NoData()
+                                                        )
                                                     )
-                                                )
-                                            } ?: DataState.NoData()
-                                    )
-                                    (oldValues as? DataState.Data)?.data
-                                        ?.firstOrNull { it.player.id == player.id }
-                                        ?.updateFrom(newData) ?: newData
+                                                } ?: DataState.NoData(),
+                                            groupChildren = playersState.data
+                                                .mapNotNull { it.asBindFor(player) }
 
-                                }
-                            )
+                                        )
+                                        (oldValues as? DataState.Data)?.data
+                                            ?.firstOrNull { it.player.id == player.id }
+                                            ?.updateFrom(newData) ?: newData
+
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -408,6 +418,99 @@ class MainDataSource(
         _selectedPlayerId.update { player.id }
     }
 
+    fun playerAction(playerId: String, action: PlayerAction) {
+        launch {
+            when (action) {
+                PlayerAction.TogglePlayPause -> {
+                    apiClient.sendRequest(
+                        Request.Player.simpleCommand(
+                            playerId = playerId,
+                            command = "play_pause"
+                        )
+                    )
+                }
+
+                PlayerAction.Next -> {
+                    apiClient.sendRequest(
+                        Request.Player.simpleCommand(playerId = playerId, command = "next")
+                    )
+                }
+
+                PlayerAction.Previous -> {
+                    apiClient.sendRequest(
+                        Request.Player.simpleCommand(
+                            playerId = playerId,
+                            command = "previous"
+                        )
+                    )
+                }
+
+                is PlayerAction.SeekTo -> {
+                    apiClient.sendRequest(
+                        Request.Player.seek(
+                            queueId = playerId,
+                            position = action.position
+                        )
+                    )
+                }
+
+                PlayerAction.VolumeDown -> apiClient.sendRequest(
+                    Request.Player.simpleCommand(
+                        playerId = playerId,
+                        command = "volume_down"
+                    )
+                )
+
+                PlayerAction.VolumeUp -> apiClient.sendRequest(
+                    Request.Player.simpleCommand(
+                        playerId = playerId,
+                        command = "volume_up"
+                    )
+                )
+
+
+                is PlayerAction.VolumeSet -> apiClient.sendRequest(
+                    Request.Player.setVolume(
+                        playerId = playerId,
+                        volumeLevel = action.level
+                    )
+                )
+
+                PlayerAction.GroupVolumeDown -> apiClient.sendRequest(
+                    Request.Player.simpleCommand(
+                        playerId = playerId,
+                        command = "group_volume_down"
+                    )
+                )
+
+                PlayerAction.GroupVolumeUp -> apiClient.sendRequest(
+                    Request.Player.simpleCommand(
+                        playerId = playerId,
+                        command = "group_volume_up"
+                    )
+                )
+
+                is PlayerAction.GroupVolumeSet -> apiClient.sendRequest(
+                    Request.Player.setGroupVolume(
+                        playerId = playerId,
+                        volumeLevel = action.level
+                    )
+                )
+
+                is PlayerAction.GroupManage -> apiClient.sendRequest(
+                    Request.Player.setGroupMembers(
+                        playerId = playerId,
+                        playersToAdd = action.toAdd,
+                        playersToRemove = action.toRemove
+                    )
+                )
+
+
+                else -> Unit
+            }
+        }
+    }
+
     fun playerAction(data: PlayerData, action: PlayerAction) {
         launch {
             when (action) {
@@ -463,19 +566,58 @@ class MainDataSource(
                 )
 
                 PlayerAction.VolumeDown -> apiClient.sendRequest(
-                    Request.Player.simpleCommand(playerId = data.player.id, command = "volume_down")
+                    Request.Player.simpleCommand(
+                        playerId = data.playerId,
+                        command = "volume_down"
+                    )
                 )
 
                 PlayerAction.VolumeUp -> apiClient.sendRequest(
-                    Request.Player.simpleCommand(playerId = data.player.id, command = "volume_up")
+                    Request.Player.simpleCommand(
+                        playerId = data.playerId,
+                        command = "volume_up"
+                    )
+                )
+
+
+                is PlayerAction.VolumeSet -> apiClient.sendRequest(
+                    Request.Player.setVolume(
+                        playerId = data.playerId,
+                        volumeLevel = action.level
+                    )
+                )
+
+                PlayerAction.GroupVolumeDown -> apiClient.sendRequest(
+                    Request.Player.simpleCommand(
+                        playerId = data.playerId,
+                        command = "group_volume_down"
+                    )
+                )
+
+                PlayerAction.GroupVolumeUp -> apiClient.sendRequest(
+                    Request.Player.simpleCommand(
+                        playerId = data.playerId,
+                        command = "group_volume_up"
+                    )
+                )
+
+                is PlayerAction.GroupVolumeSet -> apiClient.sendRequest(
+                    Request.Player.setGroupVolume(
+                        playerId = data.playerId,
+                        volumeLevel = action.level
+                    )
                 )
 
                 PlayerAction.ToggleMute -> apiClient.sendRequest(
-                    Request.Player.setMute(playerId = data.player.id, !data.player.volumeMuted)
+                    Request.Player.setMute(playerId = data.playerId, !data.player.volumeMuted)
                 )
 
-                is PlayerAction.VolumeSet -> apiClient.sendRequest(
-                    Request.Player.setVolume(playerId = data.player.id, volumeLevel = action.level)
+                is PlayerAction.GroupManage -> apiClient.sendRequest(
+                    Request.Player.setGroupMembers(
+                        playerId = data.playerId,
+                        playersToAdd = action.toAdd,
+                        playersToRemove = action.toRemove
+                    )
                 )
             }
         }
@@ -548,6 +690,7 @@ class MainDataSource(
                     when (event) {
                         is PlayerAddedEvent -> {
                             val newPlayer = event.player()
+                            Logger.e("Player added: $newPlayer")
                             if (newPlayer.shouldBeShown) {
                                 _serverPlayers.update { oldState ->
                                     when (oldState) {
@@ -570,8 +713,10 @@ class MainDataSource(
                         }
 
                         is PlayerRemovedEvent -> {
-                            val playerId = event.objectId ?: event.data.takeIf { it.isNotEmpty() }
+                            val playerId =
+                                event.objectId ?: event.data.takeIf { it.isNotEmpty() }
                             if (playerId != null) {
+                                Logger.e("Player removed: $playerId")
                                 _serverPlayers.update { oldState ->
                                     when (oldState) {
                                         is DataState.Data -> {
@@ -588,6 +733,7 @@ class MainDataSource(
 
                         is PlayerUpdatedEvent -> {
                             val data = event.player()
+                            Logger.e("Player updated: $data")
                             _serverPlayers.update { oldState ->
                                 when (oldState) {
                                     is DataState.Data -> {
@@ -595,7 +741,9 @@ class MainDataSource(
                                         data.queueId?.let { queueId ->
                                             _positionTrackers.update { trackers ->
                                                 trackers[queueId]?.let { tracker ->
-                                                    trackers + (queueId to tracker.copy(isPlaying = data.isPlaying))
+                                                    trackers + (queueId to tracker.copy(
+                                                        isPlaying = data.isPlaying
+                                                    ))
                                                 } ?: trackers
                                             }
                                         }
@@ -618,6 +766,7 @@ class MainDataSource(
 
                         is QueueUpdatedEvent -> {
                             val data = event.queue()
+                            Logger.e("Queue updated $data")
 
                             // Update position tracker if elapsedTime is present
                             data.elapsedTime?.let { elapsed ->
@@ -716,7 +865,9 @@ class MainDataSource(
                                                 currentState.data.map { playerData ->
                                                     playerData.queueItems?.let { items ->
                                                         val updatedItems = items.filter {
-                                                            !it.track.hasAnyMappingFrom(deletedTrack)
+                                                            !it.track.hasAnyMappingFrom(
+                                                                deletedTrack
+                                                            )
                                                         }
                                                         playerData.copy(
                                                             queue = (playerData.queue as? DataState.Data)?.let { queueData ->
@@ -768,7 +919,11 @@ class MainDataSource(
                                                 queueData.data.info.copy(
                                                     currentItem = queueData.data.info.currentItem.copy(
                                                         track = newTrack
-                                                            .takeIf { it.hasAnyMappingFrom(queueData.data.info.currentItem.track) }
+                                                            .takeIf {
+                                                                it.hasAnyMappingFrom(
+                                                                    queueData.data.info.currentItem.track
+                                                                )
+                                                            }
                                                             ?: queueData.data.info.currentItem.track
                                                     )
                                                 )
@@ -870,7 +1025,8 @@ class MainDataSource(
                                                 }
                                                     ?: DataState.Error()
                                             )
-                                        )
+                                        ),
+                                        groupChildren = playerData.groupChildren
                                     )
 
                                 } else playerData

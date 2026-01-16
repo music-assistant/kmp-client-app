@@ -31,7 +31,7 @@ data class MediaNotificationData(
                 isPlaying = playerData.player.isPlaying,
                 imageUrl = playerData.queueInfo?.currentItem?.track?.imageInfo?.url(serverUrl),
                 elapsedTime = playerData.queueInfo?.elapsedTime?.toLong()?.let { it * 1000 },
-                playerName = playerData.player.name,
+                playerName = playerData.player.displayName,
                 duration = playerData.queueInfo?.currentItem?.track?.duration?.toLong()
                     ?.let { it * 1000 }
             )

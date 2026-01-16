@@ -5,6 +5,7 @@ import io.music_assistant.client.ui.compose.common.DataState
 data class PlayerData(
     val player: Player,
     val queue: DataState<Queue>,
+    val groupChildren: List<Bind>,
 ) {
     val playerId = player.id
     val queueInfo = (queue as? DataState.Data)?.data?.info
@@ -40,7 +41,15 @@ data class PlayerData(
                 }
 
                 else -> other.queue
-            }
+            },
+            groupChildren = other.groupChildren
         )
     }
+    data class Bind(
+        val id: String,
+        val parentId: String,
+        val volume: Float?,
+        val name: String,
+        val isBound: Boolean,
+    )
 }

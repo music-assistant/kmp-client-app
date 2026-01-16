@@ -3,6 +3,10 @@
 package io.music_assistant.client.ui.compose.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,14 +20,22 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Album
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -31,9 +43,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -45,11 +59,10 @@ import coil3.compose.AsyncImage
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.description
 import io.music_assistant.client.data.model.client.PlayerData
-import io.music_assistant.client.ui.compose.common.OverflowMenu
-import io.music_assistant.client.ui.compose.common.OverflowMenuOption
 import io.music_assistant.client.ui.compose.common.action.PlayerAction
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 @Composable
 fun CompactPlayerItem(
@@ -152,6 +165,7 @@ fun FullPlayerItem(
     item: PlayerData,
     isLocal: Boolean,
     serverUrl: String?,
+    simplePlayerAction: (String, PlayerAction) -> Unit,
     playerAction: (PlayerData, PlayerAction) -> Unit,
     onFavoriteClick: (AppMediaItem) -> Unit, // FIXME inconsistent stuff happening
 ) {
@@ -159,16 +173,116 @@ fun FullPlayerItem(
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
 
+    var showGroupDialog by remember { mutableStateOf(false) }
+
+    // Group dialog
+    if (showGroupDialog) {
+        val coroutineScope = rememberCoroutineScope()
+        val listState = rememberLazyListState()
+
+        AlertDialog(
+            onDismissRequest = { showGroupDialog = false },
+            title = { Text("Join players") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Non-scrollable Done button at top
+                    OutlinedButton(
+                        onClick = { showGroupDialog = false },
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    ) {
+                        Text("Done")
+                    }
+
+                    // Scrollable list of players
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)
+                            .draggable(
+                                orientation = Orientation.Vertical,
+                                state = rememberDraggableState { delta ->
+                                    coroutineScope.launch {
+                                        listState.scrollBy(-delta)
+                                    }
+                                },
+                            ),
+                        state = listState,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Current player at the very top
+                        item {
+                            GroupPlayerVolumeItem(
+                                playerId = item.player.id,
+                                playerName = item.player.name,
+                                volume = item.player.volumeLevel,
+                                simplePlayerAction = simplePlayerAction
+                            )
+                        }
+
+                        // Bound players
+                        val boundChildren = item.groupChildren.filter { it.isBound }
+                        items(boundChildren, key = { "${it.id}_${it.volume}" }) { child ->
+                            GroupPlayerVolumeItem(
+                                playerId = child.id,
+                                playerName = child.name,
+                                volume = child.volume,
+                                simplePlayerAction = simplePlayerAction,
+                                bindItem = child,
+                            )
+                        }
+
+                        // Unbound players
+                        val unboundChildren = item.groupChildren.filter { !it.isBound }
+                        items(unboundChildren, key = { it.id }) { child ->
+                            GroupPlayerVolumeItem(
+                                playerId = child.id,
+                                playerName = child.name,
+                                volume = child.volume,
+                                simplePlayerAction = simplePlayerAction,
+                                bindItem = child,
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {}
+        )
+    }
+
     Column(
         modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            text = item.player.provider
-                .takeIf { !isLocal }?.substringBefore("--") ?: "",
-            fontSize = 12.sp,
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = item.player.providerType.takeIf { !isLocal } ?: "",
+                fontSize = 12.sp,
+            )
+            when {
+                item.groupChildren.isEmpty() ->
+                    OutlinedButton(
+                        enabled = false,
+                        onClick = {}) {
+                        Text("Cannot group player")
+                    }
+
+                item.groupChildren.none { it.isBound } ->
+                    OutlinedButton(
+                        enabled = true,
+                        onClick = { showGroupDialog = true }
+                    ) {
+                        Text("Group with others")
+                    }
+
+                else ->
+                    Button(enabled = true, onClick = { showGroupDialog = true }) {
+                        Text("Manage group")
+                    }
+            }
+        }
         Box(
             modifier = Modifier
                 .weight(1f, fill = false)
@@ -208,42 +322,37 @@ fun FullPlayerItem(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = track?.name ?: "--idle--",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (item.queueInfo?.currentItem?.isPlayable == false) {
                 Text(
-                    text = track?.name ?: "--idle--",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
+                    text = "Cannot play this item",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                item.queueInfo?.currentItem?.audioFormat(item.playerId)?.let {
-                    OverflowMenu(
-                        icon = Icons.Default.Info,
-                        iconTint = MaterialTheme.colorScheme.primary,
-                        iconSize = 16.dp,
-                        options = listOf(OverflowMenuOption(title = it.description, onClick = {}))
-                    )
-                }
-            }
-            track?.subtitle?.let {
+            } else {
                 Text(
-                    text = it,
+                    text = track?.subtitle ?: "",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-            } ?: run {
-                if (item.queueInfo?.currentItem?.isPlayable == false) {
-                    Text(
-                        text = "Cannot play this item",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
             }
+            Text(
+                text = item.queueInfo?.currentItem?.audioFormat(item.playerId)?.description ?: "",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
 
         val duration = track?.duration?.takeIf { it > 0 }?.toFloat()
@@ -337,5 +446,101 @@ private fun formatDuration(seconds: Float?): String {
         String.format("%d:%02d:%02d", hours, minutes, secs)
     } else {
         String.format("%d:%02d", minutes, secs)
+    }
+}
+
+/**
+ * Group player volume item with name and volume slider
+ */
+@Composable
+private fun GroupPlayerVolumeItem(
+    playerId: String,
+    playerName: String,
+    volume: Float?,
+    simplePlayerAction: (String, PlayerAction) -> Unit,
+    bindItem: PlayerData.Bind? = null,
+) {
+    var currentVolume by remember(volume) {
+        mutableStateOf(volume ?: 0f)
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy((-4).dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                modifier = Modifier.alpha(if (bindItem?.isBound != false) 1f else 0.4f).weight(1f),
+                text = playerName,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            // Show button only for non-current players (when bindItem is provided)
+            bindItem?.let { bind ->
+                val itemId = listOf(playerId)
+                IconButton(
+                    onClick = {
+                        simplePlayerAction(
+                            bind.parentId,
+                            PlayerAction.GroupManage(
+                                toAdd = itemId.takeIf { !bind.isBound },
+                                toRemove = itemId.takeIf { bind.isBound }
+                            )
+                        )
+                    }
+                ) {
+                    Icon(
+                        imageVector = if (bindItem.isBound) Icons.Default.Remove else Icons.Default.Add,
+                        contentDescription = if (bindItem.isBound) "Remove from group" else "Add to group",
+                        tint = if (bindItem.isBound)
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+
+        val sliderEnabled = volume != null && bindItem?.isBound != false
+        Slider(
+            modifier = Modifier.fillMaxWidth().alpha(if (sliderEnabled) 1f else 0.4f),
+            value = currentVolume,
+            valueRange = 0f..100f,
+            enabled = sliderEnabled,
+            onValueChange = {
+                currentVolume = it
+            },
+            onValueChangeFinished = {
+                simplePlayerAction(
+                    playerId,
+                    PlayerAction.VolumeSet(currentVolume.toDouble())
+                )
+            },
+            thumb = {
+                SliderDefaults.Thumb(
+                    interactionSource = remember { MutableInteractionSource() },
+                    thumbSize = DpSize(16.dp, 16.dp),
+                    colors = SliderDefaults.colors()
+                        .copy(thumbColor = MaterialTheme.colorScheme.secondary),
+                )
+            },
+            track = { sliderState ->
+                SliderDefaults.Track(
+                    sliderState = sliderState,
+                    thumbTrackGapSize = 0.dp,
+                    trackInsideCornerSize = 0.dp,
+                    drawStopIndicator = null,
+                    modifier = Modifier.height(4.dp)
+                )
+            }
+        )
     }
 }

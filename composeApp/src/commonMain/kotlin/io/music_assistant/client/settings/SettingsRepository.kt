@@ -131,7 +131,7 @@ class SettingsRepository(
             settings.getString(
                 "sendspin_codec_preference",
                 (Codecs.list.getOrNull(0) ?: Codec.PCM).name
-            )
+            ).uppercase()
         )
     )
     val sendspinCodecPreference = _sendspinCodecPreference.asStateFlow()

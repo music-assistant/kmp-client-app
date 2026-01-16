@@ -122,7 +122,7 @@ fun CollapsibleQueue(
                     },
                     options = players.filter { p -> p.player.id != queueId }.map { playerData ->
                         OverflowMenuOption(
-                            title = playerData.player.name,
+                            title = playerData.player.displayName,
                             onClick = {
                                 queueAction(
                                     QueueAction.Transfer(
