@@ -322,8 +322,8 @@ private fun formatDuration(seconds: Float?): String {
     val secs = totalSeconds % 60
 
     return if (hours > 0) {
-        String.format("%d:%02d:%02d", hours, minutes, secs)
+        "$hours:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}"
     } else {
-        String.format("%d:%02d", minutes, secs)
+        "$minutes:${secs.toString().padStart(2, '0')}"
     }
 }

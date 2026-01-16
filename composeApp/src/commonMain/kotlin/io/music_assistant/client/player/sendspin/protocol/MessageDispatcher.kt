@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration.Companion.seconds
 
@@ -292,11 +293,18 @@ class MessageDispatcher(
         logger.d { "Received session/update: ${message.payload.metadata?.title}" }
         // Update metadata if provided
         message.payload.metadata?.let { metadata ->
+            // Preserve existing progress values to avoid resetting progress bar to 0
+            val existingMetadata = _streamMetadata.value
+            val duration = metadata.trackDuration?.let { it / 1000.0 } ?: existingMetadata?.duration ?: 0.0
+            val elapsedTime = existingMetadata?.elapsedTime ?: 0.0
+            
             _streamMetadata.value = StreamMetadataPayload(
                 title = metadata.title,
                 artist = metadata.artist,
                 album = metadata.album,
-                artworkUrl = metadata.artworkUrl
+                artworkUrl = metadata.artworkUrl,
+                duration = duration,
+                elapsedTime = elapsedTime
             )
         }
     }
@@ -313,17 +321,62 @@ class MessageDispatcher(
 
     private fun handleServerState(message: ServerStateMessage) {
         logger.d { "Received server/state: ${message.payload}" }
-        // Server state message - acknowledged but not used currently
+        
+        // Extract metadata from server/state payload if present
+        message.payload?.let { payload ->
+            try {
+                val metadataElement = payload.jsonObject["metadata"]
+                if (metadataElement != null) {
+                    val metadata = metadataElement.jsonObject
+                    val title = metadata["title"]?.jsonPrimitive?.contentOrNull
+                    val artist = metadata["artist"]?.jsonPrimitive?.contentOrNull
+                    val album = metadata["album"]?.jsonPrimitive?.contentOrNull
+                    val artworkUrl = metadata["artwork_url"]?.jsonPrimitive?.contentOrNull
+                    
+                    // Extract progress data (duration and elapsed time)
+                    var duration = 0.0
+                    var elapsedTime = 0.0
+                    val progressElement = metadata["progress"]
+                    if (progressElement != null) {
+                        val progress = progressElement.jsonObject
+                        // track_duration is in milliseconds, convert to seconds
+                        val trackDurationMs = progress["track_duration"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
+                        duration = trackDurationMs / 1000.0
+                        // track_progress is ALSO in milliseconds (not microseconds as previously thought)
+                        // Server sends e.g. 106810 for 106.810 seconds
+                        val trackProgressMs = progress["track_progress"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
+                        elapsedTime = trackProgressMs / 1000.0
+                        logger.d { "Extracted progress: duration=${duration}s, elapsed=${elapsedTime}s" }
+                    }
+                    
+                    // Only update if we have at least title or artist
+                    if (title != null || artist != null) {
+                        _streamMetadata.value = StreamMetadataPayload(
+                            title = title,
+                            artist = artist,
+                            album = album,
+                            artworkUrl = artworkUrl,
+                            duration = duration,
+                            elapsedTime = elapsedTime
+                        )
+                        logger.d { "Updated stream metadata from server/state: $title by $artist" }
+                    }
+                }
+            } catch (e: Exception) {
+                logger.w { "Failed to parse server/state metadata: ${e.message}" }
+            }
+        }
     }
 
     // Use monotonic time for clock sync instead of wall clock time
     // This matches the server's relative time base
-    private val startTimeNanos = System.nanoTime()
+    // Use monotonic time for clock sync instead of wall clock time
+    // This matches the server's relative time base
+    private val startMark = kotlin.time.TimeSource.Monotonic.markNow()
 
     private fun getCurrentTimeMicros(): Long {
         // Use relative time since client start, not Unix epoch time
-        val elapsedNanos = System.nanoTime() - startTimeNanos
-        return elapsedNanos / 1000 // Convert to microseconds
+        return startMark.elapsedNow().inWholeMicroseconds
     }
 
     fun close() {

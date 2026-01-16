@@ -14,6 +14,7 @@ struct ContentView: View {
     var body: some View {
         ComposeView()
                 .ignoresSafeArea(.keyboard) // Compose has own keyboard handler
+                .ignoresSafeArea(.container) // Extend to screen edges (removes white areas)
     }
 }
 

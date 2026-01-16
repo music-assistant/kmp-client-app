@@ -29,6 +29,7 @@ import io.music_assistant.client.data.model.server.events.QueueItemsUpdatedEvent
 import io.music_assistant.client.data.model.server.events.QueueTimeUpdatedEvent
 import io.music_assistant.client.data.model.server.events.QueueUpdatedEvent
 import io.music_assistant.client.player.MediaPlayerController
+import io.music_assistant.client.player.sendspin.QueueCommand
 import io.music_assistant.client.player.sendspin.SendspinClient
 import io.music_assistant.client.player.sendspin.SendspinConfig
 import io.music_assistant.client.player.sendspin.SendspinConnectionState
@@ -269,11 +270,27 @@ class MainDataSource(
         log.i { "Initializing Sendspin client: $serverHost:${config.serverPort}" }
 
         try {
-            sendspinClient = SendspinClient(config, mediaPlayerController).also {
+            sendspinClient = SendspinClient(config, mediaPlayerController).also { client ->
+                // Set up callback for queue commands from Control Center
+                // Sendspin protocol only supports volume/mute - queue commands must use REST API
+                client.onQueueCommand = { queueCommand ->
+                    localPlayer.value?.let { playerData ->
+                        log.i { "Routing queue command via REST API: $queueCommand" }
+                        when (queueCommand) {
+                            is QueueCommand.Play -> playerAction(playerData, PlayerAction.TogglePlayPause)
+                            is QueueCommand.Pause -> playerAction(playerData, PlayerAction.TogglePlayPause)
+                            is QueueCommand.TogglePlayPause -> playerAction(playerData, PlayerAction.TogglePlayPause)
+                            is QueueCommand.Next -> playerAction(playerData, PlayerAction.Next)
+                            is QueueCommand.Previous -> playerAction(playerData, PlayerAction.Previous)
+                            is QueueCommand.Seek -> playerAction(playerData, PlayerAction.SeekTo(queueCommand.positionSeconds.toLong()))
+                        }
+                    } ?: log.w { "No local player available for queue command: $queueCommand" }
+                }
+
                 launch {
                     // Monitor for playback errors (e.g., Android Auto disconnect, audio output changed)
                     // and pause the MA server player when they occur
-                    it.playbackStoppedDueToError.filterNotNull().collect { error ->
+                    client.playbackStoppedDueToError.filterNotNull().collect { error ->
                         log.w(error) { "Sendspin playback stopped due to error - pausing MA server player" }
                         // Pause the local sendspin player on the MA server
                         localPlayer.value?.let { playerData ->
@@ -285,7 +302,7 @@ class MainDataSource(
                     }
                 }
 
-                it.start()
+                client.start()
             }
 
         } catch (e: Exception) {

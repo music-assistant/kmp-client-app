@@ -2,6 +2,8 @@
 
 package io.music_assistant.client.player
 
+import io.music_assistant.client.player.sendspin.model.AudioCodec
+
 /**
  * MediaPlayerController - iOS stub for Sendspin
  *
@@ -10,48 +12,90 @@ package io.music_assistant.client.player
  */
 actual class MediaPlayerController actual constructor(platformContext: PlatformContext) {
     private var isPrepared: Boolean = false
-    private var callback: MediaPlayerListener? = null
+    
+    // Callback for remote commands from Control Center
+    actual var onRemoteCommand: ((String) -> Unit)? = null
 
-    // Sendspin raw PCM streaming methods (stub)
-
-    actual fun prepareRawPcmStream(
+    // Sendspin streaming methods
+    actual fun prepareStream(
+        codec: AudioCodec,
         sampleRate: Int,
         channels: Int,
         bitDepth: Int,
+        codecHeader: String?,
         listener: MediaPlayerListener
     ) {
-        // TODO: Implement using AVAudioEngine or AudioQueue
-        callback = listener
-        isPrepared = true
-        callback?.onReady()
+        val player = PlatformPlayerProvider.player
+        if (player != null) {
+            player.prepareStream(codec.name.lowercase(), sampleRate, channels, bitDepth, codecHeader, listener)
+            isPrepared = true
+            
+            // Set up remote command handler for Control Center buttons
+            player.setRemoteCommandHandler(object : RemoteCommandHandler {
+                override fun onCommand(command: String) {
+                    println("🎵 MediaPlayerController: Remote command received: $command")
+                    onRemoteCommand?.invoke(command)
+                }
+            })
+        } else {
+            println("MediaPlayerController: No PlatformAudioPlayer registered!")
+            listener.onError(Exception("Audio Player implementation missing"))
+        }
     }
 
     actual fun writeRawPcm(data: ByteArray): Int {
-        // TODO: Implement raw PCM playback
-        return data.size // Pretend we wrote everything
+        val player = PlatformPlayerProvider.player
+        if (player != null) {
+            player.writeRawPcm(data)
+            return data.size
+        }
+        return 0
     }
 
     actual fun stopRawPcmStream() {
-        // TODO: Implement
+        PlatformPlayerProvider.player?.stopRawPcmStream()
         isPrepared = false
     }
 
     actual fun setVolume(volume: Int) {
-        // TODO: Implement using AVAudioEngine
+        PlatformPlayerProvider.player?.setVolume(volume)
     }
 
     actual fun setMuted(muted: Boolean) {
-        // TODO: Implement using AVAudioEngine
+        PlatformPlayerProvider.player?.setMuted(muted)
     }
 
     actual fun release() {
+        PlatformPlayerProvider.player?.dispose()
         isPrepared = false
-        callback = null
     }
 
     actual fun getCurrentSystemVolume(): Int {
-        // TODO: "Not yet implemented"
+        // TODO: Add getVolume to interface if needed, for now return dummy
         return 100
+    }
+    
+    // Now Playing (Control Center / Lock Screen)
+    actual fun updateNowPlaying(
+        title: String?,
+        artist: String?,
+        album: String?,
+        artworkUrl: String?,
+        duration: Double,
+        elapsedTime: Double,
+        playbackRate: Double
+    ) {
+        PlatformPlayerProvider.player?.updateNowPlaying(
+            title, artist, album, artworkUrl, duration, elapsedTime, playbackRate
+        )
+    }
+    
+    actual fun clearNowPlaying() {
+        PlatformPlayerProvider.player?.clearNowPlaying()
+    }
+    
+    fun setRemoteCommandHandler(handler: RemoteCommandHandler?) {
+        PlatformPlayerProvider.player?.setRemoteCommandHandler(handler)
     }
 }
 

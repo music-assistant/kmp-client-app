@@ -2,6 +2,8 @@
 
 package io.music_assistant.client.player
 
+import io.music_assistant.client.player.sendspin.model.AudioCodec
+
 /**
  * MediaPlayerController - Desktop stub for Sendspin
  *
@@ -9,14 +11,20 @@ package io.music_assistant.client.player
  * TODO: Implement using javax.sound SourceDataLine or similar
  */
 actual class MediaPlayerController actual constructor(val platformContext: PlatformContext) {
+    
+    // Callback for remote commands
+    actual var onRemoteCommand: ((String) -> Unit)? = null
+
     private var listener: MediaPlayerListener? = null
 
-    // Sendspin raw PCM streaming methods (stub)
+    // Sendspin streaming methods (stub)
 
-    actual fun prepareRawPcmStream(
+    actual fun prepareStream(
+        codec: AudioCodec,
         sampleRate: Int,
         channels: Int,
         bitDepth: Int,
+        codecHeader: String?,
         listener: MediaPlayerListener
     ) {
         // TODO: Implement using javax.sound SourceDataLine or similar
@@ -44,6 +52,23 @@ actual class MediaPlayerController actual constructor(val platformContext: Platf
     actual fun getCurrentSystemVolume(): Int {
         // TODO: Implement using javax.sound
         return 100
+    }
+    
+    // Now Playing - no-op on Desktop
+    actual fun updateNowPlaying(
+        title: String?,
+        artist: String?,
+        album: String?,
+        artworkUrl: String?,
+        duration: Double,
+        elapsedTime: Double,
+        playbackRate: Double
+    ) {
+        // Not implemented on Desktop
+    }
+    
+    actual fun clearNowPlaying() {
+        // Not implemented on Desktop
     }
 
     actual fun release() {

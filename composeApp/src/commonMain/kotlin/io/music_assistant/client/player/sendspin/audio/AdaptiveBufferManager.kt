@@ -3,6 +3,8 @@ package io.music_assistant.client.player.sendspin.audio
 import co.touchlab.kermit.Logger
 import io.music_assistant.client.player.sendspin.ClockSynchronizer
 import io.music_assistant.client.player.sendspin.SyncQuality
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.math.sqrt
 
 /**
@@ -52,7 +54,7 @@ class AdaptiveBufferManager(
     // Expose metrics for BufferState
     val currentSmoothedRTT: Double get() = smoothedRTT
     val currentJitter: Double get() = jitterEstimator.getStdDev()
-    val currentDropRate: Double get() = if (dropWindow.size() > 0) {
+    suspend fun getCurrentDropRate(): Double = if (dropWindow.size() > 0) {
         dropWindow.count { it } / dropWindow.size().toDouble()
     } else {
         0.0
@@ -62,7 +64,18 @@ class AdaptiveBufferManager(
      * Updates network statistics with new RTT and quality measurements.
      * Call this on every sync message (approximately every 1 second).
      */
-    fun updateNetworkStats(rtt: Long, quality: SyncQuality) {
+    // Use monotonic time for adaptation timing
+    private val startMark = kotlin.time.TimeSource.Monotonic.markNow()
+
+    private fun getCurrentTimeMicros(): Long {
+        return startMark.elapsedNow().inWholeMicroseconds
+    }
+
+    /**
+     * Updates network statistics with new RTT and quality measurements.
+     * Call this on every sync message (approximately every 1 second).
+     */
+    suspend fun updateNetworkStats(rtt: Long, quality: SyncQuality) {
         // Update RTT history
         rttHistory.add(rtt)
         jitterEstimator.addSample(rtt)
@@ -78,21 +91,21 @@ class AdaptiveBufferManager(
     /**
      * Records that a chunk was dropped due to being too late.
      */
-    fun recordChunkDropped() {
+    suspend fun recordChunkDropped() {
         dropWindow.add(true)
     }
 
     /**
      * Records that a chunk was successfully played.
      */
-    fun recordChunkPlayed() {
+    suspend fun recordChunkPlayed() {
         dropWindow.add(false)
     }
 
     /**
      * Records an underrun event with its timestamp.
      */
-    fun recordUnderrun(timestamp: Long) {
+    suspend fun recordUnderrun(timestamp: Long) {
         underrunTimestamps.add(timestamp)
     }
 
@@ -100,7 +113,7 @@ class AdaptiveBufferManager(
      * Main adaptation logic - updates thresholds based on network conditions.
      * Call this periodically (e.g., every 5 seconds).
      */
-    fun updateThresholds(currentTime: Long) {
+    suspend fun updateThresholds(currentTime: Long) {
         // Check if we're in cooldown
         if (currentTime < adaptationState.cooldownUntil) {
             return
@@ -116,7 +129,7 @@ class AdaptiveBufferManager(
         }
     }
 
-    private fun calculateNetworkStats(): NetworkStats {
+    private suspend fun calculateNetworkStats(): NetworkStats {
         val dropRate = if (dropWindow.size() > 0) {
             dropWindow.count { it } / dropWindow.size().toDouble()
         } else {
@@ -138,7 +151,7 @@ class AdaptiveBufferManager(
         )
     }
 
-    private fun shouldIncreaseBuffer(stats: NetworkStats, currentTime: Long): Boolean {
+    private suspend fun shouldIncreaseBuffer(stats: NetworkStats, currentTime: Long): Boolean {
         // Immediate increase conditions
         if (stats.recentUnderruns > 0) return true
         if (stats.dropRate > DROP_RATE_THRESHOLD) return true
@@ -165,7 +178,7 @@ class AdaptiveBufferManager(
         if (stats.dropRate > 0.0) return false
         if (stats.syncQuality != SyncQuality.GOOD) return false
 
-        // Check sustained good conditions
+        // Check sustained good conditions (rest unchanged)
         val timeSinceLastIncrease = currentTime - adaptationState.lastAdjustmentTime
         if (adaptationState.lastDirection == Direction.INCREASE &&
             timeSinceLastIncrease < 60_000_000L) {
@@ -182,7 +195,8 @@ class AdaptiveBufferManager(
         return false
     }
 
-    private fun increaseBuffer(stats: NetworkStats, currentTime: Long) {
+    private suspend fun increaseBuffer(stats: NetworkStats, currentTime: Long) {
+       // ... existing logic ...
         val newTarget = calculateTargetBuffer(stats)
         val increaseMagnitude = if (stats.recentUnderruns > 0) {
             // Aggressive increase on underrun
@@ -216,7 +230,7 @@ class AdaptiveBufferManager(
         }
     }
 
-    private fun decreaseBuffer(stats: NetworkStats, currentTime: Long) {
+    private suspend fun decreaseBuffer(stats: NetworkStats, currentTime: Long) {
         // Decrease gradually toward ideal
         val decreaseMagnitude = (_targetBufferDuration - IDEAL_BUFFER) / 4
 
@@ -242,7 +256,7 @@ class AdaptiveBufferManager(
         }
     }
 
-    private fun calculateTargetBuffer(stats: NetworkStats): Long {
+    private suspend fun calculateTargetBuffer(stats: NetworkStats): Long {
         // Base component: cover round-trip time
         val rttComponent = stats.smoothedRTT * 2.0
 
@@ -278,10 +292,7 @@ class AdaptiveBufferManager(
             .coerceIn(MIN_EARLY_THRESHOLD, MAX_EARLY_THRESHOLD)
     }
 
-    /**
-     * Resets all adaptation state to defaults.
-     */
-    fun reset() {
+     suspend fun reset() {
         logger.i { "Resetting adaptive buffer manager" }
         rttHistory.clear()
         jitterEstimator.reset()
@@ -292,14 +303,6 @@ class AdaptiveBufferManager(
         _currentEarlyThreshold = DEFAULT_EARLY_THRESHOLD
         _targetBufferDuration = IDEAL_BUFFER
         adaptationState = AdaptationState(0L, Direction.NONE, 0, 0L)
-    }
-
-    // Use monotonic time for adaptation timing
-    private val startTimeNanos = System.nanoTime()
-
-    private fun getCurrentTimeMicros(): Long {
-        val elapsedNanos = System.nanoTime() - startTimeNanos
-        return elapsedNanos / 1000 // Convert to microseconds
     }
 
     companion object {
@@ -335,25 +338,28 @@ class AdaptiveBufferManager(
  * When full, oldest elements are overwritten.
  * Thread-safe implementation to prevent ConcurrentModificationException.
  */
+/**
+ * Circular buffer with fixed capacity.
+ * When full, oldest elements are overwritten.
+ * Thread-safe implementation using Mutex.
+ */
 class CircularBuffer<T>(private val capacity: Int) {
     private val buffer = ArrayList<T>(capacity)
     private var writeIndex = 0
-    private val lock = Any()
+    private val mutex = kotlinx.coroutines.sync.Mutex()
 
-    fun add(item: T) {
-        synchronized(lock) {
-            if (buffer.size < capacity) {
-                buffer.add(item)
-            } else {
-                buffer[writeIndex] = item
-            }
-            writeIndex = (writeIndex + 1) % capacity
+    suspend fun add(item: T) = mutex.withLock {
+        if (buffer.size < capacity) {
+            buffer.add(item)
+        } else {
+            buffer[writeIndex] = item
         }
+        writeIndex = (writeIndex + 1) % capacity
     }
 
-    fun size(): Int = synchronized(lock) { buffer.size }
+    suspend fun size(): Int = mutex.withLock { buffer.size }
 
-    fun takeLast(n: Int): List<T> = synchronized(lock) {
+    suspend fun takeLast(n: Int): List<T> = mutex.withLock {
         val count = n.coerceAtMost(buffer.size)
         val result = mutableListOf<T>()
         for (i in 0 until count) {
@@ -363,7 +369,7 @@ class CircularBuffer<T>(private val capacity: Int) {
         result
     }
 
-    fun takeFirst(n: Int): List<T> = synchronized(lock) {
+    suspend fun takeFirst(n: Int): List<T> = mutex.withLock {
         val count = n.coerceAtMost(buffer.size)
         val startIndex = if (buffer.size < capacity) 0 else writeIndex
         val result = mutableListOf<T>()
@@ -374,15 +380,13 @@ class CircularBuffer<T>(private val capacity: Int) {
         result
     }
 
-    fun count(predicate: (T) -> Boolean): Int = synchronized(lock) {
+    suspend fun count(predicate: (T) -> Boolean): Int = mutex.withLock {
         buffer.count(predicate)
     }
 
-    fun clear() {
-        synchronized(lock) {
-            buffer.clear()
-            writeIndex = 0
-        }
+    suspend fun clear() = mutex.withLock {
+        buffer.clear()
+        writeIndex = 0
     }
 }
 
