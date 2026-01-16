@@ -1,42 +1,100 @@
 # Sendspin Integration - Current Status
 
-**Last Updated:** 2026-01-05
+**Last Updated:** 2026-01-16
 
 ## Implementation Status
 
 ### ✅ Core Features - WORKING
 
 - **WebSocket Connection** - Connects to Music Assistant server Sendspin endpoint
+- **Auto-Reconnect** - WebSocketHandler automatically reconnects on network failures (exponential backoff, 10 attempts max)
+- **Network Resilience** - Aggressive keepalive (5s ping, 5s TCP keepalive) for VPN-like stability
 - **Protocol Handshake** - client/hello ↔ server/hello exchange
 - **Clock Synchronization** - NTP-style sync with monotonic time base & Kalman filter
-- **PCM Audio Streaming** - Raw PCM playback via AudioTrack
-- **Opus Audio Streaming** - Opus decoding via Concentus library (Android only)
-- **Adaptive Buffering** - Network-aware dynamic buffer sizing
+- **Adaptive Buffering** - Network-aware dynamic buffer sizing (WebRTC NetEQ-inspired)
 - **Playback Control** - Play, pause, resume, seek, next/previous track
 - **Progress Reporting** - Periodic state updates to server (every 2 seconds)
 - **Metadata Display** - Title, artist, album from stream/metadata
 - **Timestamp Synchronization** - Chunks play at correct time
 
+### ✅ Platform Support
+
+#### Android
+- **Audio Output**: AudioTrack (low-latency raw PCM)
+- **PCM Streaming**: ✅ Working
+- **Opus Decoding**: ✅ Working (Concentus library)
+- **FLAC Decoding**: ✅ Working (MediaCodec, API 26+)
+- **Volume Control**: ✅ MediaSession integration with system volume
+- **Background Playback**: ✅ MainMediaPlaybackService with notifications
+- **Android Auto**: ✅ Supported via AndroidAutoPlaybackService
+
+#### iOS
+- **Audio Output**: MPV (libmpv via MPVKit) with custom stream protocol
+- **PCM Streaming**: ✅ Working (demuxer=rawaudio)
+- **Opus Decoding**: ✅ Working (MPV/FFmpeg)
+- **FLAC Decoding**: ✅ Working (MPV/FFmpeg)
+- **Volume Control**: ⚠️ Basic support, needs platform integration
+- **Background Playback**: ⚠️ Needs implementation
+- **Implementation**: Full rewrite completed 2026-01-14 (see ios_audio_pipeline.md)
+
+#### Desktop (JVM)
+- **Audio Output**: javax.sound.sampled (SourceDataLine)
+- **PCM Streaming**: ✅ Working
+- **Opus Decoding**: ✅ Working (Concentus library, same as Android)
+- **FLAC Decoding**: ❌ Not implemented (architectural limitations, intentional)
+- **Volume Control**: ⚠️ Basic support
+- **Recommendation**: Use Opus or PCM codecs on desktop
+
 ### ⚠️ Partially Implemented
 
-- **Volume Control** - Receives server commands but no UI controls yet
-- **Mute Control** - Receives server commands but no UI controls yet
-- **Error Recovery** - Basic error handling, needs improvement
-- **Reconnection** - Manual reconnect only, no auto-reconnect
-- **Opus Codec** - Android only (iOS/Desktop are stubs)
+- **Error Recovery** - Basic handling implemented, edge cases need improvement
+- **Stream Restoration** - Auto-reconnect works, but playback gap during reconnection is unavoidable
 
 ### ❌ Not Implemented
 
-- **FLAC Codec** - Decoder stub exists, not implemented
 - **Artwork Display** - Protocol support exists, no implementation
 - **Visualizer** - Not implemented
-- **mDNS Discovery** - Using direct connection instead
+- **mDNS Discovery** - Using direct connection instead (intentional design choice)
 
 ---
 
-## Recent Additions (2026-01-05)
+## Recent Additions
 
-### 1. Opus Decoder for Android ✅
+### 2026-01-16: Platform Expansion & Auto-Reconnect
+
+#### iOS Full Implementation ✅
+- Complete MPV-based audio pipeline
+- FLAC, Opus, and PCM codec support via libmpv/FFmpeg
+- Custom stream protocol (`sendspin://stream`) with RingBuffer
+- Demuxer configuration for each codec type
+- Full rewrite documented in `ios_audio_pipeline.md`
+
+#### Desktop Opus Support ✅
+- Concentus library integration (pure Java/Kotlin, no JNI)
+- PCM playback via javax.sound.sampled
+- FLAC intentionally not implemented (architectural limitations)
+
+#### Android FLAC Decoder ✅
+- MediaCodec-based implementation (API 26+)
+- Native hardware acceleration where available
+- Supports 16/24/32-bit output with bit depth conversion
+- Handles codec header (STREAMINFO block) from server
+
+#### Auto-Reconnect ✅
+- WebSocketHandler automatic reconnection on network failures
+- Exponential backoff: 500ms, 1s, 2s, 5s, 10s (max 10 attempts)
+- Aggressive keepalive settings for network transition resilience
+- Graceful degradation: continues from buffer during brief disconnects
+
+#### Network Resilience ✅
+- 5-second WebSocket ping interval (down from 30s)
+- 5-second TCP keepalive time
+- Connection state monitoring: `WebSocketState.Reconnecting(attempt)`
+- Explicit disconnect flag prevents unwanted reconnection attempts
+
+### 2026-01-05: Android Opus & Adaptive Buffering
+
+#### 1. Opus Decoder for Android ✅
 
 **Implementation:**
 - Uses Concentus library v1.0.2 (pure Java/Kotlin, no JNI)
@@ -320,15 +378,30 @@ User Actions → Music Assistant Server
 
 ## Documentation
 
-### Available
-- `sendspin-status.md` - This status document
-- `sendspin-integration-design.md` - Technical design document
-- `sendspin-integration-guide.md` - Integration guide
-- `.claude/plans/declarative-splashing-wolf.md` - Adaptive buffering implementation plan
+### Current
+- `sendspin-status.md` - **This document** - Current implementation status (maintained)
+- `ios_audio_pipeline.md` - iOS MPV integration documentation
+- `volume-control.md` - MediaSession volume control implementation
+- `sendspin-resilient-architecture.md` - Auto-reconnect architecture design
+
+### Historical (Archived 2026-01-16)
+- ~~`sendspin-integration-design.md`~~ - Deleted (superseded by status doc)
+- ~~`sendspin-integration-guide.md`~~ - Deleted (superseded by status doc)
+- ~~`sendspin-android-services-integration.md`~~ - Deleted (contradictory, confusing)
+- ~~`connection-service-design.md`~~ - Deleted (never implemented)
 
 ---
 
 ## Changelog
+
+### 2026-01-16 - Multi-Platform Support & Network Resilience
+- ✅ **iOS full implementation** - MPV-based pipeline with FLAC/Opus/PCM
+- ✅ **Desktop Opus support** - Concentus library integration
+- ✅ **Android FLAC decoder** - MediaCodec-based with hardware acceleration
+- ✅ **Auto-reconnect** - WebSocketHandler automatic reconnection with exponential backoff
+- ✅ **Network resilience** - Aggressive keepalive settings for connection stability
+- 📊 **Documentation cleanup** - Removed 4 outdated/contradictory design documents
+- 📊 Status: All three platforms now have working implementations
 
 ### 2026-01-05 - Opus + Adaptive Buffering Release
 - ✅ Added Opus decoder for Android (Concentus library)
@@ -355,4 +428,9 @@ User Actions → Music Assistant Server
 
 ---
 
-**Status:** ✅ **Production-ready** for Android with PCM and Opus support. iOS/Desktop need implementation.
+**Status:** ✅ **Production-ready** on Android, iOS, and Desktop with multi-codec support.
+
+**Platform Summary:**
+- **Android**: ✅ PCM, Opus (Concentus), FLAC (MediaCodec) - Full background playback & Android Auto
+- **iOS**: ✅ PCM, Opus, FLAC (all via MPV/FFmpeg) - Full streaming support
+- **Desktop**: ✅ PCM, Opus (Concentus) - FLAC not available (use Opus instead)

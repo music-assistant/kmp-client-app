@@ -182,7 +182,7 @@ fun FullPlayerItem(
 
         AlertDialog(
             onDismissRequest = { showGroupDialog = false },
-            title = { Text("Join players") },
+            title = { Text("Group settings") },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth()
@@ -266,7 +266,7 @@ fun FullPlayerItem(
                     OutlinedButton(
                         enabled = false,
                         onClick = {}) {
-                        Text("Cannot group player")
+                        Text("No group options")
                     }
 
                 item.groupChildren.none { it.isBound } ->
@@ -274,7 +274,7 @@ fun FullPlayerItem(
                         enabled = true,
                         onClick = { showGroupDialog = true }
                     ) {
-                        Text("Group with others")
+                        Text("Group")
                     }
 
                 else ->

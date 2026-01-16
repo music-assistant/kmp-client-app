@@ -273,8 +273,8 @@ class AdaptiveBufferManager(
         val basePrebuffer = _targetBufferDuration / 2
         _currentPrebufferThreshold = basePrebuffer.coerceIn(MIN_PREBUFFER, MAX_PREBUFFER)
 
-        // Update early threshold
-        _currentEarlyThreshold = (_targetBufferDuration + 500_000L)
+        // Update early threshold (target buffer + 100ms headroom, was +500ms)
+        _currentEarlyThreshold = (_targetBufferDuration + 100_000L)
             .coerceIn(MIN_EARLY_THRESHOLD, MAX_EARLY_THRESHOLD)
     }
 
@@ -307,14 +307,14 @@ class AdaptiveBufferManager(
         const val LATE_THRESHOLD = 100_000L // 100ms
 
         // Default thresholds (used before adaptation kicks in)
-        const val DEFAULT_PREBUFFER_THRESHOLD = 200_000L // 200ms
-        const val DEFAULT_EARLY_THRESHOLD = 1_000_000L // 1s
+        const val DEFAULT_PREBUFFER_THRESHOLD = 75_000L // 75ms (was 200ms - optimized for lower latency)
+        const val DEFAULT_EARLY_THRESHOLD = 200_000L // 200ms (was 1s - optimized for lower latency)
 
         // Bounds
-        const val MIN_PREBUFFER = 100_000L // 100ms
-        const val MAX_PREBUFFER = 800_000L // 800ms
-        const val MIN_EARLY_THRESHOLD = 500_000L // 500ms
-        const val MAX_EARLY_THRESHOLD = 3_000_000L // 3s
+        const val MIN_PREBUFFER = 50_000L // 50ms (was 100ms - optimized for lower latency)
+        const val MAX_PREBUFFER = 400_000L // 400ms (was 800ms - optimized for lower latency)
+        const val MIN_EARLY_THRESHOLD = 100_000L // 100ms (was 500ms - optimized for lower latency)
+        const val MAX_EARLY_THRESHOLD = 1_000_000L // 1s (was 3s - optimized for lower latency)
         const val MIN_BUFFER = 200_000L // 200ms
         const val MAX_BUFFER = 2_000_000L // 2s
         const val IDEAL_BUFFER = 300_000L // 300ms

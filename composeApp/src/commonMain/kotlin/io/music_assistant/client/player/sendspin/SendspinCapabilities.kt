@@ -35,8 +35,8 @@ object SendspinCapabilities {
     private fun buildSupportedFormats(codecPreference: Codec): List<AudioFormatSpec> {
         // Build format variations for the selected codec
         // Stereo (2 channels) × 3 bit depths (16, 24, 32) × 2 sample rates (44100, 48000) = 6 formats
-        val sampleRates = listOf(44100, 48000)
-        val bitDepths = listOf(16, 24, 32)
+        val sampleRates = listOf(44100/*, 48000*/)
+        val bitDepths = listOf(16/*, 24, 32*/)
 
         return buildList {
             for (sampleRate in sampleRates) {

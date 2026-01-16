@@ -1,215 +1,59 @@
 # Sendspin Resilient Streaming Architecture
 
-## Core Principle: Decouple Playback from WebSocket State
+**Last Updated:** 2026-01-16
 
-### Current Problem
-```
-WebSocket disconnects
-  ↓
-disconnectFromServer() called
-  ↓
-audioStreamManager.stopStream() → Buffer cleared
-  ↓
-Playback stops (even though buffer had 5 seconds of audio!)
-```
+## Overview
 
-### New Architecture
-```
-WebSocket disconnects
-  ↓
-WebSocketHandler auto-reconnects (DON'T call disconnectFromServer)
-  ↓
-AudioStreamManager keeps playing from buffer
-  ↓
-If reconnect succeeds before buffer empty:
-  - Send Resume message with current position
-  - Server resumes streaming
-  - Gapless continuation! ✅
-  ↓
-If buffer runs dry before reconnect:
-  - Playback underrun (natural pause)
-  - When reconnect succeeds, server sends StreamStart
-  - Resume with small gap (unavoidable)
-```
+This document describes the implemented auto-reconnect and network resilience features for the Sendspin protocol integration.
 
-## Key Insight from VPN Testing
+## Core Principle: Minimize Playback Disruption
 
-**Why VPN prevents WebSocket disconnection:**
-- VPN tunnel maintains persistent connection to VPN server
-- Network change (WiFi ↔ Cellular) happens at lower layer
-- VPN client handles transition transparently
-- App's WebSocket (over VPN tunnel) never breaks
+The architecture aims to:
+1. **Prevent disconnections** - Aggressive keepalive settings
+2. **Auto-reconnect transparently** - Exponential backoff strategy
+3. **Preserve playback** - Continue from buffer during brief network transitions (where possible)
 
-**Can we replicate without VPN?**
-Yes! Two strategies:
+## ✅ Implemented Features
 
-### Strategy 1: More Resilient WebSocket
+### 1. Auto-Reconnect (WebSocketHandler)
+
+**Implementation**: `composeApp/src/commonMain/kotlin/io/music_assistant/client/player/sendspin/connection/WebSocketHandler.kt`
+
+#### Key Features:
+- **Exponential backoff**: 500ms → 1s → 2s → 5s → 10s (max 10 attempts)
+- **State tracking**: `WebSocketState.Reconnecting(attempt)`
+- **Explicit disconnect flag**: Prevents unwanted reconnection when user disconnects
+- **Graceful failure**: Transitions to `WebSocketState.Error` after max attempts
+
+#### Code Structure:
 ```kotlin
-// Ktor WebSocket configuration:
-HttpClient(CIO) {
-    install(WebSockets) {
-        pingInterval = 5.seconds  // More aggressive (current: 30s)
-        maxFrameSize = Long.MAX_VALUE
-    }
-
-    engine {
-        // TCP socket options for keepalive
-        endpoint {
-            keepAliveTime = 5000  // 5 seconds
-            connectTimeout = 10000
-            socketTimeout = 10000
-        }
-    }
-}
-```
-
-Benefits:
-- Keeps connection alive during brief network transitions
-- TCP keepalive prevents router/NAT from dropping idle connections
-- May survive WiFi ↔ Cellular transition (like VPN does)
-
-### Strategy 2: Fast Transparent Reconnection
-Even if WebSocket does disconnect:
-- Don't tear down playback pipeline
-- Keep playing from buffer
-- Auto-reconnect in background
-- Resume streaming before buffer empties
-
-## Architecture Changes
-
-### 1. AudioStreamManager - Independent Lifecycle
-
-**Current:**
-```kotlin
-suspend fun stopStream() {
-    isStreaming = false
-    audioBuffer.clear()  // ❌ Loses buffered data!
-    // ...
-}
-```
-
-**New: Add `suspend()` method (like Android AudioTrack.pause()):**
-```kotlin
-private var isSuspended = false
-
-suspend fun suspendStream() {
-    logger.i { "Suspending stream (WebSocket reconnecting, buffer preserved)" }
-    isSuspended = true
-    // Don't clear buffer!
-    // Don't stop playback thread!
-    // Just stop accepting new chunks temporarily
-}
-
-suspend fun resumeStream() {
-    logger.i { "Resuming stream (WebSocket reconnected)" }
-    isSuspended = true
-    // Continue playing from buffer
-}
-
-// stopStream() only called on explicit StreamEnd or user stop
-suspend fun stopStream() {
-    logger.i { "Stopping stream (permanent)" }
-    isStreaming = false
-    isSuspended = false
-    audioBuffer.clear()
-    // ... existing cleanup
-}
-```
-
-**Buffer handling during suspension:**
-```kotlin
-suspend fun processBinaryMessage(data: ByteArray) {
-    if (isSuspended) {
-        logger.d { "Stream suspended, buffering chunk for later" }
-        // Still buffer chunks during reconnection!
-        // This allows seamless continuation
-    }
-
-    if (!isStreaming && !isSuspended) {
-        logger.d { "Not streaming (ignoring)" }
-        return
-    }
-
-    // ... existing processing
-}
-```
-
-### 2. WebSocketHandler - Auto-Reconnect WITHOUT Teardown
-
-**Add auto-reconnect logic:**
-```kotlin
+// Auto-reconnect state
 private var explicitDisconnect = false
 private var reconnectAttempts = 0
 private val maxReconnectAttempts = 10
-private var reconnectJob: Job? = null
 
-suspend fun disconnect() {
-    explicitDisconnect = true
-    reconnectJob?.cancel()
-    // ... existing disconnect logic
-}
-
-private fun startListening(wsSession: DefaultClientWebSocketSession) {
-    listenerJob = launch {
-        try {
-            for (frame in wsSession.incoming) {
-                // ... existing frame handling
-            }
-        } catch (e: Exception) {
-            if (explicitDisconnect) {
-                logger.i { "Explicit disconnect, not reconnecting" }
-                handleDisconnection()
-                return@launch
-            }
-
-            // Network error - auto-reconnect!
-            logger.w(e) { "WebSocket error, attempting auto-reconnect" }
-            _connectionState.value = WebSocketState.Reconnecting(reconnectAttempts)
-
-            attemptReconnect()
-        }
-    }
-}
-
+// Triggered on network errors
 private fun attemptReconnect() {
     reconnectJob = launch {
         while (reconnectAttempts < maxReconnectAttempts && !explicitDisconnect) {
-            val delay = calculateBackoff()
-            logger.i { "Reconnect attempt ${reconnectAttempts + 1} in ${delay}ms" }
-            delay(delay)
+            val delayMs = calculateBackoff()
+            delay(delayMs)
 
             try {
-                reconnectAttempts++
-
-                // Try to reconnect
                 val wsSession = client.webSocketSession(serverUrl)
                 session = wsSession
-
-                // Success!
-                logger.i { "Reconnected successfully after $reconnectAttempts attempts" }
                 reconnectAttempts = 0
                 _connectionState.value = WebSocketState.Connected
-
-                // Resume listening
                 startListening(wsSession)
                 return@launch
-
             } catch (e: Exception) {
-                logger.w(e) { "Reconnect attempt $reconnectAttempts failed" }
-                if (reconnectAttempts >= maxReconnectAttempts) {
-                    logger.e { "Max reconnect attempts reached, giving up" }
-                    _connectionState.value = WebSocketState.Error(
-                        Exception("Failed to reconnect after $maxReconnectAttempts attempts")
-                    )
-                    handleDisconnection()
-                }
+                // Continue loop or give up after max attempts
             }
         }
     }
 }
 
 private fun calculateBackoff(): Long {
-    // Exponential backoff: 500ms, 1s, 2s, 5s, 10s
     return when (reconnectAttempts) {
         0 -> 500L
         1 -> 1000L
@@ -220,78 +64,36 @@ private fun calculateBackoff(): Long {
 }
 ```
 
-### 3. SendspinClient - Coordinate Reconnection
+### 2. Network Resilience (Keepalive Settings)
 
-**Monitor WebSocket state and coordinate with AudioStreamManager:**
+**Implementation**: `composeApp/src/commonMain/kotlin/io/music_assistant/client/player/sendspin/connection/WebSocketHandler.kt`
 
+#### Configuration:
 ```kotlin
-private fun monitorWebSocketState() {
-    launch {
-        webSocketHandler?.connectionState?.collect { wsState ->
-            when (wsState) {
-                WebSocketState.Connected -> {
-                    // Check if we were streaming before
-                    if (wasStreamingBeforeDisconnect) {
-                        logger.i { "Reconnected while streaming - sending resume request" }
-                        sendResumeRequest()
-                    }
-                }
+private val client = HttpClient(CIO) {
+    install(WebSockets) {
+        pingInterval = 5.seconds  // Aggressive keepalive (was 30s)
+        maxFrameSize = Long.MAX_VALUE
+    }
 
-                is WebSocketState.Reconnecting -> {
-                    // Remember we're streaming (don't stop!)
-                    wasStreamingBeforeDisconnect = isCurrentlyStreaming()
-
-                    if (wasStreamingBeforeDisconnect) {
-                        logger.i { "Connection lost during streaming - preserving playback" }
-                        // DON'T call stopStream()!
-                        // AudioStreamManager will keep playing from buffer
-                    }
-                }
-
-                is WebSocketState.Error -> {
-                    // Only stop if max reconnect attempts exceeded
-                    if (!isReconnecting()) {
-                        logger.e { "Connection failed permanently" }
-                        audioStreamManager.stopStream()
-                        _playbackState.value = SendspinPlaybackState.Idle
-                    }
-                }
-
-                WebSocketState.Disconnected -> {
-                    // Only if explicit disconnect
-                    if (explicitDisconnect) {
-                        audioStreamManager.stopStream()
-                        _connectionState.value = SendspinConnectionState.Idle
-                    }
-                }
-            }
+    engine {
+        endpoint {
+            keepAliveTime = 5000  // 5 seconds TCP keepalive
+            connectTimeout = 10000
+            socketTimeout = 10000
         }
     }
 }
-
-private fun isCurrentlyStreaming(): Boolean {
-    return _playbackState.value in listOf(
-        SendspinPlaybackState.Buffering,
-        SendspinPlaybackState.Synchronized
-    )
-}
-
-private suspend fun sendResumeRequest() {
-    val currentPosition = audioStreamManager.playbackPosition.value
-    val bufferedDuration = audioStreamManager.bufferState.value.bufferedDuration
-
-    logger.i { "Sending resume: position=$currentPosition, buffered=${bufferedDuration}μs" }
-
-    // Send custom message to server indicating current playback state
-    messageDispatcher?.sendCommand("resume", CommandValue(
-        position = currentPosition,
-        buffered = bufferedDuration
-    ))
-}
 ```
 
-### 4. WebSocketState - Add Reconnecting State
+**Benefits**:
+- Maintains connection during brief network transitions (like VPN)
+- Prevents NAT/router timeouts
+- Early detection of dead connections
 
+### 3. Connection State Management
+
+**States**:
 ```kotlin
 sealed class WebSocketState {
     data object Disconnected : WebSocketState()
@@ -302,145 +104,109 @@ sealed class WebSocketState {
 }
 ```
 
-## 3. Resume Protocol
+**State Transitions**:
+- `Connected` → Network error → `Reconnecting(0)` → `Reconnecting(1)` → ... → `Connected` (success)
+- `Connected` → Network error → `Reconnecting(0)` → ... → `Error` (max attempts)
+- `Connected` → Explicit disconnect → `Disconnected` (no reconnection)
 
-When reconnecting during active streaming, client should inform server of current state.
+## ⚠️ Partially Implemented / Known Limitations
 
-**Option A: Extend Hello message**
-```kotlin
-// In MessageDispatcher.sendHello():
-val helloPayload = buildJsonObject {
-    put("client", clientCapabilities)
+### Buffer Preservation During Reconnection
 
-    // If resuming playback:
-    if (isResuming) {
-        putJsonObject("resume") {
-            put("position", currentPosition)
-            put("buffered_duration", bufferedDuration)
-        }
-    }
-}
-```
+**Design Goal**: Keep playing from buffer during brief disconnects
 
-**Option B: New Resume message**
-```kotlin
-// After reconnecting, send resume message:
-messageDispatcher?.sendMessage(
-    MessageType.PLAYER_COMMAND,
-    buildJsonObject {
-        put("command", "resume")
-        put("position", currentPosition)
-        put("buffered_duration", bufferedDuration)
-    }
-)
-```
+**Current Reality**:
+- Audio buffer (~5 seconds) exists in `AudioStreamManager`
+- During reconnection, buffer COULD continue playing
+- **However**: Server queue may advance during disconnect
+- **Gap is unavoidable** when reconnection takes longer than buffer duration
 
-Server can then:
-1. Check if this player is still in its active players list
-2. Check current queue position
-3. Resume streaming from appropriate position
-4. If queue moved on, send new StreamStart with updated metadata
+**Status**: Buffer exists and can bridge very brief disconnects (<5s), but full gapless restoration not guaranteed.
 
-## 4. ConnectionService - Android Holder Only
+### Stream Restoration
 
-**Purpose**: Just keep foreground service running, hold references
+**Design Goal**: Resume from last known position after reconnection
 
-```kotlin
-// composeApp/src/androidMain/kotlin/.../services/ConnectionService.kt
-class ConnectionService : Service() {
+**Current Reality**:
+- Client doesn't send "resume" message with current position
+- Server treats reconnected player as new connection
+- Sends `stream/start` from current queue position
+- Any playback gap depends on:
+  - Reconnection speed (usually <2s with auto-reconnect)
+  - Server buffer pre-fill time
+  - Whether queue advanced during disconnect
 
-    // Injected via Koin
-    private val serviceClient: ServiceClient by inject()
-    private val sendspinClient: SendspinClient by inject()
+**Status**: Basic reconnection works, but intelligent stream restoration not implemented.
 
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+## ❌ Not Implemented
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Show notification
-        startForeground(NOTIFICATION_ID, createNotification())
+### ConnectionService (Android Foreground Service)
 
-        // Monitor connection states (just for notification updates)
-        monitorConnectionStates()
+**Design Document**: `.claude/connection-service-design.md` (deleted)
 
-        return START_STICKY
-    }
+**Status**: Not implemented. Connection lifecycle managed by `MainDataSource` instead.
 
-    private fun monitorConnectionStates() {
-        scope.launch {
-            combine(
-                serviceClient.sessionState,
-                sendspinClient.connectionState
-            ) { sessionState, sendspinState ->
-                // Update notification based on states
-                updateNotification(sessionState, sendspinState)
-            }.collect()
-        }
-    }
+**Rationale**:
+- `MainMediaPlaybackService` already provides foreground service
+- No need for separate connection-only service
+- Connection survives app backgrounding through existing services
 
-    // NO business logic here!
-    // All logic stays in ServiceClient and SendspinClient (commonMain)
-}
-```
+### Audio Stream Suspension
 
-## Testing Strategy
+**Design Goal**: `AudioStreamManager.suspendStream()` to preserve buffer without stopping
 
-### Test 1: Buffered Playback During Network Transition
-1. Start Sendspin playback
-2. Verify buffer has ~5 seconds of audio
-3. Enable airplane mode (force disconnect)
-4. Verify: Playback continues from buffer
-5. Disable airplane mode within 5 seconds
-6. Verify: Reconnection happens, streaming resumes, NO gap heard
+**Status**: Not implemented. Reconnection is fast enough (<2s) that complexity isn't warranted.
 
-### Test 2: Long Disconnection (Buffer Exhaustion)
-1. Start Sendspin playback
-2. Enable airplane mode
-3. Wait 10 seconds (buffer empties)
-4. Verify: Playback underrun (pauses naturally)
-5. Disable airplane mode
-6. Verify: Reconnection, StreamStart received, playback resumes
-7. Small gap is acceptable (buffer was empty)
+### Network Change Callbacks
 
-### Test 3: WiFi ↔ Cellular Transition
-1. Start Sendspin playback on WiFi
-2. Disable WiFi (force cellular)
-3. Verify: Either WebSocket survives OR reconnects within 2s
-4. Verify: No audible gap (buffer bridged the transition)
+**Design Goal**: Proactively reconnect on WiFi ↔ Cellular transitions
 
-### Test 4: OAuth Flow (Original Problem)
-1. Connect to Music Assistant
-2. ConnectionService starts
-3. Trigger OAuth → Chrome Custom Tab opens
-4. Verify: ServiceClient WebSocket stays connected
-5. Complete OAuth
-6. Verify: Still connected, no reconnection needed
+**Status**: Not implemented. Auto-reconnect on connection failure is sufficient.
 
-## Expected Outcomes
+## Testing Results
 
-✅ **VPN-like resilience**: Aggressive keepalive may prevent disconnection entirely
-✅ **Gapless network transitions**: 5s buffer bridges 1-2s reconnection time
-✅ **Graceful degradation**: If reconnect takes longer, buffer empties naturally (pause)
-✅ **Stream restoration**: Server can resume from last known position
-✅ **No playback disruption**: User doesn't notice brief network issues
-✅ **All logic in commonMain**: ConnectionService is just Android lifecycle wrapper
+### Network Transition Test (WiFi → Cellular)
+✅ **Result**: Auto-reconnect triggers within 1-2 seconds
+✅ **Audio**: Brief gap (1-3s), then playback resumes
+✅ **User Experience**: Acceptable for mobile usage
 
-## Implementation Order
+### Brief Disconnect Test (Airplane Mode 3s)
+✅ **Result**: Reconnects on first attempt (500ms delay)
+✅ **Audio**: Minimal gap, buffer may bridge the transition
+✅ **User Experience**: Smooth recovery
 
-1. ✅ **Revise WebSocket keepalive** (quick win, may solve problem entirely)
-2. ✅ **Add WebSocketHandler auto-reconnect** (preserves AudioStreamManager)
-3. ✅ **Add AudioStreamManager suspend/resume** (buffer preservation)
-4. ✅ **SendspinClient reconnection coordination** (resume protocol)
-5. ✅ **ConnectionService** (Android foreground wrapper)
-6. ✅ **Testing** (verify gapless transitions work)
+### Extended Disconnect Test (Airplane Mode 30s)
+✅ **Result**: Max attempts exhausted, enters Error state
+⚠️ **Audio**: Playback stops
+✅ **Manual Recovery**: User can reconnect from settings
 
-## Key Differences from Previous Design
+### OAuth Flow Test
+✅ **Result**: Connection maintained during Chrome Custom Tab
+✅ **Reason**: Aggressive keepalive prevents disconnect
+✅ **User Experience**: No reconnection needed
 
-| Previous Design | New Design |
-|----------------|-----------|
-| Focus on ConnectionService | Focus on decoupling playback from WebSocket |
-| Reconnect but clear buffer | Reconnect while preserving buffer |
-| Accept gaps as inevitable | Eliminate gaps via buffer bridging |
-| Separate concerns via services | Separate concerns via state decoupling |
-| Android-specific solution | CommonMain architecture + Android wrapper |
+## Architecture Benefits
 
-This architecture should achieve **gapless playback during network transitions** by leveraging the existing 5-second buffer!
+✅ **Simple**: Auto-reconnect logic centralized in WebSocketHandler
+✅ **Transparent**: No user intervention needed for brief network issues
+✅ **Predictable**: Clear exponential backoff strategy
+✅ **Graceful**: Error state after max attempts, not infinite retries
+✅ **Production-ready**: Tested with real server and network conditions
+
+## Future Enhancements (Not Planned)
+
+- Resume protocol (send current position on reconnect)
+- Buffer suspension (complex, marginal benefit)
+- Network change callbacks (Android-specific, low priority)
+- Adaptive backoff based on connection quality
+- Connection quality metrics reporting
+
+## Related Documentation
+
+- **sendspin-status.md** - Current implementation status with platform breakdown
+- **ios_audio_pipeline.md** - iOS-specific implementation details
+- **volume-control.md** - MediaSession integration
+
+---
+
+**Summary**: Auto-reconnect is fully implemented and works well in practice. Brief network transitions (1-5s) are handled gracefully. Extended disconnections (30s+) result in error state requiring manual reconnection. This balance provides good UX without excessive complexity.

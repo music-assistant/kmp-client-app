@@ -11,7 +11,8 @@
       "Bash(./gradlew:*)",
       "Bash(jar tf:*)",
       "WebSearch",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(ls:*)"
     ]
   }
 }

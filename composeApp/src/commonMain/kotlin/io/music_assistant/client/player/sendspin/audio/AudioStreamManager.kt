@@ -59,6 +59,10 @@ class AudioStreamManager(
     private var isStreaming = false
     private var droppedChunksCount = 0
 
+    // Buffer state update throttling (performance optimization)
+    private var lastBufferStateUpdate = 0L
+    private val bufferStateUpdateInterval = 100_000L // Update max every 100ms
+
     suspend fun startStream(config: StreamStartPlayer) {
         logger.i { "Starting stream: ${config.codec}, ${config.sampleRate}Hz, ${config.channels}ch, ${config.bitDepth}bit" }
 
@@ -198,14 +202,14 @@ class AudioStreamManager(
                             adaptiveBufferManager.recordUnderrun(getCurrentTimeMicros())
                             _bufferState.update { it.copy(isUnderrun = true) }
                         }
-                        delay(10) // Wait for more data
+                        delay(2) // Wait for more data (was 10ms, reduced for faster recovery)
                         continue
                     }
 
                     // Check sync quality
                     if (clockSynchronizer.currentQuality == SyncQuality.LOST) {
                         logger.w { "Clock sync lost, waiting..." }
-                        delay(100)
+                        delay(10) // Reduced from 100ms for faster recovery
                         continue
                     }
 
@@ -230,7 +234,7 @@ class AudioStreamManager(
                         chunkPlaybackTime > currentLocalTime + earlyThreshold -> {
                             // Chunk is too early, wait
                             val delayMs =
-                                ((chunkPlaybackTime - currentLocalTime) / 1000).coerceAtMost(100)
+                                ((chunkPlaybackTime - currentLocalTime) / 1000).coerceAtMost(20) // Was 100ms, reduced for lower latency
                             logger.d { "Chunk too early, waiting ${delayMs}ms (diff=${timeDiff / 1000}ms)" }
                             delay(delayMs)
                         }
@@ -268,9 +272,36 @@ class AudioStreamManager(
     private suspend fun waitForPrebuffer() {
         val threshold = adaptiveBufferManager.currentPrebufferThreshold
         logger.i { "Waiting for prebuffer (threshold=${threshold / 1000}ms)..." }
+
+        val startTime = getCurrentTimeMicros()
+        val timeoutUs = 5_000_000L // 5 second timeout
+
         while (isActive && audioBuffer.getBufferedDuration() < threshold) {
+            // Check timeout
+            if (getCurrentTimeMicros() - startTime > timeoutUs) {
+                val bufferMs = audioBuffer.getBufferedDuration() / 1000
+                logger.w { "Prebuffer timeout after 5s (buffered=${bufferMs}ms, threshold=${threshold / 1000}ms)" }
+
+                // Emit error state for UI
+                _streamError.update {
+                    Exception("Prebuffer timeout - check network connection")
+                }
+
+                // Start playback with whatever we have (graceful degradation)
+                if (audioBuffer.getBufferedDuration() > 0) {
+                    logger.i { "Starting playback with partial buffer" }
+                    return
+                } else {
+                    // No data at all - stop stream
+                    logger.e { "No data received, stopping stream" }
+                    stopStream()
+                    return
+                }
+            }
+
             delay(50)
         }
+
         val bufferMs = audioBuffer.getBufferedDuration() / 1000
         val thresholdMs = threshold / 1000
         logger.i { "Prebuffer complete: ${bufferMs}ms (threshold=${thresholdMs}ms)" }
@@ -321,11 +352,23 @@ class AudioStreamManager(
     }
 
     private suspend fun updateBufferState() {
+        val now = getCurrentTimeMicros()
         val bufferedDuration = audioBuffer.getBufferedDuration()
+        val isUnderrun = bufferedDuration == 0L && isStreaming
+
+        // Throttle updates to reduce GC pressure (max every 100ms)
+        // Exception: Always update on underrun state changes
+        if (now - lastBufferStateUpdate < bufferStateUpdateInterval &&
+            _bufferState.value.isUnderrun == isUnderrun) {
+            return // Skip update
+        }
+
+        lastBufferStateUpdate = now
+
         _bufferState.update {
             BufferState(
                 bufferedDuration = bufferedDuration,
-                isUnderrun = bufferedDuration == 0L && isStreaming,
+                isUnderrun = isUnderrun,
                 droppedChunks = droppedChunksCount,
                 // Adaptive metrics
                 targetBufferDuration = adaptiveBufferManager.targetBufferDuration,

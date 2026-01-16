@@ -30,6 +30,9 @@ actual class OpusDecoder : AudioDecoder {
     // Decoding buffer (reused to avoid allocations in hot path)
     private var pcmBuffer: ShortArray? = null
 
+    // Lock to prevent concurrent access (decode vs release race condition)
+    private val decoderLock = Any()
+
     override fun configure(config: AudioFormatSpec, codecHeader: String?) {
         logger.i { "Configuring Opus decoder: ${config.sampleRate}Hz, ${config.channels}ch, ${config.bitDepth}bit" }
 
@@ -49,6 +52,10 @@ actual class OpusDecoder : AudioDecoder {
         channels = config.channels
         bitDepth = config.bitDepth
 
+        // Note: Decoder pooling disabled for consistency with FlacDecoder
+        // Can be re-enabled if needed (Concentus is pure Java/Kotlin, no state machine issues)
+
+        // Always create new decoder
         try {
             // Create Concentus Opus decoder
             decoder = ConcentusOpusDecoder(sampleRate, channels)
@@ -74,52 +81,54 @@ actual class OpusDecoder : AudioDecoder {
     }
 
     override fun decode(encodedData: ByteArray): ByteArray {
-        val currentDecoder = decoder
-            ?: throw IllegalStateException("Decoder not configured. Call configure() first.")
+        return synchronized(decoderLock) {
+            val currentDecoder = decoder
+                ?: throw IllegalStateException("Decoder not configured. Call configure() first.")
 
-        val currentPcmBuffer = pcmBuffer
-            ?: throw IllegalStateException("PCM buffer not allocated")
+            val currentPcmBuffer = pcmBuffer
+                ?: throw IllegalStateException("PCM buffer not allocated")
 
-        if (encodedData.isEmpty()) {
-            logger.w { "Received empty encoded data" }
-            return ByteArray(0)
-        }
-
-        try {
-            logger.d { "Decoding Opus packet: ${encodedData.size} bytes" }
-
-            // Decode Opus packet to PCM samples
-            // Returns number of samples per channel
-            val samplesDecoded = currentDecoder.decode(
-                encodedData,                           // input: Opus-encoded packet
-                0,                                      // input offset
-                encodedData.size,                       // input length
-                currentPcmBuffer,                       // output: PCM samples (ShortArray)
-                0,                                      // output offset
-                currentPcmBuffer.size / channels,       // frame size (samples per channel)
-                false                                   // decode FEC (forward error correction) - disabled for now
-            )
-
-            if (samplesDecoded <= 0) {
-                logger.w { "Decoder returned no samples" }
-                return ByteArray(0)
+            if (encodedData.isEmpty()) {
+                logger.w { "Received empty encoded data" }
+                return@synchronized ByteArray(0)
             }
 
-            // Total samples = samplesDecoded * channels (interleaved)
-            val totalSamples = samplesDecoded * channels
+            try {
+                logger.d { "Decoding Opus packet: ${encodedData.size} bytes" }
 
-            logger.d { "Decoded $samplesDecoded samples/channel ($totalSamples total samples)" }
+                // Decode Opus packet to PCM samples
+                // Returns number of samples per channel
+                val samplesDecoded = currentDecoder.decode(
+                    encodedData,                           // input: Opus-encoded packet
+                    0,                                      // input offset
+                    encodedData.size,                       // input length
+                    currentPcmBuffer,                       // output: PCM samples (ShortArray)
+                    0,                                      // output offset
+                    currentPcmBuffer.size / channels,       // frame size (samples per channel)
+                    false                                   // decode FEC (forward error correction) - disabled for now
+                )
 
-            // Convert ShortArray (16-bit PCM) to ByteArray based on target bit depth
-            return convertShortArrayToByteArray(currentPcmBuffer, totalSamples)
+                if (samplesDecoded <= 0) {
+                    logger.w { "Decoder returned no samples" }
+                    return@synchronized ByteArray(0)
+                }
 
-        } catch (e: OpusException) {
-            logger.e(e) { "Opus decoding error" }
-            // Graceful degradation: return silence instead of crashing playback
-            return ByteArray(0)
-        } catch (e: Exception) {
-            logger.e(e) { "Unexpected error during decode" }
-            return ByteArray(0)
+                // Total samples = samplesDecoded * channels (interleaved)
+                val totalSamples = samplesDecoded * channels
+
+                logger.d { "Decoded $samplesDecoded samples/channel ($totalSamples total samples)" }
+
+                // Convert ShortArray (16-bit PCM) to ByteArray based on target bit depth
+                convertShortArrayToByteArray(currentPcmBuffer, totalSamples)
+
+            } catch (e: OpusException) {
+                logger.e(e) { "Opus decoding error" }
+                // Graceful degradation: return silence instead of crashing playback
+                return@synchronized ByteArray(0)
+            } catch (e: Exception) {
+                logger.e(e) { "Unexpected error during decode" }
+                return@synchronized ByteArray(0)
+            }
         }
     }
 
@@ -185,20 +194,24 @@ actual class OpusDecoder : AudioDecoder {
     }
 
     override fun reset() {
-        logger.i { "Resetting Opus decoder" }
-        try {
-            // Reset decoder state while keeping the instance
-            decoder?.resetState()
-        } catch (e: Exception) {
-            logger.e(e) { "Error resetting decoder" }
+        synchronized(decoderLock) {
+            logger.i { "Resetting Opus decoder" }
+            try {
+                // Reset decoder state while keeping the instance
+                decoder?.resetState()
+            } catch (e: Exception) {
+                logger.e(e) { "Error resetting decoder" }
+            }
         }
     }
 
     override fun release() {
-        logger.i { "Releasing Opus decoder resources" }
-        // Concentus is pure Java/Kotlin, no native resources to free
-        // Simply null out references for garbage collection
-        decoder = null
-        pcmBuffer = null
+        synchronized(decoderLock) {
+            logger.i { "Releasing Opus decoder resources" }
+            // Concentus is pure Java/Kotlin, no native resources to free
+            // Simply null out references for garbage collection
+            decoder = null
+            pcmBuffer = null
+        }
     }
 }
