@@ -18,7 +18,31 @@ data class Player(
     val queueId: String?,
     val isPlaying: Boolean,
     val isAnnouncing: Boolean,
+    val canGroupWith: List<String>?,
+    val groupChildren: List<String>?,
+    //val activeGroup: String?,
+    val groupVolume: Float?,
 ) {
+
+    val displayName =
+        "$name${groupChildren?.takeIf { it.size > 1 }?.size?.let { " +${it - 1}" } ?: ""}"
+
+    val providerType = provider.substringBefore("--")
+
+    val currentVolume = if (groupChildren?.isNotEmpty() == true) groupVolume else volumeLevel
+
+    fun asBindFor(other: Player): PlayerData.Bind? {
+        if (id == other.id) return null
+        if (other.canGroupWith?.contains(providerType) != true) return null
+        return PlayerData.Bind(
+            id = id,
+            parentId = other.id,
+            name = name,
+            volume = volumeLevel,
+            isBound = other.groupChildren?.contains(id) == true,
+        )
+    }
+
     companion object {
         private const val PLAYER_CONTROL_NONE = "none"
 
@@ -29,12 +53,16 @@ data class Player(
             type = type,
             shouldBeShown = available && enabled && (hidden != true),
             canSetVolume = supportedFeatures.contains(PlayerFeature.VOLUME_SET),
-            volumeLevel = volumeLevel?.toFloat(),
+            volumeLevel = volumeLevel,
             volumeMuted = volumeMuted == true,
             canMute = muteControl != null && muteControl != PLAYER_CONTROL_NONE,
             queueId = currentMedia?.queueId ?: activeSource,
             isPlaying = state == PlayerState.PLAYING,
             isAnnouncing = announcementInProgress == true,
+            canGroupWith = canGroupWith,
+            groupChildren = groupChilds,
+            //activeGroup = activeGroup,
+            groupVolume = groupVolume,
         )
     }
 }

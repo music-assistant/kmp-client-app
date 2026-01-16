@@ -53,6 +53,17 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
             }
         )
 
+        fun setGroupVolume(
+            playerId: String,
+            volumeLevel: Double,
+        ) = Request(
+            command = "players/cmd/group_volume",
+            args = buildJsonObject {
+                put("player_id", JsonPrimitive(playerId))
+                put("volume_level", JsonPrimitive(volumeLevel))
+            }
+        )
+
         fun setMute(
             playerId: String,
             muted: Boolean,
@@ -61,6 +72,29 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
             args = buildJsonObject {
                 put("player_id", JsonPrimitive(playerId))
                 put("muted", JsonPrimitive(muted))
+            }
+        )
+
+        fun setGroupMembers(
+            playerId: String,
+            playersToAdd: List<String>?,
+            playersToRemove: List<String>?,
+        ) = Request(
+            command = "players/cmd/set_members",
+            args = buildJsonObject {
+                put("target_player", JsonPrimitive(playerId))
+                playersToAdd?.let {
+                    put(
+                        "player_ids_to_add",
+                        myJson.decodeFromString<JsonArray>(myJson.encodeToString(it))
+                    )
+                }
+                playersToRemove?.let {
+                    put(
+                        "player_ids_to_remove",
+                        myJson.decodeFromString<JsonArray>(myJson.encodeToString(it))
+                    )
+                }
             }
         )
     }

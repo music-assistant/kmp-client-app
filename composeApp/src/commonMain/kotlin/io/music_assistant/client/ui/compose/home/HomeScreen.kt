@@ -242,6 +242,9 @@ fun HomeScreen(
                                             playerPagerState = playerPagerState,
                                             playersState = state,
                                             serverUrl = serverUrl,
+                                            simplePlayerAction = { playerId, action ->
+                                                viewModel.playerAction(playerId, action)
+                                            },
                                             playerAction = { playerData, action ->
                                                 viewModel.playerAction(playerData, action)
                                             },
@@ -310,6 +313,9 @@ fun HomeScreen(
                                             playerPagerState = playerPagerState,
                                             playersState = state,
                                             serverUrl = serverUrl,
+                                            simplePlayerAction = { playerId, action ->
+                                                viewModel.playerAction(playerId, action)
+                                            },
                                             playerAction = { playerData, action ->
                                                 viewModel.playerAction(playerData, action)
                                             },

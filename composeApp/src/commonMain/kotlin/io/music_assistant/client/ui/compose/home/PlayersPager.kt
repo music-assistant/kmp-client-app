@@ -66,6 +66,7 @@ internal fun PlayersPager(
     playerPagerState: PagerState,
     playersState: HomeScreenViewModel.PlayersState.Data,
     serverUrl: String?,
+    simplePlayerAction: (String, PlayerAction) -> Unit,
     playerAction: (PlayerData, PlayerAction) -> Unit,
     onFavoriteClick: (AppMediaItem) -> Unit,
     showQueue: Boolean,
@@ -126,14 +127,14 @@ internal fun PlayersPager(
                         Brush.verticalGradient(
                             listOf(
                                 MaterialTheme.colorScheme.surfaceContainerHigh,
-                                MaterialTheme.colorScheme.surfaceContainerLowest
+                                MaterialTheme.colorScheme.surfaceContainerLow
                             )
                         )
                     } else {
                         Brush.verticalGradient(
                             listOf(
                                 MaterialTheme.colorScheme.surfaceContainerHigh,
-                                MaterialTheme.colorScheme.surfaceContainerHigh
+                                MaterialTheme.colorScheme.primaryContainer
                             )
                         )
                     }
@@ -144,7 +145,7 @@ internal fun PlayersPager(
                 ) {
                     Text(
                         modifier = Modifier.align(Alignment.Center),
-                        text = if (isLocalPlayer) "Local player" else player.player.name,
+                        text = if (isLocalPlayer) "Local player" else player.player.displayName,
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Medium,
@@ -211,6 +212,7 @@ internal fun PlayersPager(
                             item = player,
                             isLocal = isLocalPlayer,
                             serverUrl = serverUrl,
+                            simplePlayerAction = simplePlayerAction,
                             playerAction = playerAction,
                             onFavoriteClick = onFavoriteClick,
                         )
@@ -220,11 +222,11 @@ internal fun PlayersPager(
                 if (
                     showQueue
                     && player.player.canSetVolume
-                    && player.player.volumeLevel != null
+                    && player.player.currentVolume != null
                 ) {
                     if (!isLocalPlayer) {
-                        var currentVolume by remember(player.player.volumeLevel) {
-                            mutableStateOf(player.player.volumeLevel)
+                        var currentVolume by remember(player.player.currentVolume) {
+                            mutableStateOf(player.player.currentVolume)
                         }
                         Row(
                             modifier = Modifier.fillMaxWidth().height(36.dp)
@@ -255,7 +257,11 @@ internal fun PlayersPager(
                                 onValueChangeFinished = {
                                     playerAction(
                                         player,
-                                        PlayerAction.VolumeSet(currentVolume.toDouble())
+                                        if (player.groupChildren.none { it.isBound }) {
+                                            PlayerAction.VolumeSet(currentVolume.toDouble())
+                                        } else {
+                                            PlayerAction.GroupVolumeSet(currentVolume.toDouble())
+                                        }
                                     )
                                 },
                                 thumb = {
