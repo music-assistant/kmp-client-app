@@ -1,6 +1,6 @@
 # Music Assistant Mobile app
 
-The (official) Music Assistant Mobile app is a cross-platform client application designed for Android, iOS, and Java runtime environments. Developed using Kotlin Multiplatform (KMP) and Compose Multiplatform frameworks, this project aims to provide a unified codebase for seamless music management across multiple platforms.
+The (official) Music Assistant Mobile app is a cross-platform client application designed for Android and iOS. Developed using Kotlin Multiplatform (KMP) and Compose Multiplatform frameworks, this project aims to provide a unified codebase for seamless music management across mobile platforms.
 
 Please note that this project is still under (heavy) development and not yet in a production state or published to any of the app stores. Development work is in progress (and any help is highly appreciated!) to allow this project to become the official mobile app for the Music Assistant project.
 
