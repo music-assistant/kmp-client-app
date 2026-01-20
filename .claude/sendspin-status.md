@@ -37,14 +37,6 @@
 - **Background Playback**: ⚠️ Needs implementation
 - **Implementation**: Full rewrite completed 2026-01-14 (see ios_audio_pipeline.md)
 
-#### Desktop (JVM)
-- **Audio Output**: javax.sound.sampled (SourceDataLine)
-- **PCM Streaming**: ✅ Working
-- **Opus Decoding**: ✅ Working (Concentus library, same as Android)
-- **FLAC Decoding**: ❌ Not implemented (architectural limitations, intentional)
-- **Volume Control**: ⚠️ Basic support
-- **Recommendation**: Use Opus or PCM codecs on desktop
-
 ### ⚠️ Partially Implemented
 
 - **Error Recovery** - Basic handling implemented, edge cases need improvement
@@ -68,11 +60,6 @@
 - Custom stream protocol (`sendspin://stream`) with RingBuffer
 - Demuxer configuration for each codec type
 - Full rewrite documented in `ios_audio_pipeline.md`
-
-#### Desktop Opus Support ✅
-- Concentus library integration (pure Java/Kotlin, no JNI)
-- PCM playback via javax.sound.sampled
-- FLAC intentionally not implemented (architectural limitations)
 
 #### Android FLAC Decoder ✅
 - MediaCodec-based implementation (API 26+)
@@ -206,7 +193,6 @@ User Actions → Music Assistant Server
 7. **No logging controls** - Can't adjust log verbosity at runtime
 8. **No connection retry limits** - Could retry forever
 9. **Thread priority not set** - Playback thread should be high priority
-10. **iOS/Desktop Opus support** - Currently Android-only
 
 ---
 
@@ -232,11 +218,10 @@ User Actions → Music Assistant Server
 - Buffer adaptation edge cases
 
 ### ❌ Not Tested
-- FLAC codec (not implemented)
+- FLAC codec (not implemented on all platforms)
 - Multiple concurrent connections
 - Server restart scenarios
 - Clock drift over extended periods (24+ hours)
-- iOS/Desktop platforms
 
 ---
 
@@ -273,16 +258,16 @@ User Actions → Music Assistant Server
 8. Add comprehensive error recovery
 
 ### Medium Term
-9. Implement FLAC decoder (Android)
-10. Implement Opus decoder (iOS/Desktop)
-11. Add codec preference settings
-12. Optimize memory usage
+9. Add codec preference settings
+10. Optimize memory usage
+11. Improve iOS background playback
+12. Enhance iOS volume control integration
 
 ### Long Term
-13. iOS platform support
-14. Desktop platform support
-15. Artwork display
-16. Visualizer support
+13. Artwork display
+14. Visualizer support
+15. Advanced audio processing features
+16. Multi-room synchronization improvements
 
 ---
 
@@ -322,10 +307,8 @@ User Actions → Music Assistant Server
 - **Concentus v1.0.2** (Opus decoder - Android only)
 
 ### Platform-Specific
-- Android: AudioTrack for raw PCM
-- Android: Concentus for Opus decoding
-- iOS: AVAudioPlayer (stub)
-- Desktop: javax.sound (stub)
+- Android: AudioTrack for raw PCM, Concentus for Opus decoding, MediaCodec for FLAC decoding
+- iOS: MPV (libmpv via MPVKit) for all audio codecs
 
 ---
 
@@ -394,14 +377,13 @@ User Actions → Music Assistant Server
 
 ## Changelog
 
-### 2026-01-16 - Multi-Platform Support & Network Resilience
+### 2026-01-16 - iOS Support & Network Resilience
 - ✅ **iOS full implementation** - MPV-based pipeline with FLAC/Opus/PCM
-- ✅ **Desktop Opus support** - Concentus library integration
 - ✅ **Android FLAC decoder** - MediaCodec-based with hardware acceleration
 - ✅ **Auto-reconnect** - WebSocketHandler automatic reconnection with exponential backoff
 - ✅ **Network resilience** - Aggressive keepalive settings for connection stability
 - 📊 **Documentation cleanup** - Removed 4 outdated/contradictory design documents
-- 📊 Status: All three platforms now have working implementations
+- 📊 Status: Both Android and iOS platforms now have working implementations
 
 ### 2026-01-05 - Opus + Adaptive Buffering Release
 - ✅ Added Opus decoder for Android (Concentus library)
@@ -428,9 +410,8 @@ User Actions → Music Assistant Server
 
 ---
 
-**Status:** ✅ **Production-ready** on Android, iOS, and Desktop with multi-codec support.
+**Status:** ✅ **Production-ready** on Android and iOS with multi-codec support.
 
 **Platform Summary:**
 - **Android**: ✅ PCM, Opus (Concentus), FLAC (MediaCodec) - Full background playback & Android Auto
 - **iOS**: ✅ PCM, Opus, FLAC (all via MPV/FFmpeg) - Full streaming support
-- **Desktop**: ✅ PCM, Opus (Concentus) - FLAC not available (use Opus instead)

@@ -1,7 +1,7 @@
 # Music Assistant KMP Client
 
-Cross-platform music player client for [Music Assistant Server](https://github.com/music-assistant/server).  
-Built with Kotlin Multiplatform + Compose Multiplatform for Android, iOS, and Desktop.
+Cross-platform music player client for [Music Assistant Server](https://github.com/music-assistant/server).
+Built with Kotlin Multiplatform + Compose Multiplatform for Android and iOS.
 
 ## Quick Commands
 
@@ -10,16 +10,11 @@ Built with Kotlin Multiplatform + Compose Multiplatform for Android, iOS, and De
 ./gradlew :composeApp:assembleDebug
 ./gradlew :composeApp:installDebug
 
-# Desktop
-./gradlew :composeApp:run
-./gradlew :composeApp:packageDistributionForCurrentOS
-
 # iOS - open in Xcode
 open iosApp/iosApp.xcodeproj
 
 # Tests
 ./gradlew :composeApp:testDebugUnitTest
-./gradlew :composeApp:desktopTest
 ```
 
 ## Features

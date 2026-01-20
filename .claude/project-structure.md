@@ -7,7 +7,6 @@ composeApp/src/
 ├── commonMain/     # 95%+ of code lives here
 ├── androidMain/    # ExoPlayer, MediaService, Android Auto
 ├── iosMain/        # AVPlayer, CarPlay
-├── desktopMain/    # VLC player
 └── appleMain/      # Shared Apple code (iOS + macOS)
 ```
 
@@ -49,12 +48,12 @@ ui/{feature}/
 
 ## Platform-Specific Code
 
-| Feature | Android | iOS | Desktop |
-|---------|---------|-----|---------|
-| Local Player | ExoPlayer (Media3) | AVPlayer | VLCJ |
-| Background Playback | MediaService | - | - |
-| Car Integration | Android Auto | CarPlay | - |
-| Settings Storage | SharedPreferences | NSUserDefaults | Properties |
+| Feature | Android | iOS |
+|---------|---------|-----|
+| Local Player | ExoPlayer (Media3) | AVPlayer |
+| Background Playback | MediaService | - |
+| Car Integration | Android Auto | CarPlay |
+| Settings Storage | SharedPreferences | NSUserDefaults |
 
 ## Key Files
 

@@ -22,7 +22,6 @@
 ## Media
 - **Coil 3** - Async image loading (with Ktor network)
 - **ExoPlayer (Media3)** - Android local playback
-- **VLCJ** - Desktop local playback (VLC bindings)
 - **AVPlayer** - iOS local playback
 
 ## Utilities
@@ -33,7 +32,7 @@
 ## Build
 - **Gradle** - Build system
 - **Kotlin Multiplatform** - Cross-platform compilation
-- **JVM 17** - Target for Android/Desktop
+- **JVM 17** - Target for Android
 
 ---
 

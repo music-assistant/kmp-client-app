@@ -119,7 +119,7 @@ The built-in player functionality uses the Sendspin multi-room audio protocol:
 - **Connection**: Direct WebSocket to Music Assistant server (same IP as main connection)
 - **Platform-specific**: `MediaPlayerController` has expect/actual for raw PCM streaming
   - Android: Uses `AudioTrack` for low-latency playback
-  - iOS/Desktop: Stubs for future implementation
+  - iOS: Stub for future implementation
 
 See `.claude/settings-screen.md` for complete Settings screen documentation including authentication flows, local player configuration, and state management.
 

@@ -4,7 +4,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 
 /**
  * Platform-specific main dispatcher.
- * On Android/iOS this is Dispatchers.Main, on desktop it's Dispatchers.Default.
+ * On Android/iOS this is Dispatchers.Main.
  */
 expect val mainDispatcher: CoroutineDispatcher
 
@@ -15,6 +15,5 @@ expect val mainDispatcher: CoroutineDispatcher
  *
  * - Android: Uses THREAD_PRIORITY_AUDIO for real-time audio processing
  * - iOS: Uses high-priority DispatchQueue
- * - Desktop: Uses Dispatchers.IO with priority handling
  */
 expect val audioDispatcher: CoroutineDispatcher

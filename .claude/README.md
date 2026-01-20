@@ -21,7 +21,7 @@ This directory contains project documentation for the Music Assistant KMP Client
 **[project.md](project.md)**
 - Quick start guide
 - Feature list
-- Build commands (Android, iOS, Desktop)
+- Build commands (Android, iOS)
 - Project description and goals
 
 ### Architecture
@@ -37,7 +37,7 @@ This directory contains project documentation for the Music Assistant KMP Client
 
 ### Project Structure
 **[project-structure.md](project-structure.md)**
-- Source set organization (commonMain, androidMain, iosMain, desktopMain)
+- Source set organization (commonMain, androidMain, iosMain)
 - Package organization
 - Feature module pattern
 - Platform-specific code guidelines
@@ -48,7 +48,7 @@ This directory contains project documentation for the Music Assistant KMP Client
 - Networking: Ktor, WebSocket, WebRTC
 - Data: kotlinx.serialization, multiplatform-settings
 - DI & Architecture: Koin, Navigation3
-- Media: Coil 3, ExoPlayer, VLCJ, AVPlayer
+- Media: Coil 3, ExoPlayer, AVPlayer
 - Utilities: Kermit logging, Reorderable, mDNS
 
 ### Development Guidelines
@@ -72,7 +72,6 @@ This directory contains project documentation for the Music Assistant KMP Client
 - Platform support breakdown:
   - Android: PCM, Opus, FLAC (all working)
   - iOS: PCM, Opus, FLAC via MPV (all working)
-  - Desktop: PCM, Opus (FLAC not available)
 - Auto-reconnect and network resilience features
 - Recent additions and changelog
 - Performance metrics

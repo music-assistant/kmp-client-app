@@ -7,7 +7,6 @@ import io.music_assistant.client.player.sendspin.audio.Codec
  */
 enum class PlatformType {
     ANDROID,
-    DESKTOP,
     IOS
 }
 

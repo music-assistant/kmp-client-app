@@ -12,7 +12,9 @@
       "Bash(jar tf:*)",
       "WebSearch",
       "Bash(curl:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(xargs cat:*)",
+      "Bash(find:*)"
     ]
   }
 }

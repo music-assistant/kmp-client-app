@@ -7,7 +7,6 @@
 | Shared logic | `commonMain/` |
 | Android-only | `androidMain/` |
 | iOS-only | `iosMain/` |
-| Desktop-only | `desktopMain/` |
 | Reusable composables | `ui/common/composables/` |
 | Feature composables | `ui/{feature}/composables/` |
 | ViewModels | Same package as screen |
@@ -91,6 +90,3 @@ Music Assistant server required. Configure:
 1. Enable developer mode in Android Auto app
 2. Enable "Unknown sources"
 3. VPN config: exclude Android Auto from VPN
-
-**Desktop:**
-- Requires VLC installed for local playback
