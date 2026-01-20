@@ -3,10 +3,6 @@
 package io.music_assistant.client.ui.compose.item
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +19,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ExpandMore
@@ -174,20 +169,9 @@ private fun ItemDetailsContent(
 
             is DataState.Data -> {
                 val item = itemState.data
-                val coroutineScope = rememberCoroutineScope()
-                val gridState = rememberLazyGridState()
 
                 LazyVerticalGrid(
-                    modifier = Modifier.fillMaxSize()
-                        .draggable(
-                            orientation = Orientation.Vertical,
-                            state = rememberDraggableState { delta ->
-                                coroutineScope.launch {
-                                    gridState.scrollBy(-delta)
-                                }
-                            },
-                        ),
-                    state = gridState,
+                    modifier = Modifier.fillMaxSize(),
                     columns = GridCells.Adaptive(minSize = 96.dp),
                     contentPadding = PaddingValues(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),

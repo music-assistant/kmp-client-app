@@ -4,10 +4,6 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -206,7 +202,6 @@ fun CollapsibleQueue(
                         var dragEndIndex by remember { mutableStateOf<Int?>(null) }
                         var menuItemId by remember { mutableStateOf<String?>(null) }
                         val listState = rememberLazyListState()
-                        val coroutineScope = rememberCoroutineScope()
                         val reorderableLazyListState =
                             rememberReorderableLazyListState(listState) { from, to ->
                                 if (to.index <= currentItemIndex) {
@@ -231,15 +226,7 @@ fun CollapsibleQueue(
                         }
 
                         LazyColumn(
-                            modifier = Modifier.fillMaxSize()
-                                .draggable(
-                                    orientation = Orientation.Vertical,
-                                    state = rememberDraggableState { delta ->
-                                        coroutineScope.launch {
-                                            listState.scrollBy(-delta)
-                                        }
-                                    },
-                                ),
+                            modifier = Modifier.fillMaxSize(),
                             state = listState,
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {

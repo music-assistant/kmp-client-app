@@ -5,10 +5,6 @@ package io.music_assistant.client.ui.compose.home
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,7 +34,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -87,19 +82,10 @@ fun LandingPage(
         }
     }
 
-    val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
     LazyColumn(
-        modifier = modifier.fillMaxSize()
-            .draggable(
-                orientation = Orientation.Vertical,
-                state = rememberDraggableState { delta ->
-                    coroutineScope.launch {
-                        listState.scrollBy(-delta)
-                    }
-                },
-            ),
+        modifier = modifier.fillMaxSize(),
         state = listState,
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
@@ -266,7 +252,6 @@ fun CategoryRow(
     val isHomogenous = remember(mediaItems) {
         mediaItems.all { it::class == mediaItems.firstOrNull()?.let { first -> first::class } }
     }
-    val coroutineScope = rememberCoroutineScope()
     val rowListState = rememberLazyListState()
 
     Column {
@@ -294,15 +279,6 @@ fun CategoryRow(
             }
         }
         LazyRow(
-            modifier = Modifier
-                .draggable(
-                    orientation = Orientation.Horizontal,
-                    state = rememberDraggableState { delta ->
-                        coroutineScope.launch {
-                            rowListState.scrollBy(-delta)
-                        }
-                    },
-                ),
             state = rowListState,
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp)

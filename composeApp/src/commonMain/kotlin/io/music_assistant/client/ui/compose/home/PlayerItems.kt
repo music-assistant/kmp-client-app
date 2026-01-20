@@ -3,10 +3,6 @@
 package io.music_assistant.client.ui.compose.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -43,7 +38,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -177,9 +171,6 @@ fun FullPlayerItem(
 
     // Group dialog
     if (showGroupDialog) {
-        val coroutineScope = rememberCoroutineScope()
-        val listState = rememberLazyListState()
-
         AlertDialog(
             onDismissRequest = { showGroupDialog = false },
             title = { Text("Group settings") },
@@ -197,16 +188,7 @@ fun FullPlayerItem(
 
                     // Scrollable list of players
                     LazyColumn(
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)
-                            .draggable(
-                                orientation = Orientation.Vertical,
-                                state = rememberDraggableState { delta ->
-                                    coroutineScope.launch {
-                                        listState.scrollBy(-delta)
-                                    }
-                                },
-                            ),
-                        state = listState,
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         // Current player at the very top
