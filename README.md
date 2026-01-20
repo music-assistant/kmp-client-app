@@ -1,6 +1,8 @@
-# Music Assistant Kmp Client
+# Music Assistant Mobile app
 
-Music Assistant Kmp Client is a cross-platform client application designed for Android, iOS, and Java runtime environments. Developed using Kotlin Multiplatform (KMP) and Compose Multiplatform frameworks, this project aims to provide a unified codebase for seamless music management across multiple platforms.
+The (official) Music Assistant Mobile app is a cross-platform client application designed for Android, iOS, and Java runtime environments. Developed using Kotlin Multiplatform (KMP) and Compose Multiplatform frameworks, this project aims to provide a unified codebase for seamless music management across multiple platforms.
+
+Please note that this project is still under (heavy) development and not yet in a production state or published to any of the app stores. Development work is in progress (and any help is highly appreciated!) to allow this project to become the official mobile app for the Music Assistant project.
 
 This client interfaces with the [Music Assistant Server](https://github.com/music-assistant/server), an open-source media library manager that integrates with various streaming services and connected speakers. The server acts as the core component, running on devices like Raspberry Pi, NAS, or Intel NUC, and facilitates centralized music management.
 
