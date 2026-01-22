@@ -39,10 +39,10 @@ data class StreamDetails(
 
 @Serializable
 data class DSPSettings(
-    @SerialName("state") val state: String,
-    @SerialName("input_gain") val inputGain: Double,
-    @SerialName("filters") val filters: List<String>,
-    @SerialName("output_gain") val outputGain: Double,
-    @SerialName("output_limiter") val outputLimiter: Boolean,
+//    @SerialName("state") val state: String,
+//    @SerialName("input_gain") val inputGain: Double,
+//    @SerialName("filters") val filters: List<String>,
+//    @SerialName("output_gain") val outputGain: Double,
+//    @SerialName("output_limiter") val outputLimiter: Boolean,
     @SerialName("output_format") val outputFormat: AudioFormat? = null
 )
