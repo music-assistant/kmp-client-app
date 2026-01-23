@@ -14,6 +14,8 @@ import android.media.AudioTrack
 import android.os.Build
 import co.touchlab.kermit.Logger
 
+import io.music_assistant.client.player.sendspin.model.AudioCodec
+
 /**
  * MediaPlayerController - Sendspin audio player
  *
@@ -21,6 +23,9 @@ import co.touchlab.kermit.Logger
  * Built-in player (ExoPlayer) has been removed - Sendspin is now the only playback method.
  */
 actual class MediaPlayerController actual constructor(platformContext: PlatformContext) {
+    
+    // Callback for remote commands - currently unused on Android (handled via different mechanism if needed)
+    actual var onRemoteCommand: ((String) -> Unit)? = null
     private val logger = Logger.withTag("MediaPlayerController")
     private val context: Context = platformContext.applicationContext
     private val audioManager: AudioManager =
@@ -181,12 +186,15 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
         logger.i { "Sent error signal to stop sendspin stream. User should press play to resume on phone speakers." }
     }
 
-    actual fun prepareRawPcmStream(
+    actual fun prepareStream(
+        codec: AudioCodec,
         sampleRate: Int,
         channels: Int,
         bitDepth: Int,
+        codecHeader: String?,
         listener: MediaPlayerListener
     ) {
+        // Android ignores codecHeader - it's only for iOS/MPV pass-through
         logger.i { "Preparing raw PCM stream: ${sampleRate}Hz, ${channels}ch, ${bitDepth}bit" }
 
         // Store listener so we can signal errors (e.g., audio output disconnection)
@@ -405,6 +413,23 @@ actual class MediaPlayerController actual constructor(platformContext: PlatformC
                 logger.e(e) { "Error unregistering noisy audio receiver" }
             }
         }
+    }
+    
+    // Now Playing - no-op on Android (uses MediaSession instead)
+    actual fun updateNowPlaying(
+        title: String?,
+        artist: String?,
+        album: String?,
+        artworkUrl: String?,
+        duration: Double,
+        elapsedTime: Double,
+        playbackRate: Double
+    ) {
+        // Android handles Now Playing via MediaSession, not implemented here
+    }
+    
+    actual fun clearNowPlaying() {
+        // Android handles Now Playing via MediaSession, not implemented here
     }
 
     actual fun release() {

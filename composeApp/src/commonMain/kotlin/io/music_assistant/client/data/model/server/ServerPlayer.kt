@@ -9,7 +9,7 @@ data class ServerPlayer(
     @SerialName("provider") val provider: String,
     @SerialName("type") val type: PlayerType,
     //@SerialName("name") val name: String,
-    @SerialName("available") val available: Boolean,
+    @SerialName("available") val available: Boolean = true,
     //@SerialName("device_info") val deviceInfo: DeviceInfo,
     @SerialName("supported_features") val supportedFeatures: List<String>,
     @SerialName("can_group_with") val canGroupWith: List<String>? = null,
@@ -75,4 +75,3 @@ data class PlayerMedia(
 //    @SerialName("can_seek") val canSeek: Boolean,
 //    @SerialName("can_next_previous") val canNextPrevious: Boolean
 //)
-

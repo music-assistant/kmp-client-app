@@ -83,14 +83,28 @@ class AudioStreamManager(
         )
         audioDecoder?.configure(formatSpec, config.codecHeader)
 
-        // Prepare MediaPlayerController for raw PCM streaming
-        mediaPlayerController.prepareRawPcmStream(
+        // Determine output codec for MediaPlayerController
+        // iOS decoders are passthrough (return raw encoded data for MPV to handle)
+        // Android/Desktop decode to PCM
+        val decoder = audioDecoder
+        val outputCodec = if (decoder is PassthroughDecoder) {
+            // Passthrough decoder means native player handles codec decoding
+            AudioCodec.valueOf(config.codec.uppercase())
+        } else {
+            // After decoding, data is PCM
+            AudioCodec.PCM
+        }
+
+        // Prepare MediaPlayerController
+        mediaPlayerController.prepareStream(
+            codec = outputCodec,
             sampleRate = config.sampleRate,
             channels = config.channels,
             bitDepth = config.bitDepth,
+            codecHeader = config.codecHeader,
             listener = object : MediaPlayerListener {
                 override fun onReady() {
-                    logger.i { "MediaPlayer ready for PCM streaming" }
+                    logger.i { "MediaPlayer ready for stream ($outputCodec)" }
                 }
 
                 override fun onAudioCompleted() {
@@ -187,6 +201,30 @@ class AudioStreamManager(
 
             // Start adaptation thread
             startAdaptationThread()
+
+            // SYNC FAST-FORWARD: After prebuffer, skip to the first chunk that's "current"
+            // This handles the case where pause/next caused a time gap and all buffered
+            // chunks have timestamps in the past.
+            val syncStartTime = getCurrentTimeMicros()
+            var skippedChunks = 0
+            while (isActive && isStreaming) {
+                val chunk = audioBuffer.peek() ?: break
+                val chunkPlaybackTime = chunk.localTimestamp
+                val lateThreshold = adaptiveBufferManager.currentLateThreshold
+                
+                if (chunkPlaybackTime < syncStartTime - lateThreshold) {
+                    // This chunk is late - skip it
+                    audioBuffer.poll()
+                    skippedChunks++
+                } else {
+                    // Found a chunk that's current or early - start playing from here
+                    break
+                }
+            }
+            if (skippedChunks > 0) {
+                logger.i { "🔄 Sync fast-forward: skipped $skippedChunks late chunks to catch up" }
+                adaptiveBufferManager.reset() // Reset stats after bulk skip
+            }
 
             var chunksPlayed = 0
             var lastLogTime = getCurrentTimeMicros()
@@ -375,7 +413,7 @@ class AudioStreamManager(
                 currentPrebufferThreshold = adaptiveBufferManager.currentPrebufferThreshold,
                 smoothedRTT = adaptiveBufferManager.currentSmoothedRTT,
                 jitter = adaptiveBufferManager.currentJitter,
-                dropRate = adaptiveBufferManager.currentDropRate
+                dropRate = adaptiveBufferManager.getCurrentDropRate()
             )
         }
     }
@@ -386,6 +424,28 @@ class AudioStreamManager(
         _playbackPosition.update { 0L }
         droppedChunksCount = 0
         updateBufferState()
+    }
+
+    /**
+     * Flush audio for track change (next/prev/seek).
+     * Clears buffer and stops native audio for immediate responsiveness,
+     * but keeps isStreaming=true so the playback thread can receive new chunks.
+     */
+    suspend fun flushForTrackChange() {
+        logger.i { "Flushing for track change (keeping stream active)" }
+        // Clear the audio buffer
+        audioBuffer.clear()
+        // Reset decoder for new track
+        audioDecoder?.reset()
+        // Stop native audio playback immediately (for responsiveness)
+        mediaPlayerController.stopRawPcmStream()
+        // Reset playback position
+        _playbackPosition.update { 0L }
+        droppedChunksCount = 0
+        // Reset adaptive buffer for new track
+        adaptiveBufferManager.reset()
+        updateBufferState()
+        // NOTE: isStreaming stays TRUE so we can receive new chunks
     }
 
     suspend fun stopStream() {
@@ -425,12 +485,13 @@ class AudioStreamManager(
 
     // Use monotonic time for playback timing instead of wall clock time
     // This matches the server's relative time base
-    private val startTimeNanos = System.nanoTime()
+    // Use monotonic time for playback timing instead of wall clock time
+    // This matches the server's relative time base
+    private val startMark = kotlin.time.TimeSource.Monotonic.markNow()
 
     private fun getCurrentTimeMicros(): Long {
         // Use relative time since stream start, not Unix epoch time
-        val elapsedNanos = System.nanoTime() - startTimeNanos
-        return elapsedNanos / 1000 // Convert to microseconds
+        return startMark.elapsedNow().inWholeMicroseconds
     }
 
     fun close() {
@@ -440,3 +501,9 @@ class AudioStreamManager(
         supervisorJob.cancel()
     }
 }
+
+/**
+ * Marker interface for passthrough decoders that don't actually decode.
+ * Used by iOS where MPV handles the decoding.
+ */
+interface PassthroughDecoder

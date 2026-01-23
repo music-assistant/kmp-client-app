@@ -240,7 +240,9 @@ data class StreamMetadataPayload(
     val title: String?,
     val artist: String?,
     val album: String?,
-    @SerialName("artwork_url") val artworkUrl: String?
+    @SerialName("artwork_url") val artworkUrl: String?,
+    val duration: Double = 0.0, // Track duration in seconds
+    val elapsedTime: Double = 0.0 // Elapsed playback time in seconds
 )
 
 @Serializable
