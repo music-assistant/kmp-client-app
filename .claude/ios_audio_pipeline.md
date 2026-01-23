@@ -1,7 +1,7 @@
-# iOS Audio Pipeline & MPV Integration
+# iOS Audio Pipeline & Native AudioQueue Integration
 
 ## Overview
-High-Performance Audio Pipeline for iOS using `Libmpv` (via `MPVKit`) for FLAC/Opus/PCM streaming playback via the Sendspin protocol.
+High-Performance Audio Pipeline for iOS using native `AudioQueue` services and optimized C/Swift decoders for FLAC/Opus/PCM streaming playback via the Sendspin protocol. This implementation replaces the previous MPV-based solution to provide better system integration and lower overhead.
 
 ## Architecture
 
@@ -16,7 +16,7 @@ High-Performance Audio Pipeline for iOS using `Libmpv` (via `MPVKit`) for FLAC/O
 │                   AudioStreamManager (Kotlin)                    │
 │  • Receives chunks with timestamps                               │
 │  • Buffers/reorders (TimestampOrderedBuffer, AdaptiveBuffer)    │
-│  • PassthroughDecoder for iOS (no decoding - MPV does it)       │
+│  • PassthroughDecoder for iOS (wraps codec type)                │
 │  • Calls writeRawPcm(data) to push encoded bytes                │
 └─────────────────────────────────────────────────────────────────┘
                               │
@@ -28,28 +28,26 @@ High-Performance Audio Pipeline for iOS using `Libmpv` (via `MPVKit`) for FLAC/O
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                  MPVController.swift                             │
+│                  NativeAudioController.swift (Swift)             │
 │  • prepareStream(codec, sampleRate, channels, bitDepth, header) │
-│  • Decodes base64 codecHeader (FLAC STREAMINFO block)           │
-│  • Delays loadfile until first data arrives                      │
-│  • Writes header + audio to RingBuffer                          │
+│  • Manages AudioQueue lifecycle                                 │
+│  • Maintains PCM buffer (PCMData[])                             │
+│  • Handles remote commands (via NowPlayingManager)              │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    RingBuffer.swift                              │
-│  • Thread-safe circular buffer (4MB capacity)                    │
-│  • Blocking read using NSCondition (MPV requires this)          │
-│  • close() method signals EOF to blocked reads                  │
+│                  AudioDecoders.swift (Swift)                     │
+│  • Factory creates specific decoder for stream                   │
+│  • Decodes input data -> Int16 PCM for AudioQueue               │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                   Libmpv (C-API via MPVKit)                      │
-│  • Custom stream protocol: sendspin://stream                     │
-│  • demuxer=lavf for FLAC/Opus (FFmpeg auto-detection)           │
-│  • demuxer=rawaudio for PCM                                      │
-│  • ao=audiounit for iOS audio output                            │
+│                     AudioQueue (iOS Core Audio)                  │
+│  • 5x 64KB buffers                                               │
+│  • Callback-driven playback                                     │
+│  • System audio session management                              │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -57,83 +55,57 @@ High-Performance Audio Pipeline for iOS using `Libmpv` (via `MPVKit`) for FLAC/O
 
 ### Codec Support
 
-Per-platform codec support is defined via `Codecs.list`:
+Per-platform codec support is defined via `Codecs.list`. The iOS implementation uses specific libraries for each codec:
 
-| Platform | Supported Codecs | Implementation |
-|----------|------------------|----------------|
-| iOS      | FLAC, Opus, PCM  | PassthroughDecoder → MPV handles decoding |
-| Android  | FLAC, Opus, PCM  | Native decoders → PCM output |
-| Desktop  | Opus, PCM        | PcmDecoder/OpusDecoder → PCM output |
+| Codec | Implementation Source | decoding Details |
+|-------|-----------------------|------------------|
+| **FLAC** | `libFLAC` (C library) | `FLACLibDecoder` uses callbacks to decode to Int16 PCM. Handles 16/24-bit input (downsamples 24->16). |
+| **Opus** | `swift-opus` (libopus) | `OpusLibDecoder` decodes to Float32, then converts to Int16. |
+| **PCM** | Native | `PCMPassthroughDecoder` handles 16/24/32-bit integer PCM. |
 
-The codec list is defined in platform-specific files:
-- `iosMain/.../utils/Codecs.ios.kt` → `listOf(Codec.FLAC, Codec.OPUS, Codec.PCM)`
-- `androidMain/.../utils/Codecs.android.kt` → `listOf(Codec.FLAC, Codec.OPUS, Codec.PCM)`
-- `desktopMain/.../utils/Codecs.desktop.kt` → `listOf(Codec.OPUS, Codec.PCM)`
+### AudioQueue Management
 
-### Demuxer Settings
-| Codec | Demuxer Setting | Notes |
-|-------|-----------------|-------|
-| FLAC  | `lavf` | Requires codecHeader prepended to stream |
-| Opus  | `lavf` | Requires codecHeader prepended to stream |
-| PCM   | `rawaudio` | + demuxer-rawaudio-rate/channels/format |
+The `NativeAudioController` manages an `AudioQueueRef` directly:
+
+1.  **Buffering**: Uses 5 buffers of 64KB each to ensure smooth playback and minimize stuttering.
+2.  **Format**: Always configures AudioQueue for Linear PCM, 16/24/32-bit signed integer, based on the source stream bit depth.
+3.  **Synchronization**: Uses `NSLock` to protect the PCM buffer shared between the writer (Kotlin->Swift) and the specific reader callback (AudioQueue).
 
 ### Critical Implementation Notes
 
-1. **Passthrough Decoder Pattern**: iOS decoders (`FlacDecoder.ios.kt`, `OpusDecoder.ios.kt`) implement `PassthroughDecoder` interface. The `AudioStreamManager` detects this and passes the original codec type (not PCM) to `MediaPlayerController.prepareStream()`, so MPV knows what format to expect.
+1.  **Decoding in Swift**: Unlike the previous MPV implementation where the player handled everything, we now explicitly decode encoded chunks (FLAC/Opus) into PCM *before* feeding them to the AudioQueue. This happens in `NativeAudioController.writeRawPcm`.
 
-2. **Codec Header Prepending**: The server sends `codec_header` (base64 FLAC/Opus header) separately in `stream/start`. This MUST be decoded and written to the RingBuffer BEFORE any audio data.
+2.  **Codec Header**: The `codec_header` (e.g., FLAC STREAMINFO) is passed to `prepareStream`. `nativeAudioController` uses this to initialize the decoder (specifically for FLAC).
 
-3. **Delayed loadfile**: MPV's `loadfile` must be called AFTER data is in the buffer, otherwise the demuxer times out and closes the stream.
+3.  **Now Playing Integration**: `NowPlayingManager` is integrated directly into the controller to handle Lock Screen / Control Center metadata and commands.
 
-4. **Blocking RingBuffer Read**: MPV's stream callback expects blocking reads. The `RingBuffer.read()` uses `NSCondition` to wait for data.
-
-5. **Demuxer Configuration**: Do NOT use `demuxer=auto` (invalid). Use `lavf` (FFmpeg) or omit for default behavior.
-
-### MPV Configuration Options
-```swift
-// Audio output for iOS
-setOptionString("vid", "no")
-setOptionString("ao", "audiounit")
-
-// Streaming optimizations
-setOptionString("cache-pause", "no")
-setOptionString("demuxer-readahead-secs", "0.5")
-setOptionString("audio-buffer", "0.1")
-
-// Verbose logging (for debugging)
-setOptionString("terminal", "yes")
-setOptionString("msg-level", "all=v")
-```
+4.  **Bit Depth Handling**:
+    - **FLAC**: 24-bit inputs are currently shifted down to 16-bit for playback compatibility if needed, or handled as is depending on decoder logic.
+    - **PCM**: Custom unpacking logic supports 24-bit packed integers (3 bytes per sample) which standard `CoreAudio` types don't always handle automatically.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `iosApp/MPVController.swift` | Main MPV integration, stream callbacks |
-| `iosApp/RingBuffer.swift` | Thread-safe circular buffer with blocking read |
-| `iosApp/iOSApp.swift` | Registers MPVController via PlatformPlayerProvider |
-| `composeApp/.../PlatformAudioPlayer.kt` | Kotlin interface for Swift implementation |
-| `composeApp/.../MediaPlayerController.ios.kt` | Delegates to PlatformPlayerProvider |
-| `composeApp/.../utils/Codecs.ios.kt` | Supported codecs: FLAC, Opus, PCM |
-| `composeApp/.../audio/FlacDecoder.ios.kt` | Passthrough decoder for FLAC |
-| `composeApp/.../audio/OpusDecoder.ios.kt` | Passthrough decoder for Opus |
+| `iosApp/NativeAudioController.swift` | Main implementation. Manages AudioQueue, referencing Decoders. |
+| `iosApp/AudioDecoders.swift` | Contains `FLACLibDecoder`, `OpusLibDecoder`, `PCMPassthroughDecoder` and factory. |
+| `iosApp/NowPlayingManager.swift` | Handles MPNowPlayingInfoCenter and MPRemoteCommandCenter. |
+| `composeApp/.../MediaPlayerController.ios.kt` | Kotlin stub that delegates to `PlatformPlayerProvider`. |
+| `composeApp/.../utils/Codecs.ios.kt` | Supported codecs: FLAC, Opus, PCM. |
 
-## Status: ✅ Working (2026-01-19)
+## Status: ✅ Working (2026-01-23)
 
-- [x] FLAC streaming playback
-- [x] Opus streaming playback
-- [x] PCM streaming playback
+- [x] FLAC streaming playback (via libFLAC)
+- [x] Opus streaming playback (via swift-opus)
+- [x] PCM streaming playback (16/24/32 bit)
 - [x] Proper codec header handling
-- [x] MPV demuxer configuration
-- [x] Updated to new `Codecs.list` architecture
+- [x] Native AudioQueue implementation (Replacing MPV)
 
 ## Known Issues
 
-1. **Seek/Scrub Crash**: App crashes with `ArrayIndexOutOfBoundsException` in `ServiceClient.sendRequest` when scrubbing. This is a separate issue in the API layer, not the audio pipeline.
+1.  **Seek/Scrub**: Similar to previous implementation, scrubbing might trigger issues in the API layer if not handled gracefully.
+2.  **Resumption**: Stream resumption during network changes relies on the existing sendspin resilience strategy (buffer preservation).
 
 ## Future Work
 
-1. **Sample-Accurate Sync**: Current sync is approximate (~50-100ms tolerance). The Kotlin layer schedules chunks at the right time, but once data enters the RingBuffer→MPV pipeline, we lose precise timing control. For sub-10ms sync, consider:
-   - Using `AudioUnit` directly instead of MPV for timing control
-   - Implementing MPV's `ao_push` timing callbacks
-   - Passing timestamps through to the audio output layer
+1.  **Sample-Accurate Sync**: Direct access to `AudioQueue` callbacks provides better timing info than MPV. We could implement precise synchronized playback by using the `mSampleTime` from `AudioQueueTimeline`.
