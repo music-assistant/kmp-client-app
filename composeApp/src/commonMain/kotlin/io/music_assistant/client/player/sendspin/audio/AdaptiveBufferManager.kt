@@ -196,7 +196,6 @@ class AdaptiveBufferManager(
     }
 
     private suspend fun increaseBuffer(stats: NetworkStats, currentTime: Long) {
-       // ... existing logic ...
         val newTarget = calculateTargetBuffer(stats)
         val increaseMagnitude = if (stats.recentUnderruns > 0) {
             // Aggressive increase on underrun
