@@ -291,20 +291,13 @@ class MessageDispatcher(
 
     private fun handleSessionUpdate(message: SessionUpdateMessage) {
         logger.d { "Received session/update: ${message.payload.metadata?.title}" }
-        // Update metadata if provided
+        // Update metadata if provided (duration/elapsed come from MainDataSource via regular API)
         message.payload.metadata?.let { metadata ->
-            // Preserve existing progress values to avoid resetting progress bar to 0
-            val existingMetadata = _streamMetadata.value
-            val duration = metadata.trackDuration?.let { it / 1000.0 } ?: existingMetadata?.duration ?: 0.0
-            val elapsedTime = existingMetadata?.elapsedTime ?: 0.0
-            
             _streamMetadata.value = StreamMetadataPayload(
                 title = metadata.title,
                 artist = metadata.artist,
                 album = metadata.album,
-                artworkUrl = metadata.artworkUrl,
-                duration = duration,
-                elapsedTime = elapsedTime
+                artworkUrl = metadata.artworkUrl
             )
         }
     }
@@ -321,8 +314,9 @@ class MessageDispatcher(
 
     private fun handleServerState(message: ServerStateMessage) {
         logger.d { "Received server/state: ${message.payload}" }
-        
+
         // Extract metadata from server/state payload if present
+        // Note: duration/elapsed come from MainDataSource via regular API
         message.payload?.let { payload ->
             try {
                 val metadataElement = payload.jsonObject["metadata"]
@@ -332,32 +326,14 @@ class MessageDispatcher(
                     val artist = metadata["artist"]?.jsonPrimitive?.contentOrNull
                     val album = metadata["album"]?.jsonPrimitive?.contentOrNull
                     val artworkUrl = metadata["artwork_url"]?.jsonPrimitive?.contentOrNull
-                    
-                    // Extract progress data (duration and elapsed time)
-                    var duration = 0.0
-                    var elapsedTime = 0.0
-                    val progressElement = metadata["progress"]
-                    if (progressElement != null) {
-                        val progress = progressElement.jsonObject
-                        // track_duration is in milliseconds, convert to seconds
-                        val trackDurationMs = progress["track_duration"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
-                        duration = trackDurationMs / 1000.0
-                        // track_progress is ALSO in milliseconds (not microseconds as previously thought)
-                        // Server sends e.g. 106810 for 106.810 seconds
-                        val trackProgressMs = progress["track_progress"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
-                        elapsedTime = trackProgressMs / 1000.0
-                        logger.d { "Extracted progress: duration=${duration}s, elapsed=${elapsedTime}s" }
-                    }
-                    
+
                     // Only update if we have at least title or artist
                     if (title != null || artist != null) {
                         _streamMetadata.value = StreamMetadataPayload(
                             title = title,
                             artist = artist,
                             album = album,
-                            artworkUrl = artworkUrl,
-                            duration = duration,
-                            elapsedTime = elapsedTime
+                            artworkUrl = artworkUrl
                         )
                         logger.d { "Updated stream metadata from server/state: $title by $artist" }
                     }
