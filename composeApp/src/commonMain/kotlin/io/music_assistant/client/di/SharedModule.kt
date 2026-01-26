@@ -41,13 +41,5 @@ val sharedModule = module {
  * Call this before stopKoin() to ensure proper resource cleanup.
  */
 fun cleanupSingletons() {
-    /*
-    try {
-        GlobalContext.getOrNull()?.get<ServiceClient>()?.close()
-        GlobalContext.getOrNull()?.get<AuthenticationManager>()?.close()
-        GlobalContext.getOrNull()?.get<MainDataSource>()?.close()
-    } catch (e: Exception) {
-        // Ignore exceptions during cleanup
-    }
-    */
+    // Cleanup is handled by individual components' lifecycle
 }
