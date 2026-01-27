@@ -34,7 +34,7 @@ actual class FlacDecoder : AudioDecoder {
     // Timeout for MediaCodec operations (microseconds)
     private val TIMEOUT_US = 10000L // 10ms
 
-    override fun configure(config: AudioFormatSpec, codecHeader: String?) {
+    actual override fun configure(config: AudioFormatSpec, codecHeader: String?) {
         logger.i { "Configuring FLAC decoder: ${config.sampleRate}Hz, ${config.channels}ch, ${config.bitDepth}bit" }
 
         // Validate constraints
@@ -98,7 +98,7 @@ actual class FlacDecoder : AudioDecoder {
         }
     }
 
-    override fun decode(encodedData: ByteArray): ByteArray {
+    actual override fun decode(encodedData: ByteArray): ByteArray {
         val currentCodec = codec
             ?: throw IllegalStateException("Decoder not configured. Call configure() first.")
 
@@ -259,7 +259,7 @@ actual class FlacDecoder : AudioDecoder {
         }
     }
 
-    override fun reset() {
+    actual override fun reset() {
         logger.i { "Resetting FLAC decoder" }
         try {
             codec?.let { c ->
@@ -280,7 +280,7 @@ actual class FlacDecoder : AudioDecoder {
         }
     }
 
-    override fun release() {
+    actual override fun release() {
         logger.i { "Releasing FLAC decoder resources" }
         try {
             codec?.let { c ->

@@ -33,7 +33,7 @@ actual class OpusDecoder : AudioDecoder {
     // Lock to prevent concurrent access (decode vs release race condition)
     private val decoderLock = Any()
 
-    override fun configure(config: AudioFormatSpec, codecHeader: String?) {
+    actual override fun configure(config: AudioFormatSpec, codecHeader: String?) {
         logger.i { "Configuring Opus decoder: ${config.sampleRate}Hz, ${config.channels}ch, ${config.bitDepth}bit" }
 
         // Validate Opus-specific constraints
@@ -80,7 +80,7 @@ actual class OpusDecoder : AudioDecoder {
         }
     }
 
-    override fun decode(encodedData: ByteArray): ByteArray {
+    actual override fun decode(encodedData: ByteArray): ByteArray {
         return synchronized(decoderLock) {
             val currentDecoder = decoder
                 ?: throw IllegalStateException("Decoder not configured. Call configure() first.")
@@ -193,7 +193,7 @@ actual class OpusDecoder : AudioDecoder {
         }
     }
 
-    override fun reset() {
+    actual override fun reset() {
         synchronized(decoderLock) {
             logger.i { "Resetting Opus decoder" }
             try {
@@ -205,7 +205,7 @@ actual class OpusDecoder : AudioDecoder {
         }
     }
 
-    override fun release() {
+    actual override fun release() {
         synchronized(decoderLock) {
             logger.i { "Releasing Opus decoder resources" }
             // Concentus is pure Java/Kotlin, no native resources to free
