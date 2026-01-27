@@ -134,6 +134,10 @@ class WebSocketHandler(
                         is Frame.Ping, is Frame.Pong -> {
                             // Handled automatically by Ktor
                         }
+                        
+                        else -> {
+                            // Ignore other frame types
+                        }
                     }
                 }
             } catch (e: Exception) {

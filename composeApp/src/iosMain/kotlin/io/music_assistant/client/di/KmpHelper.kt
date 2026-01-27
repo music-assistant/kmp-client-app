@@ -1,0 +1,121 @@
+package io.music_assistant.client.di
+
+import io.music_assistant.client.api.Request
+import io.music_assistant.client.api.ServiceClient
+import io.music_assistant.client.data.MainDataSource
+import io.music_assistant.client.data.model.client.AppMediaItem
+import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItemList
+import io.music_assistant.client.data.model.server.QueueOption
+import io.music_assistant.client.data.model.server.ServerMediaItem
+
+import io.music_assistant.client.utils.resultAs
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
+
+/**
+ * KmpHelper - Bridge for accessing Koin dependencies from Swift
+ */
+object KmpHelper : KoinComponent {
+    val mainDataSource: MainDataSource by inject()
+    val serviceClient: ServiceClient by inject()
+    
+    // Provide a scope for Swift to launch coroutines if needed
+    val mainScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    
+    // MARK: - Swift Helpers for Data Fetching
+    
+    fun fetchRecommendations(completion: (List<AppMediaItem>) -> Unit) {
+        mainScope.launch {
+            val result = serviceClient.sendRequest(Request.Library.recommendations())
+            val serverItems = result.resultAs<List<ServerMediaItem>>() ?: emptyList()
+            // Flat map recommendations which are usually folders/lists
+            // But here we might get specific structure.
+            // HomeVieModel maps `RecommendationFolder`. 
+            // For CarPlay, let's flatten or return items. 
+            // Let's assume we want the items inside the folders for a flat list, or the folders themselves?
+            // HomeScreen works with RecommendationFolder. Let's return flattened items for simplicity or Folders.
+            // "Recents" is usually what we want.
+            
+            // Let's try fetching "Recent" specifically if possible, or mapping the result.
+            // resultAs converts to basic types. HomeScreen logic handles `toAppMediaItemList`.
+            
+            val appItems = serverItems.toAppMediaItemList()
+            completion(appItems)
+        }
+    }
+    
+    fun fetchPlaylists(completion: (List<AppMediaItem>) -> Unit) {
+        mainScope.launch {
+             val result = serviceClient.sendRequest(Request.Playlist.listLibrary())
+             val items = result.resultAs<List<ServerMediaItem>>()?.toAppMediaItemList() ?: emptyList()
+             completion(items)
+        }
+    }
+    
+    fun fetchAlbums(completion: (List<AppMediaItem>) -> Unit) {
+        mainScope.launch {
+            val result = serviceClient.sendRequest(Request.Album.listLibrary())
+            val items = result.resultAs<List<ServerMediaItem>>()?.toAppMediaItemList() ?: emptyList()
+            completion(items)
+        }
+    }
+    
+    fun fetchArtists(completion: (List<AppMediaItem>) -> Unit) {
+        mainScope.launch {
+            val result = serviceClient.sendRequest(Request.Artist.listLibrary())
+            val items = result.resultAs<List<ServerMediaItem>>()?.toAppMediaItemList() ?: emptyList()
+            completion(items)
+        }
+    }
+    
+    fun search(query: String, completion: (List<AppMediaItem>) -> Unit) {
+        mainScope.launch {
+            val result = serviceClient.sendRequest(
+                Request.Library.search(
+                    query = query,
+                    mediaTypes = listOf(
+                        io.music_assistant.client.data.model.server.MediaType.ARTIST,
+                        io.music_assistant.client.data.model.server.MediaType.ALBUM,
+                        io.music_assistant.client.data.model.server.MediaType.TRACK,
+                        io.music_assistant.client.data.model.server.MediaType.PLAYLIST
+                    ),
+                    limit = 10,
+                    libraryOnly = false
+                )
+            )
+            val searchResult = result.resultAs<io.music_assistant.client.data.model.server.SearchResult>()
+            val items = searchResult?.toAppMediaItemList() ?: emptyList()
+            completion(items)
+        }
+    }
+    
+    // MARK: - Playback
+    
+    fun playMediaItem(item: AppMediaItem) {
+        // Use selected player from MainDataSource
+        val playerId = mainDataSource.selectedPlayerIndex.value?.let { index ->
+             (mainDataSource.playersData.value as? io.music_assistant.client.ui.compose.common.DataState.Data)?.data?.get(index)?.playerId
+        } ?: return
+        
+        playItem(item, playerId, QueueOption.PLAY)
+    }
+    
+    private fun playItem(item: AppMediaItem, queueOrPlayerId: String, option: QueueOption) {
+        item.uri?.let { uri ->
+            mainScope.launch {
+                serviceClient.sendRequest(
+                    Request.Library.play(
+                        media = listOf(uri),
+                        queueOrPlayerId = queueOrPlayerId,
+                        option = option,
+                        radioMode = false
+                    )
+                )
+            }
+        }
+    }
+}

@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration.Companion.seconds
 
@@ -290,7 +291,7 @@ class MessageDispatcher(
 
     private fun handleSessionUpdate(message: SessionUpdateMessage) {
         logger.d { "Received session/update: ${message.payload.metadata?.title}" }
-        // Update metadata if provided
+        // Update metadata if provided (duration/elapsed come from MainDataSource via regular API)
         message.payload.metadata?.let { metadata ->
             _streamMetadata.value = StreamMetadataPayload(
                 title = metadata.title,
@@ -313,17 +314,45 @@ class MessageDispatcher(
 
     private fun handleServerState(message: ServerStateMessage) {
         logger.d { "Received server/state: ${message.payload}" }
-        // Server state message - acknowledged but not used currently
+
+        // Extract metadata from server/state payload if present
+        // Note: duration/elapsed come from MainDataSource via regular API
+        message.payload?.let { payload ->
+            try {
+                val metadataElement = payload.jsonObject["metadata"]
+                if (metadataElement != null) {
+                    val metadata = metadataElement.jsonObject
+                    val title = metadata["title"]?.jsonPrimitive?.contentOrNull
+                    val artist = metadata["artist"]?.jsonPrimitive?.contentOrNull
+                    val album = metadata["album"]?.jsonPrimitive?.contentOrNull
+                    val artworkUrl = metadata["artwork_url"]?.jsonPrimitive?.contentOrNull
+
+                    // Only update if we have at least title or artist
+                    if (title != null || artist != null) {
+                        _streamMetadata.value = StreamMetadataPayload(
+                            title = title,
+                            artist = artist,
+                            album = album,
+                            artworkUrl = artworkUrl
+                        )
+                        logger.d { "Updated stream metadata from server/state: $title by $artist" }
+                    }
+                }
+            } catch (e: Exception) {
+                logger.w { "Failed to parse server/state metadata: ${e.message}" }
+            }
+        }
     }
 
     // Use monotonic time for clock sync instead of wall clock time
     // This matches the server's relative time base
-    private val startTimeNanos = System.nanoTime()
+    // Use monotonic time for clock sync instead of wall clock time
+    // This matches the server's relative time base
+    private val startMark = kotlin.time.TimeSource.Monotonic.markNow()
 
     private fun getCurrentTimeMicros(): Long {
         // Use relative time since client start, not Unix epoch time
-        val elapsedNanos = System.nanoTime() - startTimeNanos
-        return elapsedNanos / 1000 // Convert to microseconds
+        return startMark.elapsedNow().inWholeMicroseconds
     }
 
     fun close() {

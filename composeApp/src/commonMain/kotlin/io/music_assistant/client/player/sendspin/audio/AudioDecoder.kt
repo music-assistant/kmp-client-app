@@ -29,5 +29,16 @@ class PcmDecoder : AudioDecoder {
 }
 
 // Platform-specific decoders for FLAC and OPUS (future implementation)
-expect class FlacDecoder() : AudioDecoder
-expect class OpusDecoder() : AudioDecoder
+expect class FlacDecoder() : AudioDecoder {
+    override fun configure(config: AudioFormatSpec, codecHeader: String?)
+    override fun decode(encodedData: ByteArray): ByteArray
+    override fun reset()
+    override fun release()
+}
+
+expect class OpusDecoder() : AudioDecoder {
+    override fun configure(config: AudioFormatSpec, codecHeader: String?)
+    override fun decode(encodedData: ByteArray): ByteArray
+    override fun reset()
+    override fun release()
+}

@@ -14,7 +14,10 @@
       "Bash(curl:*)",
       "Bash(ls:*)",
       "Bash(xargs cat:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(gh pr view:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

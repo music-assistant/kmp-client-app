@@ -274,6 +274,8 @@ class SendspinClient(
                 _playbackState.update { SendspinPlaybackState.Idle }
                 // Stop periodic state reporting
                 stopStateReporting()
+                // Clear Now Playing from Control Center / Lock Screen
+                // mediaPlayerController.clearNowPlaying() // DISABLED: Keep metadata visible so user can resume
             }
         }
 

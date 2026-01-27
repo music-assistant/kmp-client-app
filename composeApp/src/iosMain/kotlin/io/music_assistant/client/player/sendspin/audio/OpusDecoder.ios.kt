@@ -2,21 +2,21 @@ package io.music_assistant.client.player.sendspin.audio
 
 import io.music_assistant.client.player.sendspin.model.AudioFormatSpec
 
-actual class OpusDecoder : AudioDecoder {
-    override fun configure(config: AudioFormatSpec, codecHeader: String?) {
-        // TODO: Implement OPUS decoder using AudioToolbox
-        throw NotImplementedError("OPUS decoder not yet implemented for iOS. Use PCM codec for now.")
+actual class OpusDecoder : AudioDecoder, PassthroughDecoder {
+    actual override fun configure(config: AudioFormatSpec, codecHeader: String?) {
+        // Pass-through: No configuration needed for raw stream passing
     }
 
-    override fun decode(encodedData: ByteArray): ByteArray {
-        throw NotImplementedError("OPUS decoder not yet implemented for iOS. Use PCM codec for now.")
+    actual override fun decode(encodedData: ByteArray): ByteArray {
+        // Pass-through: Return raw opus data to be handled by MPV
+        return encodedData
     }
 
-    override fun reset() {
+    actual override fun reset() {
         // Nothing to reset
     }
 
-    override fun release() {
+    actual override fun release() {
         // Nothing to release
     }
 }

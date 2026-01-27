@@ -5,6 +5,7 @@ import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.ui.graphics.Color
 import co.touchlab.kermit.Logger
 import io.ktor.http.Url
+import io.music_assistant.client.utils.currentTimeMillis
 import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.data.model.client.AppMediaItem
@@ -92,7 +93,7 @@ class MainDataSource(
     ) {
         fun calculateCurrentPosition(): Double {
             if (!isPlaying) return basePosition
-            val elapsedSinceBase = (System.currentTimeMillis() - baseTimestamp) / 1000.0
+            val elapsedSinceBase = (currentTimeMillis() - baseTimestamp) / 1000.0
             val calculated = basePosition + elapsedSinceBase
             return duration?.let { calculated.coerceAtMost(it) } ?: calculated
         }
@@ -360,12 +361,34 @@ class MainDataSource(
 
         log.i { "Initializing Sendspin client: $serverHost:${config.serverPort}" }
 
+        // Set up remote command handler for Control Center/Lock Screen commands
+        // Commands go directly through MainDataSource via REST API
+        mediaPlayerController.onRemoteCommand = { command ->
+            localPlayer.value?.let { playerData ->
+                log.i { "Remote command from Control Center: $command" }
+                when (command) {
+                    "play", "pause", "toggle_play_pause" -> playerAction(playerData, PlayerAction.TogglePlayPause)
+                    "next" -> playerAction(playerData, PlayerAction.Next)
+                    "previous" -> playerAction(playerData, PlayerAction.Previous)
+                    else -> {
+                        if (command.startsWith("seek:")) {
+                            command.removePrefix("seek:").toDoubleOrNull()?.let { position ->
+                                playerAction(playerData, PlayerAction.SeekTo(position.toLong()))
+                            }
+                        } else {
+                            log.w { "Unknown remote command: $command" }
+                        }
+                    }
+                }
+            } ?: log.w { "No local player available for remote command: $command" }
+        }
+
         try {
-            sendspinClient = SendspinClient(config, mediaPlayerController).also {
+            sendspinClient = SendspinClient(config, mediaPlayerController).also { client ->
                 launch {
                     // Monitor for playback errors (e.g., Android Auto disconnect, audio output changed)
                     // and pause the MA server player when they occur
-                    it.playbackStoppedDueToError.filterNotNull().collect { error ->
+                    client.playbackStoppedDueToError.filterNotNull().collect { error ->
                         log.w(error) { "Sendspin playback stopped due to error - pausing MA server player" }
                         // Pause the local sendspin player on the MA server
                         localPlayer.value?.let { playerData ->
@@ -380,7 +403,7 @@ class MainDataSource(
                 launch {
                     // Monitor connection state and refresh player list when Sendspin connects
                     // This ensures the local player appears immediately in the UI
-                    it.connectionState.collect { state ->
+                    client.connectionState.collect { state ->
                         if (state is SendspinConnectionState.Connected) {
                             log.i { "Sendspin connected - refreshing player list" }
                             delay(1000) // Give server a moment to register the player
@@ -389,7 +412,7 @@ class MainDataSource(
                     }
                 }
 
-                it.start()
+                client.start()
             }
 
         } catch (e: Exception) {
@@ -776,7 +799,7 @@ class MainDataSource(
                                     trackers + (data.id to PositionTracker(
                                         queueId = data.id,
                                         basePosition = elapsed,
-                                        baseTimestamp = System.currentTimeMillis(),
+                                        baseTimestamp = currentTimeMillis(),
                                         isPlaying = player?.isPlaying ?: false,
                                         duration = data.currentItem?.track?.duration
                                     ))
@@ -812,7 +835,7 @@ class MainDataSource(
                                     trackers + (queueId to PositionTracker(
                                         queueId = queueId,
                                         basePosition = event.data,
-                                        baseTimestamp = System.currentTimeMillis(),
+                                        baseTimestamp = currentTimeMillis(),
                                         isPlaying = player?.isPlaying ?: false,
                                         duration = oldQueue?.currentItem?.track?.duration
                                     ))
@@ -834,7 +857,7 @@ class MainDataSource(
                                     trackers + (it to PositionTracker(
                                         queueId = it,
                                         basePosition = event.data.secondsPlayed,
-                                        baseTimestamp = System.currentTimeMillis(),
+                                        baseTimestamp = currentTimeMillis(),
                                         isPlaying = event.data.isPlaying,
                                         duration = event.data.duration
                                     ))
@@ -964,7 +987,7 @@ class MainDataSource(
                                 trackers + (queue.id to PositionTracker(
                                     queueId = queue.id,
                                     basePosition = elapsed,
-                                    baseTimestamp = System.currentTimeMillis(),
+                                    baseTimestamp = currentTimeMillis(),
                                     isPlaying = player?.isPlaying ?: false,
                                     duration = queue.currentItem?.track?.duration
                                 ))
